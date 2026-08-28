@@ -61,6 +61,17 @@ That last rule already bit once: `normalizeOrcanosUrl` lives in its own
 dependency-free `src/lib/orcanos-url.ts` precisely because both the forms and
 the server need it, while `src/lib/orcanos.ts` reaches `decryptSecret`.
 
+### Scripts
+
+| File | What it does |
+|---|---|
+| `run_dev.bat` | Frees port 3100, creates + opens `.env.local` if absent (and stops — the app cannot start without it), installs deps on first run, `npm run dev` in the foreground so Ctrl+C works |
+| `deploy.bat` | typecheck → `next build` → commit → push. The build gate runs **before** the commit prompt, so a broken build never reaches a red Vercel deploy. Pushing requires typing `DEPLOY`. |
+
+Same shape as the `run_dev.bat` / `deploy.bat` pair in the traceability-matrix
+project. Don't add scripts for things `npm` already does — the `.bat` files
+exist because the team is on Windows.
+
 ### File layout
 
 ```

@@ -73,10 +73,23 @@ message until this is applied.
 
 ### 3. Run
 
+Double-click **`run_dev.bat`** — it frees port 3100, creates `.env.local` from
+the example and opens it if it is missing, installs dependencies on first run,
+starts the dev server and opens the browser.
+
+Or by hand:
+
 ```bash
 npm install
 npm run dev          # http://localhost:3100
 ```
+
+### Scripts
+
+| File | What it does |
+|---|---|
+| `run_dev.bat` | **Main dev launcher** — frees port 3100, checks `.env.local`, installs deps if missing, runs `npm run dev` on http://localhost:3100 |
+| `deploy.bat` | **Deploy** — typecheck → production build → commit → push. Refuses to push unless the build passes, and requires typing `DEPLOY` to confirm, because a push to `main` is a production deploy |
 
 ### 4. OAuth redirect URI
 
