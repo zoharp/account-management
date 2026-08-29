@@ -12,7 +12,15 @@ import { encryptSecret } from '@/lib/crypto';
 import { normalizeOrcanosUrl } from '@/lib/orcanos';
 import { startProvisioning, toJobView } from '@/lib/provisioning';
 import { logSecurityEvent } from '@/lib/audit';
-import type { AccountListRow } from '@/lib/types';
+import { mergeAccounts } from '@/lib/modules';
+import {
+  listTraceAccounts,
+  supportsAskPaul,
+  supportsModules,
+  traceConfigured,
+  type TraceAccountRow,
+} from '@/lib/trace';
+import type { AccountListRow, TraceSourceStatus } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,7 +37,8 @@ export async function GET() {
   void user;
 
   const accounts = await pgGet<AccountListRow[]>(
-    'accounts?select=id,account_name,db_type,is_active,created_at&order=account_name.asc',
+    'accounts?select=id,account_name,db_type,is_active,created_at,orcanos_api_url' +
+      '&order=account_name.asc',
   );
 
   // The RPC aggregates every account in one call. A failure here must not blank
@@ -48,7 +57,51 @@ export async function GET() {
     acct.total_tokens = Number(t?.total_tokens ?? 0) || 0;
   }
 
-  return Response.json({ accounts });
+  // The traceability half. Treated exactly like the cost RPC above: a failure
+  // degrades the list to its QMS AI half rather than failing the page. The two
+  // systems are independent and one being down is not an outage of the other.
+  let traceRows: TraceAccountRow[] = [];
+  const trace: TraceSourceStatus = {
+    available: false,
+    supports_modules: false,
+    supports_ask_paul: false,
+    url: process.env.TRACE_API_URL ?? null,
+    message: '',
+  };
+
+  if (!traceConfigured()) {
+    trace.message =
+      'Traceability is not connected. Set TRACE_API_URL and TRACE_ADMIN_PASSWORD to merge its accounts.';
+  } else {
+    try {
+      traceRows = await listTraceAccounts();
+      trace.available = true;
+      trace.supports_modules = supportsModules(traceRows);
+      trace.supports_ask_paul = supportsAskPaul(traceRows);
+      if (!trace.supports_modules) {
+        // Production Fly is 3.21.0 and has no allow_trace / allow_training.
+        // `moduleFlag()` reads their absence as licensed (fail-open, matching
+        // access_control._modules_of), so say so rather than showing ticks that
+        // look like stored decisions.
+        trace.message =
+          'This traceability instance predates per-module licences (needs 3.23.0) — ' +
+          'every module shows as licensed for every listed account.';
+      } else if (!trace.supports_ask_paul) {
+        // 3.23–3.26: the other two columns are real, allow_ask_paul is not.
+        trace.message =
+          'This traceability instance predates the Ask Paul licence (needs 3.27.0) — ' +
+          'Ask Paul shows as licensed for every listed account.';
+      }
+    } catch (e) {
+      trace.message = e instanceof Error ? e.message : String(e);
+      console.error('[GET /api/accounts] traceability lookup failed:', e);
+    }
+  }
+
+  return Response.json({
+    accounts: mergeAccounts(accounts, traceRows, { traceAvailable: trace.available }),
+    trace,
+  });
 }
 
 export async function POST(req: Request) {

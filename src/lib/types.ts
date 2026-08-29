@@ -10,6 +10,9 @@ export interface PlatformUser {
   role: 'admin' | 'user' | string;
   auth_method?: string | null;
   last_login_at?: string | null;
+  /** The Orcanos identity join key — see `sql/002_orcanos_identity.sql`. */
+  orcanos_user_name?: string | null;
+  orcanos_account?: string | null;
 }
 
 /** The non-secret columns of `accounts` — no `*_encrypted` column ever leaves the server. */
@@ -49,6 +52,61 @@ export interface AccountRow {
 export interface AccountListRow extends AccountRow {
   total_cost_usd: number;
   total_tokens: number;
+}
+
+/** The modules an account can be licensed for. See `lib/modules.ts`. */
+export type ModuleKey = 'ask_paul' | 'trace' | 'training';
+
+/**
+ * `null` means the source that owns this module has no row for this tenant —
+ * rendered as a dash, never as an unticked box. Unknown is not the same as off.
+ */
+export type AccountModules = Record<ModuleKey, boolean | null>;
+
+/** One row of the merged list: the master half, the traceability half, or both. */
+export interface MergedAccountRow {
+  /** Stable React key. The master uuid when there is one, else `trace:<tenant>`. */
+  key: string;
+  account_name: string;
+  /** Orcanos `Virtual_dir`. The merge key — see `lib/modules.ts`. */
+  tenant: string | null;
+
+  // ── master `accounts` half — every field null for a traceability-only tenant
+  id: string | null;
+  db_type: string | null;
+  is_active: boolean | null;
+  created_at: string | null;
+  orcanos_api_url: string | null;
+  total_cost_usd: number;
+  total_tokens: number;
+
+  // ── traceability `account_access` half
+  trace_present: boolean;
+  trace_allow_access: boolean | null;
+  trace_allow_ai: boolean | null;
+  trace_allow_add: boolean | null;
+  /** The Ask Paul (QMS AI) licence — absent column reads as licensed, per `moduleFlag`. */
+  trace_allow_ask_paul: boolean | null;
+  /** What this tenant is called inside Ask Paul; '' means "send the tenant name". */
+  trace_ask_paul_account: string;
+  trace_note: string;
+  trace_cost_usd: number;
+  trace_tokens: number;
+  trace_ai_provider: string;
+
+  modules: AccountModules;
+}
+
+/** Why the traceability half of the list is (or isn't) there. */
+export interface TraceSourceStatus {
+  available: boolean;
+  /** False when the instance predates the per-module columns (< 3.23.0). */
+  supports_modules: boolean;
+  /** False when the instance predates `allow_ask_paul` (< 3.27.0) — a later column than the above. */
+  supports_ask_paul: boolean;
+  /** Which instance answered — shown in the UI so local-vs-Fly is never a guess. */
+  url: string | null;
+  message: string;
 }
 
 export interface LlmKeyStatus {

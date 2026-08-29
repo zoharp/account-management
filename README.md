@@ -59,17 +59,24 @@ PLATFORM_ACCOUNT=orcanos
 Every variable is server-side. Nothing is `NEXT_PUBLIC_`, and nothing here may
 ever be imported into a client component.
 
-### 2. Database migration
+### 2. Database migrations
 
-Run once against the **master** Supabase, in the SQL editor:
+Run once against the **master** Supabase, in the SQL editor. ⚠️ **As of 2026-08-28
+neither has been applied**, and the app is partly broken until they are:
 
 ```
-sql/001_account_provisioning.sql
+Orcanos QMS/design/sql/009_security_audit_log.sql    → creates security_audit_log
+sql/001_account_provisioning.sql                     → creates account_provisioning
 ```
 
-Purely additive — one new table, nothing the QMS reads or writes is touched, so
-applying it cannot affect the running QMS. Account creation fails with a clear
-message until this is applied.
+| Missing | Symptom |
+|---|---|
+| `security_audit_log` | Audit log page returns **HTTP 500**; every audit write is silently discarded |
+| `account_provisioning` | **Create account** fails |
+
+Both are `create table if not exists` plus indexes — purely additive, nothing the
+QMS reads or writes is touched, so applying them cannot affect the running QMS.
+Neither can be applied through PostgREST; use the SQL editor or the Management API.
 
 ### 3. Run
 
@@ -104,6 +111,21 @@ https://<your-vercel-domain>/auth/callback   (production)
 
 Google: APIs & Services → Credentials → the OAuth client → Authorised redirect
 URIs. Microsoft: App registrations → Authentication → Redirect URIs.
+
+A missing entry gives `Error 400: redirect_uri_mismatch` and no other diagnostic.
+Changes take a few minutes to propagate — wait before assuming something else is
+wrong.
+
+⚠️ Register on the client belonging to **`PLATFORM_ACCOUNT`**. That is currently
+`orcanosdemo` (renamed from `demo` on 2026-08-29), not `orcanos`, so the login
+screen serves that account's OAuth clients — settle which account this console
+should authenticate against before registering production URIs. See
+[TESTING.md](TESTING.md).
+
+The authorize call deliberately sends **no `access_type` and no `prompt`**. The
+code is exchanged once for the profile and the refresh token is never used, so
+`access_type=offline` only forced Google's consent screen on every sign-in.
+Don't reintroduce either parameter.
 
 ---
 
@@ -226,9 +248,27 @@ Do this only after the new app has been exercised against production data.
 
 ## Docs
 
-- `CLAUDE.md` — architecture, conventions, and the traps worth knowing before
-  changing anything here.
-- `sql/001_account_provisioning.sql` — the one migration, with its rationale.
-- `sql/bootstrap_new_account.sql` — the per-account schema applied to every
-  newly provisioned tenant database. Copied from the QMS repo; this app now owns
+| File | What it covers |
+|---|---|
+| [CLAUDE.md](CLAUDE.md) | Architecture summary, the traps, conventions, what not to do. Start here when changing code. |
+| [ARCHITECTURE.md](ARCHITECTURE.md) | The design in depth — request lifecycle, module map, the provisioning state machine, and the reasoning behind each decision. |
+| [SCHEMA.md](SCHEMA.md) | Every table and column this app touches, with DDL and who owns what. |
+| [SECURITY.md](SECURITY.md) | The access gate, the encryption contract, SSRF protection, the audit trail, and the configuration mistakes that break things quietly. |
+| [DEPLOYMENT.md](DEPLOYMENT.md) | Vercel setup, environment variables, OAuth redirect URIs, verification, rollback. |
+| [TESTING.md](TESTING.md) | The manual test plan — and an honest account of what has actually been verified. |
+| [../PLATFORM_AUTH.md](../PLATFORM_AUTH.md) | Workspace-level: how authentication works across all five projects and where it is heading. |
+
+SQL:
+
+- `sql/001_account_provisioning.sql` — the one migration, with its rationale and
+  the orphan-project query.
+- `sql/bootstrap_new_account.sql` — the per-account schema applied to every newly
+  provisioned tenant database. Copied from the QMS repo; this app now owns
   running it.
+
+> ⚠️ **Status: partially verified (v0.1.1, 2026-08-28).** Google sign-in works
+> against the live master database. The audit log returns 500 and account
+> creation will fail — both because their tables were never created (see
+> *Setup → 2*). Everything past the login screen is still unexercised. Work
+> through [TESTING.md](TESTING.md), starting with the encryption-key check,
+> which must pass before you save anything.

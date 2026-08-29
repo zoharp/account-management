@@ -1,10 +1,160 @@
 # account-management — Notes for Claude Code
 
-Read this before changing anything here. `README.md` is the setup and operations
-guide; this file is the architecture and the traps.
+Read this before changing anything here. **This file is the source of truth** for
+how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.1.0`
+- **App:** `0.2.5`
+
+**0.2.5** (2026-08-29) — **Microsoft sign-in withdrawn.** Closes finding A-1: the route defaulted
+`office365_tenant` to `common`, verified no `tid`, and took the identity from Graph's `mail` — an
+attribute an attacker sets freely in a tenant they own, which made the `@orcanos.com` half of the
+platform gate the attacker's own assertion. Off in three places, because hiding a button is not a
+control: `office365SignInEnabled()` in `lib/env.ts`, a 403 + audited `login_denied` at the top of
+`api/auth/office365`, and the method no longer advertised by `api/auth/config`. The DB flag
+`auth_methods.office365_enabled` is now tidy-up, not the control. **Google and Orcanos email
+sign-in are untouched** — each method resolves independently. The vulnerable code is left in place
+and unreachable so re-enabling forces a read of the finding first.
+
+**0.2.4** (2026-08-29) — **the Status column is gone; the Ask Paul pill writes both halves.**
+`accounts.is_active` was never a platform gate — only QMS AI reads it, so an account set Inactive
+could still sign in to traceability (found by doing it). It is one half of Ask Paul's switch:
+`is_active` kills the app, trace `allow_ask_paul` only hides the hand-off button. One pill now
+writes both and ANDs them for display, so every column is one control per module. The two systems
+share no transaction, so master is written first and a failed trace write returns non-2xx naming
+which half landed; the list reloads after a failure too. Full record in
+[INTERNAL_TRACE_MERGE.md](INTERNAL_TRACE_MERGE.md) §4.4.
+
+**0.2.3** (2026-08-29) — **security audit + hardening.** Full review of the whole tree, recorded in
+[SECURITY_AUDIT_2026-08-29.md](SECURITY_AUDIT_2026-08-29.md). Three fixes applied: `isSafeExternalUrl`
+now resolves IPv4-mapped IPv6 spellings (`[::ffff:127.0.0.1]` normalises to `[::ffff:7f00:1]` and
+walked straight past the dotted-quad check) and blocks CGNAT `100.64/10`; `next.config.mjs` sends
+security headers, chiefly `frame-ancestors 'none'` — the console was framable and Delete account is
+one click; and Google sign-in now requires `email_verified`, which is load-bearing because the email
+domain is half the platform gate. **Three findings are still open and two need a decision** — read
+[SECURITY.md §9.1](SECURITY.md). The highest, A-1, is that Office 365 sign-in defaults to tenant
+`common` and takes its identity from Graph's `mail`, an attribute an attacker sets in their own
+tenant; whether it is live depends on `office365_enabled`, which nobody has checked.
+
+**0.2.2** (2026-08-29) — the Orcanos mark now appears on the sidebar brand and the login card.
+`src/components/OrcanosLogo.tsx` is the same inline SVG traceability-matrix uses
+(`src/frontend/src/App.jsx`) — arc on `currentColor`, dot on a new `--logo-dot` token. That dot is
+`#f5821f`, deliberately not `--accent-orange` `#f5a623`: it belongs to the mark, so it matches the
+other app rather than the palette.
+
+**0.2.1** (2026-08-29) — the **QMS AI** module pill is now **Ask Paul**, and reads/writes the real
+licence column `account_access.allow_ask_paul` instead of being derived from master `is_active`.
+Ask Paul *is* the QMS AI app (`ask_paul_account` holds a tenant's master `account_name`), so the
+licence column already existed and no master DDL was needed. Status and Modules now answer
+different questions — account gate vs per-product licence — instead of being one value rendered
+twice with the same PATCH behind both. Full record in [INTERNAL_TRACE_MERGE.md](INTERNAL_TRACE_MERGE.md)
+§4.3. Also: `package.json` said `0.1.1` while this file said `0.2.0`; both now say `0.2.1`.
+
+**0.2.0** (2026-08-28) — Orcanos-backed sign-in built. `POST /api/auth/local/login` now verifies
+the password via `QW_Login` against the platform account's own Orcanos tenant instead of bcrypt
+against `users.password_hash`. New migration `sql/002_orcanos_identity.sql`, applied to master
+2026-08-29. Also fixed: the tenant pin no longer compares `Virtual_dir` against `PLATFORM_ACCOUNT`
+directly (that's just the master-DB config-row label, e.g. `demo` — confirmed live to differ from
+the real tenant segment, `orcanosdemo`); it now compares against the tenant segment parsed out of
+that account's own `orcanos_api_url` (`lib/orcanos-url.ts` `orcanosVirtualDirFromUrl()`). Not yet
+confirmed with an actual successful sign-in — see *Current state* below.
+
+**0.1.1** (2026-08-28) — first live run against the master database. Google sign-in fixed and
+verified; two never-applied migrations found.
+
+### Docs map
+
+| File | What it is | Read it when |
+|---|---|---|
+| `CLAUDE.md` | **This file** — architecture summary, the traps, conventions, what not to do | Always, first |
+| [`README.md`](README.md) | Human-facing: what it is, setup, scripts, known deltas from QMS | Setting it up |
+| [`ARCHITECTURE.md`](ARCHITECTURE.md) | The design in depth — request lifecycle, module map, the provisioning state machine, why each decision | Changing how something works |
+| [`SCHEMA.md`](SCHEMA.md) | Every table and column touched, with DDL and ownership | Touching the database |
+| [`SECURITY.md`](SECURITY.md) | The gate, encryption contract, SSRF, response headers, audit trail, config risks | Touching auth, secrets or an outbound call |
+| [`SECURITY_AUDIT_2026-08-29.md`](SECURITY_AUDIT_2026-08-29.md) | The last full security review — findings with evidence, what was verified sound, what is still open | Before shipping auth or secret-handling work; when asked what the security posture is |
+| [`DEPLOYMENT.md`](DEPLOYMENT.md) | Vercel setup, env vars, OAuth redirect URIs, rollback, retiring the QMS panel | Deploying |
+| [`TESTING.md`](TESTING.md) | The manual test plan, and what has genuinely been verified | Before and after any change |
+| [`INTERNAL_TRACE_MERGE.md`](INTERNAL_TRACE_MERGE.md) | **Internal.** The traceability-matrix merge — decisions taken, what is built, every known gap and risk | Touching the merged list, `lib/trace.ts`, `lib/modules.ts` or `api/accounts/trace/*` |
+| [`../PLATFORM_AUTH.md`](../PLATFORM_AUTH.md) | **Workspace-level.** How auth works across all five projects, and where it is going | Before touching `lib/session.ts`, `lib/login.ts` or `api/auth/*` |
+
+---
+
+## Current state — read this before anything else
+
+The app has now been run against the live master Supabase (`jjiavhexvfahboiodomv`).
+**It is partially verified, not working end to end.** Full record in [TESTING.md](TESTING.md).
+
+| | |
+|---|---|
+| ✅ Verified | Dev server on :3100, `GET /api/auth/config`, **Google sign-in** |
+| ✅ Applied 2026-08-29 | **All three migrations are now in master**, via the Supabase Management API (`database/query`) rather than the SQL editor — same effect: `sql/002_orcanos_identity.sql`, `Orcanos QMS/design/sql/009_security_audit_log.sql`, `sql/001_account_provisioning.sql` |
+| ⬜ Untested | **Audit log.** The table now exists and `GET` answers 200 — but it starts **empty**, and nothing retroactive is recoverable. No event either app produced before 2026-08-29 was ever recorded. |
+| ⬜ Untested | **Create account.** `account_provisioning` now exists; the provisioning job has still never run end to end. Read the provisioning section below before the first real run. |
+| ⬜ **Untested — Orcanos sign-in end to end.** `zoharp@orcanos.com` has `orcanos_user_name='rami.azulay'` set (test data, master DB). Nobody has yet completed a real `POST /api/auth/local/login` with a correct password and watched it succeed. Do this first before trusting the flow. |
+| ⬜ Untested | Accounts list, account detail, connection tests, billing, sign-out |
+
+**No migrations are outstanding.** All three were applied on 2026-08-29. None can go through
+PostgREST, so the route used was the Management API:
+
+```
+POST https://api.supabase.com/v1/projects/jjiavhexvfahboiodomv/database/query
+Authorization: Bearer $SUPABASE_ORG_ACCESS_TOKEN     body: {"query": "<the .sql file>"}
+```
+
+All three are `create table if not exists` / `add column if not exists`, so re-running one is a
+no-op. Use the same route for the next one rather than hand-editing in the SQL editor — it leaves
+the file as the single source of what was run.
+
+**`lib/audit.ts` already checks `res.ok`** (contrary to an earlier note in this file) — a non-2xx
+audit write logs to the server console instead of being silently discarded. Still non-blocking by
+design.
+
+**Settled 2026-08-29 — accounts were renamed to match their Orcanos tenant, and `PLATFORM_ACCOUNT`
+is now `orcanosdemo`.** The two master accounts whose `account_name` differed from the tenant
+segment in their own `orcanos_api_url` were renamed to match it, so label and tenant are now one
+string:
+
+| id | was | now | tenant segment |
+|---|---|---|---|
+| `8ecbef88-c056-47da-86a7-ed61ce19213e` | `demo` | **`orcanosdemo`** | `orcanosdemo` |
+| `fdd0c266-5829-45d6-8ef4-023bb6339c02` | `Medical Portal` | **`orca60`** | `orca60` |
+| `818222f0-7ab2-484f-bdc7-8323eba9a380` | `Orcanos` | *(unchanged)* | `orcanos` |
+
+⚠️ **This was done against the explicit written advice in
+[INTERNAL_TRACE_MERGE.md §6.1](INTERNAL_TRACE_MERGE.md#61-account_name-was-renamed-to-the-tenant-2026-08-29),
+at the user's request.** Read that section before assuming anything about QMS AI still works: in QMS
+`account_name` is a routing key carried in the `X-Account` header from the browser's `localStorage`
+and in `?account=` on shared links, and neither followed the rename. The `account_llm_keys`
+orphaning that section warns about *was* prevented — see below.
+
+`PLATFORM_ACCOUNT` in `.env.local` moved to `orcanosdemo` with it. **Set the same value in Vercel
+before deploying**; with the old value `GET /api/auth/config` answers 404 and the login screen
+offers no sign-in method at all. The login screen still renders the *orcanosdemo* account's OAuth
+clients — that is the client the `/auth/callback` URI must be registered on. The staff gate is
+unaffected (`PLATFORM_EMAIL_DOMAIN` is a separate variable).
+
+**Renaming an account is a multi-table write.** `account_name` is a text key with **no foreign key**
+in `auth_methods`, `account_llm_keys`, `account_usage_logs`, `account_provisioning` and
+`security_audit_log`. The rename above updated the first three in one transaction through the
+Management API `database/query` route (`account_provisioning` had no rows):
+
+```sql
+begin;
+update auth_methods       set account_name='orcanosdemo' where account_name='demo';
+update account_llm_keys   set account_name='orcanosdemo' where account_name='demo';
+update account_usage_logs set account_name='orcanosdemo' where account_name='demo';
+update accounts set account_name='orcanosdemo', updated_at=now() where id='8ecbef88-…';
+-- and the same four for 'Medical Portal' → 'orca60'
+commit;
+```
+
+`security_audit_log` was deliberately **not** rewritten. Its rows record the label an event actually
+carried at the time; the seven historical `demo` rows stay `demo`. Expect the audit page's account
+filter to show both spellings.
+
+**Built — Orcanos-backed sign-in.** `POST /api/auth/local/login` verifies the password via
+`QW_Login` instead of bcrypt-in-master. Blocked on `sql/002_orcanos_identity.sql` above until that
+runs. Full record in *Orcanos sign-in* below and [`../PLATFORM_AUTH.md`](../PLATFORM_AUTH.md) §5.
 
 ---
 
@@ -119,6 +269,69 @@ Identical to the QMS `require_orcanos_admin`. Three properties to preserve:
    expiry.
 3. **The page-level check is not the boundary.** `accounts/page.tsx` redirects
    for UX; the route handlers are what actually protect the data.
+
+### Orcanos sign-in (built 2026-08-28)
+
+Email/password sign-in (`POST /api/auth/local/login`) verifies the password via
+`QW_Login` rather than bcrypt against `users.password_hash`. Full specification
+in [`../PLATFORM_AUTH.md`](../PLATFORM_AUTH.md) §5; the parts that matter here:
+
+**The join key.** `QW_Login` returns no email — only `User_details.User_name`
+(e.g. `"orca"`), which is unique per tenant, not globally. Two columns on
+master `users` (`sql/002_orcanos_identity.sql`), unique on
+`(orcanos_account, lower(orcanos_user_name))`:
+
+```sql
+alter table users
+  add column orcanos_user_name text,
+  add column orcanos_account   text;   -- QW_Login Virtual_dir / the account id
+```
+
+`orcanos_account` always holds one value today. **Kept anyway** — it carries
+the tenant dimension, so going multi-tenant later is a data migration into a
+`user_identities` table rather than a redesign. No synthetic email is invented.
+
+**Person and credential are separate acts, resolved as two different columns:**
+
+- **`orcanos_user_name`** is set by an admin, the same deliberate way the row's
+  `email` is — there is no self-service or UI for this yet, so it is set
+  directly in the Supabase SQL editor. The route refuses to even attempt
+  `QW_Login` for a `users` row that has none (logged as `no_such_user`, same
+  message as a missing row — no enumeration).
+- **`orcanos_account`** is filled automatically, once, the first time that row's
+  `QW_Login` succeeds — `lib/users.ts` `linkOrcanosAccount()`. Every login after
+  that compares the fresh `Virtual_dir` against the stored value and denies on
+  a mismatch (`orcanos_identity_mismatch`). Before writing it, the route checks
+  no *other* row already claims that `(orcanos_account, orcanos_user_name)` pair
+  (`orcanos_identity_already_linked`) — belt-and-suspenders on top of the unique
+  index, which is the real guard against a race.
+
+**The gate, as implemented in `api/auth/local/login/route.ts`:**
+
+```
+QW_Login IsSuccess
+  && Virtual_dir === PLATFORM_ACCOUNT   ← pinned server-side, NEVER client-supplied
+  && Is_admin === '1'                   ← fails closed
+  && orcanos_account (once set) matches Virtual_dir
+  && completeLogin() → isPlatformStaff(): users.role === 'admin' && email domain ← re-read every request
+```
+
+⚠️ Requiring Orcanos `Is_admin` is safe **only because the tenant is pinned**
+(`identity.virtualDir !== account` is checked before `Is_admin`, both against
+the pinned `PLATFORM_ACCOUNT`, never a client-supplied value). If the Orcanos
+URL a login checks against ever becomes client-supplied, any customer's own
+Orcanos administrator walks into the control plane. Master `role` stays in the
+conjunction because `Is_admin` is read once at login and the session lives
+24 h — `role` is the only instant kill switch.
+
+Keep `password_hash` and `local_enabled` in the schema; QMS still uses both,
+and this app still reads `local_enabled` as the gate for whether the "sign in
+with email" form appears at all — only what happens *inside* that route
+changed.
+
+**Not yet built:** an admin UI to set `orcanos_user_name`/`role` on a `users`
+row. Today that is a manual `INSERT`/`UPDATE` in the Supabase SQL editor, same
+as `auth_methods` and `PLATFORM_ACCOUNT` already are.
 
 ---
 
@@ -240,21 +453,22 @@ panel.
 
 ---
 
-## Testing this manually
+## Testing
 
-1. `npm run dev` → http://localhost:3100
-2. Sign in with an `@orcanos.com` admin. A non-admin, or a non-Orcanos address,
-   must be refused at sign-in — not after.
-3. Accounts list: totals and dates match what the QMS panel shows for the same
-   accounts.
-4. Toggle a status; reload; it stuck. Toggle back.
-5. Open an account: every field matches QMS. Run all three connection tests and
-   compare results with QMS for the same account.
-6. Edit a non-secret field, save, reload. Then set a vector key without testing
-   — Save must refuse.
-7. Billing: figures agree with the QMS billing modal.
-8. Create a test account end to end; watch the log; confirm the Supabase project
-   exists, the schema applied, and the `accounts` row is correct. Then check
-   `account_provisioning` has no orphan rows.
-9. Audit log: the create and the edits from the steps above are all present.
-10. Sign out → back to `/login`, and `/accounts` redirects there too.
+The full plan is [TESTING.md](TESTING.md). Two things to internalise:
+
+- **Only sign-in has run against the master database.** Google sign-in is
+  verified; everything past the login screen is not. See *Current state* above.
+- **The encryption-key check comes first.** Open an existing account and run
+  *Test Orcanos DB* before saving anything. A wrong `ENCRYPTION_KEY` renders
+  plausible screens and then corrupts credentials on the first save.
+
+Short regression loop after a change:
+
+1. `npx tsc --noEmit` and `npx next build`
+2. Sign in and out
+3. List loads with correct totals
+4. Open an account; all three connection tests behave
+5. Save a non-secret change
+6. `GET /api/accounts` signed out → **404**
+7. `/audit` shows the events from 2 and 5

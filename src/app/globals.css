@@ -17,6 +17,9 @@
   --accent-primary-hover: #4a2b88;
   --accent-primary-soft: #f1ecfa;
   --accent-orange: #f5a623;
+  /* The dot in the Orcanos mark. Deliberately not --accent-orange: it belongs
+     to the logo, and matches the same SVG in traceability-matrix. */
+  --logo-dot: #f5821f;
   --sidebar-bg: #eae5f5;
 
   --bg-page: #f6f7f9;
@@ -86,9 +89,31 @@ button {
   padding: 18px 14px;
 }
 
+/* The mark takes its arc colour from `currentColor`, so it sits inside a
+   purple-text element rather than carrying a colour of its own. */
+.orcanos-logo {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: block;
+  color: var(--accent-primary);
+  /* Top-aligned with the title's cap height, not vertically centred on the
+     whole two-line block. The nudge covers the line box's half-leading; the
+     mark's own inset inside its 100×100 viewBox (~5.5%) is already part of it. */
+  margin-top: 1px;
+}
+
+.app-brand-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 22px;
+}
+
 .app-brand {
   font-size: 15px;
   font-weight: 700;
+  line-height: 1.2;
   color: var(--accent-primary);
   margin: 0 0 2px;
 }
@@ -96,7 +121,7 @@ button {
 .app-brand-sub {
   font-size: 11px;
   color: var(--text-secondary);
-  margin: 0 0 22px;
+  margin: 0;
 }
 
 .app-nav {
@@ -373,6 +398,109 @@ button {
   color: var(--text-muted);
 }
 
+/* ── Module licences ───────────────────────────────────────────────────────
+ * One pill per module, per account. Three states, and the third is the point:
+ * `--na` means the system that owns that module has no row for this tenant,
+ * which is NOT the same as licensed-off. It is drawn as a dash on a hatched
+ * neutral so it reads as "no answer" rather than as a decision.
+ */
+
+.acl-mods {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.acl-mod {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: 12px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: filter 0.12s ease;
+}
+
+.acl-mod:hover:not(:disabled) {
+  filter: brightness(0.96);
+}
+
+.acl-mod:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.acl-mod-mark {
+  font-weight: 700;
+  font-size: 10px;
+  line-height: 1;
+}
+
+.acl-mod--on {
+  background: #dcfce7;
+  color: var(--ok-fg);
+  border-color: var(--ok-border);
+}
+
+.acl-mod--off {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
+.acl-mod--na {
+  background: repeating-linear-gradient(
+    135deg,
+    var(--bg-subtle),
+    var(--bg-subtle) 4px,
+    var(--bg-page) 4px,
+    var(--bg-page) 8px
+  );
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+
+.acl-tenant {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.acl-badge--muted {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+
+/* Explains where the traceability half of the list came from, or why it is
+ * missing. Sits above the card so it is read before the data, not after. */
+.acl-notice {
+  background: var(--accent-primary-soft);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-primary);
+  border-radius: 6px;
+  padding: 10px 14px;
+  margin-bottom: 14px;
+  font-size: 13px;
+}
+
+.acl-notice--warn {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  border-left-color: var(--accent-orange);
+}
+
+.acl-notice-src {
+  color: var(--text-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px;
+}
+
 /* ── Modals ────────────────────────────────────────────────────────────── */
 
 .acl-overlay {
@@ -608,6 +736,158 @@ button {
   margin: 4px 0 0;
 }
 
+/* The two states a hint takes when it is reporting the outcome of a live test
+ * rather than explaining a field. Deliberately the same element: a key that has
+ * just been verified and a key that has not are the same sentence's answer. */
+.acl-hint--ok {
+  color: var(--ok-fg);
+  font-weight: 500;
+}
+
+.acl-hint--bad {
+  color: var(--err-fg);
+  font-weight: 500;
+}
+
+.acl-hint--warn {
+  color: var(--warn-fg);
+  font-weight: 500;
+}
+
+/* ── Traceability settings dialog ──────────────────────────────────────── */
+
+.acl-header-sub {
+  font-size: 12px;
+  font-weight: 400;
+  color: var(--text-muted);
+  margin-left: 10px;
+}
+
+/* A capability checkbox with its consequence spelled out underneath. The hint
+ * is not decoration — "Add items" off means view-only, and an operator should
+ * not have to already know that to use this screen. */
+.acl-check {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 0;
+  cursor: pointer;
+}
+
+.acl-check input[type='checkbox'] {
+  width: 17px;
+  height: 17px;
+  margin-top: 1px;
+  cursor: pointer;
+  accent-color: var(--accent-primary);
+  flex-shrink: 0;
+}
+
+.acl-check span {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.acl-check strong {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.acl-check em {
+  font-size: 12px;
+  font-style: normal;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* The dialog's fields stack rather than sit in the label/input columns the
+ * account editor uses — these are selects with long option labels. */
+.acl-field-row--stack {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 5px;
+}
+
+.acl-field-row--stack > span {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.acl-field-row--stack select,
+.acl-field-row--stack input {
+  width: 100%;
+  padding: 7px 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 6px;
+  font-size: 13px;
+  font-family: inherit;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.acl-field-row--stack select:focus,
+.acl-field-row--stack input:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+}
+
+.acl-field-row--stack input:disabled {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+}
+
+/* ── Audit event-group filter ──────────────────────────────────────────── */
+
+.acl-filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+.acl-chip {
+  font-size: 12px;
+  font-weight: 500;
+  padding: 5px 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border-strong);
+  background: var(--bg-surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.acl-chip:hover {
+  border-color: var(--accent-primary);
+  color: var(--accent-primary);
+}
+
+.acl-chip--on {
+  background: var(--accent-primary);
+  border-color: var(--accent-primary);
+  color: #fff;
+}
+
+.acl-usage {
+  max-height: 320px;
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-top: 8px;
+}
+
+/* A call the provider refused still cost nothing but is worth seeing — it is
+ * usually the first sign that a tenant's key has stopped working. */
+.acl-row--failed td {
+  background: var(--err-bg);
+}
+
 .acl-test-result {
   padding: 7px 11px;
   border-radius: 6px;
@@ -759,9 +1039,23 @@ button {
   padding: 28px 26px;
 }
 
+.login-brand-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 22px;
+}
+
+.login-brand-row .orcanos-logo {
+  width: 34px;
+  height: 34px;
+  margin-top: 1px;
+}
+
 .login-title {
   font-size: 18px;
   font-weight: 700;
+  line-height: 1.2;
   color: var(--accent-primary);
   margin: 0 0 2px;
 }
@@ -769,7 +1063,7 @@ button {
 .login-sub {
   font-size: 13px;
   color: var(--text-secondary);
-  margin: 0 0 22px;
+  margin: 0;
 }
 
 .login-method {

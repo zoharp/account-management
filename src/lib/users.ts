@@ -40,6 +40,35 @@ export async function findUserByEmail(
 }
 
 /**
+ * Look up a `users` row by its linked Orcanos identity — the join key QW_Login
+ * itself cannot provide (it returns no email). Used only to detect a conflict
+ * before linking a second row to the same `(orcanos_account, orcanos_user_name)`
+ * pair; the unique index in `sql/002_orcanos_identity.sql` is the real guard.
+ */
+export async function findUserByOrcanosIdentity(
+  orcanosAccount: string,
+  orcanosUserName: string,
+): Promise<PlatformUser | null> {
+  const rows = await pgGet<PlatformUser[]>(
+    `users?orcanos_account=eq.${encodeURIComponent(orcanosAccount)}` +
+      `&orcanos_user_name=ilike.${encodeURIComponent(orcanosUserName)}&select=*`,
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Bind a master `users` row to the Orcanos tenant it just proved control of.
+ * Called once, on the first successful `QW_Login` for that row — see
+ * CLAUDE.md "Planned: Orcanos sign-in". `orcanos_user_name` is expected to
+ * already be set (an admin enters it deliberately, the same way the row's
+ * email is); only `orcanos_account` (the tenant / `Virtual_dir`) is filled
+ * here, because that is the value QW_Login itself supplies.
+ */
+export async function linkOrcanosAccount(userId: number, orcanosAccount: string): Promise<void> {
+  await pgPatch(`users?id=eq.${userId}`, { orcanos_account: orcanosAccount });
+}
+
+/**
  * Port of `_create_or_update_user`.
  *
  * One deliberate difference: the QMS version creates a `users` row for any

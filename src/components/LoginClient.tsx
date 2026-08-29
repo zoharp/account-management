@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import type { AuthMethodOption } from '@/lib/types';
+import OrcanosLogo from './OrcanosLogo';
 
 /**
  * Port of QMS Auth.jsx, minus the account-picker stage.
@@ -63,8 +64,10 @@ export default function LoginClient() {
 
     if (method.type === 'google') {
       params.set('scope', 'openid email profile');
-      params.set('access_type', 'offline');
-      params.set('prompt', 'select_account');
+      // No `access_type=offline` and no `prompt`: the code is exchanged once for
+      // the profile and the refresh token is never used, so asking for offline
+      // access only forces Google's consent screen on every sign-in. Without
+      // either, an already-signed-in browser lands straight back on /auth/callback.
       window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
     } else {
       params.set('scope', 'openid profile email User.Read');
@@ -100,8 +103,13 @@ export default function LoginClient() {
   return (
     <div className="login-wrap">
       <div className="login-card">
-        <h1 className="login-title">Orcanos Platform</h1>
-        <p className="login-sub">Console sign-in</p>
+        <div className="login-brand-row">
+          <OrcanosLogo />
+          <div>
+            <h1 className="login-title">Orcanos Platform</h1>
+            <p className="login-sub">Console sign-in</p>
+          </div>
+        </div>
 
         {loading ? (
           <p className="acl-empty">Loading…</p>

@@ -1,6 +1,6 @@
 {
   "name": "account-management",
-  "version": "0.1.0",
+  "version": "0.2.5",
   "private": true,
   "description": "Orcanos platform control plane — account management, extracted from Orcanos QMS AI",
   "engines": {

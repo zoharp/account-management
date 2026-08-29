@@ -55,7 +55,20 @@ export async function POST(req: Request) {
       cache: 'no-store',
     });
     if (!userRes.ok) throw new Error('Could not read Google profile');
-    const profile = (await userRes.json()) as { email: string; name?: string };
+    const profile = (await userRes.json()) as {
+      email: string;
+      email_verified?: boolean;
+      name?: string;
+    };
+
+    // The whole platform gate rests on the email domain, so the email has to be
+    // one Google actually vouches for. A Google account created around a
+    // third-party address carries `email_verified: false` until it is confirmed,
+    // and taking that claim on trust makes the `@orcanos.com` half of the gate
+    // an assertion the attacker writes.
+    if (profile.email_verified !== true) {
+      throw new Error('Google has not verified this email address.');
+    }
 
     return await completeLogin(profile.email, profile.name || profile.email, 'google', account);
   } catch (e) {

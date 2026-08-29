@@ -1,9 +1,16 @@
 /**
  * POST /api/auth/office365 — exchange a Microsoft Entra authorization code.
  * Ports `handle_office365_oauth` + `POST /auth/office365`.
+ *
+ * ⚠️ **Turned off at the top of the handler** — `office365SignInEnabled()` is
+ * `false` and the reasoning lives on that constant in `lib/env.ts`. The gate is
+ * here rather than only on the login screen because hiding the button is not a
+ * control: this route is a plain POST anyone can call directly. The rest of the
+ * file is left intact and unfixed so that whoever re-enables it has to read
+ * finding A-1 first.
  */
 
-import { appOrigin, platformAccount } from '@/lib/env';
+import { appOrigin, office365SignInEnabled, platformAccount } from '@/lib/env';
 import { getAuthMethodsConfig } from '@/lib/users';
 import { completeLogin } from '@/lib/login';
 import { logSecurityEvent } from '@/lib/audit';
@@ -17,6 +24,21 @@ const USERINFO_URL = 'https://graph.microsoft.com/v1.0/me';
 
 export async function POST(req: Request) {
   const account = platformAccount();
+
+  // Refused before the code is even read, and audited: an attempt arriving here
+  // while the method is off is either a stale browser tab or someone probing.
+  if (!office365SignInEnabled()) {
+    await logSecurityEvent('login_denied', {
+      accountName: account,
+      detail: { method: 'office365', reason: 'method_disabled' },
+      success: false,
+    });
+    return Response.json(
+      { detail: 'Microsoft sign-in is not available. Use Google or email sign-in.' },
+      { status: 403 },
+    );
+  }
+
   const body = (await req.json().catch(() => ({}))) as { code?: string; redirect_uri?: string };
   if (!body.code) return Response.json({ detail: 'Missing: code' }, { status: 400 });
 

@@ -17,13 +17,14 @@
 import { requirePlatformStaff } from '@/lib/session';
 import { pgGet } from '@/lib/supabase';
 import { orcanosTestLogin } from '@/lib/orcanos';
+import { logSecurityEvent } from '@/lib/audit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-  const { error } = await requirePlatformStaff();
+  const { user, error } = await requirePlatformStaff();
   if (error) return error;
 
   const body = (await req.json().catch(() => ({}))) as {
@@ -44,11 +45,31 @@ export async function POST(req: Request) {
     account = rows[0] ?? null;
   }
 
+  const usedStoredCredential = !body.password && Boolean(account);
+
   const result = await orcanosTestLogin({
     apiUrl: body.api_url ?? '',
     username: body.username ?? '',
     password: body.password,
     account,
+  });
+
+  // A test that falls back to the saved credential DECRYPTS and USES a stored
+  // password. That is a secret-access event and belongs in the trail whether it
+  // succeeded or not — a run of failures here is what a compromised or expired
+  // credential looks like from the outside. `success` carries the outcome, so a
+  // failed test is a recorded event rather than an absent one.
+  await logSecurityEvent('orcanos_login_tested', {
+    user,
+    detail: {
+      account_id: body.account_id ?? null,
+      used_stored_credential: usedStoredCredential,
+      // The URL is pinned to the account's own when the stored password is
+      // used, so recording it shows which host the secret actually reached.
+      api_url: usedStoredCredential ? (account?.orcanos_api_url ?? null) : (body.api_url ?? null),
+      error: result.ok ? undefined : result.error,
+    },
+    success: result.ok,
   });
 
   if (!result.ok) {

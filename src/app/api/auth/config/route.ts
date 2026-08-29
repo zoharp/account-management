@@ -10,7 +10,7 @@
  * which the browser needs to build the authorize URL.
  */
 
-import { platformAccount } from '@/lib/env';
+import { office365SignInEnabled, platformAccount } from '@/lib/env';
 import { getAuthMethodsConfig } from '@/lib/users';
 import type { AuthMethodOption } from '@/lib/types';
 
@@ -45,7 +45,10 @@ export async function GET() {
   if (config.google_enabled) {
     methods.push({ type: 'google', client_id: config.google_client_id ?? undefined });
   }
-  if (config.office365_enabled) {
+  // `office365_enabled` in the master DB is no longer sufficient — the method is
+  // off in code (`lib/env.ts`, finding A-1). Both have to be true for the button
+  // to appear, and the route refuses regardless of what this returns.
+  if (config.office365_enabled && office365SignInEnabled()) {
     methods.push({
       type: 'office365',
       client_id: config.office365_client_id ?? undefined,

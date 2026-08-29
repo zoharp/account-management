@@ -31,7 +31,7 @@ export async function logSecurityEvent(
 
   try {
     const key = supabaseServiceKey();
-    await fetch(`${supabaseUrl()}/rest/v1/security_audit_log`, {
+    const res = await fetch(`${supabaseUrl()}/rest/v1/security_audit_log`, {
       method: 'POST',
       headers: {
         apikey: key,
@@ -43,6 +43,20 @@ export async function logSecurityEvent(
       signal: AbortSignal.timeout(5000),
       cache: 'no-store',
     });
+
+    // fetch does NOT throw on 4xx/5xx, so without this check a missing table
+    // (PostgREST answers 404 PGRST205) discards every audit write with no error
+    // anywhere. That is exactly how this went unnoticed from day one. Still
+    // non-blocking — the requirement is that failures are visible, not fatal.
+    if (!res.ok) {
+      const body = (await res.text().catch(() => '')).slice(0, 300);
+      console.error(
+        `[audit] '${eventType}' NOT recorded — HTTP ${res.status}: ${body}` +
+          (res.status === 404
+            ? ' | security_audit_log is missing: apply 009_security_audit_log.sql to the master DB.'
+            : ''),
+      );
+    }
   } catch (e) {
     console.error(`[audit] failed to record '${eventType}':`, e);
   }

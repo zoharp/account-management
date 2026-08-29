@@ -9,6 +9,7 @@
 import { requirePlatformStaff } from '@/lib/session';
 import { pgGet } from '@/lib/supabase';
 import { testOrcanosConnection, testVectorConnection } from '@/lib/connections';
+import { logSecurityEvent } from '@/lib/audit';
 import type { ConnectionTestResult } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -33,7 +34,7 @@ const COLUMNS = [
 const NOT_CONFIGURED: ConnectionTestResult = { success: null, message: 'Not configured' };
 
 export async function POST(_req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const { error } = await requirePlatformStaff();
+  const { user, error } = await requirePlatformStaff();
   if (error) return error;
 
   const { id } = await ctx.params;
@@ -52,6 +53,20 @@ export async function POST(_req: Request, ctx: { params: Promise<{ id: string }>
     hasOrcanos ? testOrcanosConnection(row) : Promise.resolve(NOT_CONFIGURED),
     hasVector ? testVectorConnection(row) : Promise.resolve(NOT_CONFIGURED),
   ]);
+
+  // Both tests DECRYPT stored database credentials to use them. That is secret
+  // access, and it is exactly what an auditor means by "key access" — so it is
+  // recorded even though nothing was changed. `success` is false if either
+  // configured connection failed; a connection with nothing to test is neither.
+  await logSecurityEvent('account_credentials_tested', {
+    user,
+    detail: {
+      account_id: id,
+      orcanos: hasOrcanos ? (orcanos.success ? 'ok' : 'failed') : 'not_configured',
+      vector: hasVector ? (vector.success ? 'ok' : 'failed') : 'not_configured',
+    },
+    success: (!hasOrcanos || orcanos.success === true) && (!hasVector || vector.success === true),
+  });
 
   return Response.json({ orcanos, vector });
 }

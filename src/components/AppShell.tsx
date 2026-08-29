@@ -2,6 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import OrcanosLogo from './OrcanosLogo';
 
 /**
  * The standing chrome. In QMS the Accounts panel was a modal launched from the
@@ -29,8 +30,13 @@ export default function AppShell({
   return (
     <div className="app-shell">
       <aside className="app-sidebar">
-        <p className="app-brand">Orcanos Platform</p>
-        <p className="app-brand-sub">Console</p>
+        <div className="app-brand-row">
+          <OrcanosLogo />
+          <div>
+            <p className="app-brand">Orcanos Platform</p>
+            <p className="app-brand-sub">Console</p>
+          </div>
+        </div>
 
         <nav className="app-nav">
           <Link
