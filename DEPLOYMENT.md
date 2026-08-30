@@ -84,10 +84,15 @@ Only the redirect URI differs, so each deployment's callback must be added to th
 OAuth client:
 
 ```
-http://localhost:3100/auth/callback            development
-https://<your-vercel-domain>/auth/callback     production
-https://<preview-url>/auth/callback            each preview, if OAuth is needed there
+http://localhost:3100/auth/callback                  development
+https://accounts.orcanos.ai/auth/callback            production   ← the live one
+https://<preview-url>/auth/callback                  each preview, if OAuth is needed there
 ```
+
+⚠️ **`https://accounts.orcanos.ai/auth/callback` must be present in the Google
+OAuth client or production Google sign-in fails with `redirect_uri_mismatch`.**
+The console is deployed and everything else answers correctly; this is the one
+step that lives in the Google Cloud console and cannot be scripted from here.
 
 - **Google:** APIs & Services → Credentials → the OAuth client → Authorised
   redirect URIs.
@@ -99,6 +104,27 @@ token exchange, which is why both sides derive it from `appOrigin()`.
 Local password sign-in works without any of this.
 
 ## 5. Vercel setup
+
+**As built (2026-08-29).** This is done; the list below is the record, not a
+to-do.
+
+| | |
+|---|---|
+| Vercel project | `account-management` (team `zohars-projects-11ab50b7`) |
+| Git | connected to `zoharp/account-management`; **a push to `main` is a production deploy** |
+| Production domain | `https://accounts.orcanos.ai` — `accounts.orcanos.ai` CNAME → `cname.vercel-dns.com` |
+| Environment | every variable from §1 set for **Production and Preview** |
+| Framework preset | Next.js, auto-detected, no build overrides |
+
+> Ask Paul is the separate Vercel project **`zorgolite`** on
+> `askpaul.orcanos.ai`. Serving this console at `askpaul.orcanos.ai/accounts`
+> instead would need `basePath: '/accounts'` here, the ~23 absolute
+> `fetch('/api/…')` calls and the OAuth `redirect_uri` reworked, and a rewrite
+> added to the QMS frontend's `vercel.json` — i.e. a change to the live Ask Paul
+> deployment. Its own subdomain was chosen to avoid all of that; both are under
+> `orcanos.ai`, so a future `.orcanos.ai` session cookie is still shared.
+
+To recreate it from scratch:
 
 1. Import `zoharp/account-management` as a new Vercel project. Framework preset
    Next.js; no build overrides needed.
