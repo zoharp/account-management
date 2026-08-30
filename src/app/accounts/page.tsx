@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { getCurrentUser, isPlatformStaff } from '@/lib/session';
 import AppShell from '@/components/AppShell';
+import { appVersion } from '@/lib/version';
 import AccountsClient from '@/components/AccountsClient';
 
 export const dynamic = 'force-dynamic';
@@ -15,7 +16,7 @@ export default async function AccountsPage() {
   if (!isPlatformStaff(user)) redirect('/login');
 
   return (
-    <AppShell active="accounts" userEmail={user!.email}>
+    <AppShell active="accounts" userEmail={user!.email} version={appVersion()}>
       <AccountsClient />
     </AppShell>
   );

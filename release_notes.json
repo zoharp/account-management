@@ -1,0 +1,92 @@
+[
+  {
+    "version": "0.2.9",
+    "date": "2026-08-29",
+    "changes": [
+      "✨ **Version in the footer** — the sidebar now shows the running version; click it for the release notes.",
+      "✨ **Release notes** — this file, plus a long-form changelog in `docs/changelog/CHANGELOG-v0.md`.",
+      "🔄 **CLAUDE.md trimmed** — ten releases of inline history moved to the changelog, leaving the current-version block and a pointer."
+    ]
+  },
+  {
+    "version": "0.2.8",
+    "date": "2026-08-29",
+    "changes": [
+      "🔄 **Orcanos hosts only** — sign-in URLs are now restricted to `orcanos.com` and its subdomains by default, which is what makes the free-text URL box safe.",
+      "🐛 **Wrong Orcanos identity** — the platform admin row still carried test data, so every password was being checked against the wrong Orcanos user."
+    ]
+  },
+  {
+    "version": "0.2.7",
+    "date": "2026-08-29",
+    "changes": [
+      "✨ **Choose the Orcanos server** — the sign-in screen now has an Orcanos URL field, remembered per browser.",
+      "✨ **A real default** — `ORCANOS_LOGIN_URL` (`app.orcanos.com/orcanos`); an unset `orcanos_api_url` used to be a 500.",
+      "🔄 **Richer login audit** — every sign-in event records which Orcanos server answered, and whether the caller chose it."
+    ]
+  },
+  {
+    "version": "0.2.6",
+    "date": "2026-08-29",
+    "changes": [
+      "✨ **Sign in by username** — the first field now accepts an Orcanos user name as well as an email address.",
+      "✨ **Show/hide password** — a toggle on the password field."
+    ]
+  },
+  {
+    "version": "0.2.5",
+    "date": "2026-08-29",
+    "changes": [
+      "🗑️ **Microsoft sign-in withdrawn** — it trusted an email attribute an attacker can set in their own tenant; off in code, not just hidden.",
+      "🔄 **Google and Orcanos sign-in unaffected** — each method resolves independently."
+    ]
+  },
+  {
+    "version": "0.2.4",
+    "date": "2026-08-29",
+    "changes": [
+      "🗑️ **Status column removed** — it was never a platform gate; an account set Inactive could still sign in to traceability.",
+      "🔄 **Ask Paul writes both halves** — one pill now sets the master flag and the traceability licence, and ANDs them for display."
+    ]
+  },
+  {
+    "version": "0.2.3",
+    "date": "2026-08-29",
+    "changes": [
+      "🔄 **Security audit and hardening** — full review of the tree, recorded in `SECURITY_AUDIT_2026-08-29.md`.",
+      "🐛 **SSRF guard gaps** — IPv4-mapped IPv6 spellings of loopback walked past the address check; CGNAT space is now blocked too.",
+      "🐛 **Console was framable** — security headers added, chiefly `frame-ancestors 'none'`.",
+      "🐛 **Google sign-in now requires `email_verified`** — the email domain is half the platform gate."
+    ]
+  },
+  {
+    "version": "0.2.2",
+    "date": "2026-08-29",
+    "changes": [
+      "✨ **Orcanos mark** — the logo now appears on the sidebar brand and the login card."
+    ]
+  },
+  {
+    "version": "0.2.1",
+    "date": "2026-08-29",
+    "changes": [
+      "🔄 **QMS AI pill is now Ask Paul** — and reads the real licence column instead of being derived from account status.",
+      "🐛 **Version mismatch** — `package.json` said 0.1.1 while the docs said 0.2.0."
+    ]
+  },
+  {
+    "version": "0.2.0",
+    "date": "2026-08-28",
+    "changes": [
+      "✨ **Orcanos-backed sign-in** — email sign-in verifies the password through Orcanos `QW_Login` instead of a stored hash.",
+      "🐛 **Tenant pin corrected** — it compared against the config-row label rather than the account's real Orcanos tenant segment."
+    ]
+  },
+  {
+    "version": "0.1.1",
+    "date": "2026-08-28",
+    "changes": [
+      "🐛 **Google sign-in fixed** — first live run against the master database; two never-applied migrations found."
+    ]
+  }
+]

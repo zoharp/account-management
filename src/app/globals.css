@@ -164,6 +164,82 @@ button {
   border-top: 1px solid rgba(92, 53, 168, 0.15);
 }
 
+/* The version sits below Sign out, quieter than a nav item — it is a label you
+   read, that happens to be clickable, not an action competing with the nav. */
+.app-version {
+  display: block;
+  width: 100%;
+  margin-top: 6px;
+  padding: 4px 10px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm, 4px);
+}
+
+.app-version:hover {
+  color: var(--accent-primary);
+  background: rgba(92, 53, 168, 0.07);
+}
+
+/* ── Release notes modal ───────────────────────────────────────────── */
+
+.rel-entry {
+  padding: 16px 0;
+  border-bottom: 1px solid #f2f3f5;
+}
+
+.rel-entry:last-child {
+  border-bottom: none;
+}
+
+.rel-entry-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.rel-version {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--accent-primary);
+}
+
+.rel-date {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.rel-changes {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.rel-changes li {
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--text-secondary);
+  margin-bottom: 5px;
+}
+
+.rel-changes strong {
+  color: var(--text-primary);
+}
+
+.rel-changes code {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 11.5px;
+  background: rgba(92, 53, 168, 0.07);
+  padding: 1px 4px;
+  border-radius: 3px;
+}
+
 .app-user {
   font-size: 12px;
   color: var(--text-secondary);

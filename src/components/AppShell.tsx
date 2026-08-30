@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import OrcanosLogo from './OrcanosLogo';
+import ReleaseNotesModal from './ReleaseNotesModal';
 
 /**
  * The standing chrome. In QMS the Accounts panel was a modal launched from the
@@ -14,12 +16,16 @@ export default function AppShell({
   children,
   active,
   userEmail,
+  version,
 }: {
   children: React.ReactNode;
   active: 'accounts' | 'audit';
   userEmail: string;
+  /** From `appVersion()`, read server-side — see `lib/version.ts`. */
+  version: string;
 }) {
   const router = useRouter();
+  const [showNotes, setShowNotes] = useState(false);
 
   async function signOut() {
     await fetch('/api/auth/logout', { method: 'POST' });
@@ -58,10 +64,22 @@ export default function AppShell({
           <button className="app-nav-item" onClick={signOut}>
             Sign out
           </button>
+          {/* Which build is actually in front of you — the first question in
+              any "is my change live?" conversation. Clicking it says what
+              changed. */}
+          <button
+            className="app-version"
+            onClick={() => setShowNotes(true)}
+            title="What's new in this release"
+          >
+            v{version}
+          </button>
         </div>
       </aside>
 
       <main className="app-main">{children}</main>
+
+      {showNotes && <ReleaseNotesModal onClose={() => setShowNotes(false)} />}
     </div>
   );
 }
