@@ -4,7 +4,33 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.2.5`
+- **App:** `0.2.7`
+
+**0.2.7** (2026-08-29) — **the sign-in Orcanos URL is now a free-text field on the login screen,
+and the tenant pin is gone with it.** Requested explicitly, with the consequence stated first and
+the two safe alternatives declined: `POST /api/auth/local/login` takes `orcanosUrl` from the body,
+so the same request-supplied string now decides both which server is asked and which `Virtual_dir`
+that server is expected to report — `Is_admin` is an assertion by a host the caller chose, and
+naming a staff row plus any password is enough. Recorded as accepted risk **B-1** in
+[SECURITY.md §9.2](SECURITY.md), which contradicts the "⚠️ Requiring Orcanos `Is_admin` is safe
+**only because the tenant is pinned**" note further down this file — §9.2 is now the accurate one.
+`ORCANOS_LOGIN_HOST_ALLOWLIST=orcanos.com` reverses it completely at no operational cost and is the
+recommended production setting; it ships empty because an unrestricted field was the ask. Also new:
+`ORCANOS_LOGIN_URL` (default `app.orcanos.com/orcanos`) pre-fills the box and is a real fallback —
+an empty `accounts.orcanos_api_url` used to be a 500. Login audit events now carry `orcanos_url`,
+`virtual_dir` and `client_supplied_url`, which is the only way an attack is visible afterwards.
+
+**0.2.6** (2026-08-29) — **Orcanos sign-in accepts the user name as well as the email, and the
+password field has a show/hide toggle.** People know themselves by the Orcanos username they
+already sign in with, not by the master `users.email` an admin typed. The first field now resolves
+against either column (`findUserByEmailOrOrcanosUserName` in `lib/users.ts`) — email wins on a
+double match, since the session is issued against it. This widens nothing: both columns are
+admin-set, `QW_Login` is still called with the *stored* `orcanos_user_name` and never with what was
+typed, and every gate after it is untouched. The username half is scoped to rows unlinked or
+already bound to this tenant, so the lookup moved to after `expectedVirtualDir` is derived. The
+request field is now `identifier` (`email` still accepted); the `no_such_user` audit detail
+carries `identifier`. Case-insensitivity is done in code, not in the filter — PostgREST has no
+case-insensitive equality and `ilike` would treat a `_` in a username as a wildcard.
 
 **0.2.5** (2026-08-29) — **Microsoft sign-in withdrawn.** Closes finding A-1: the route defaulted
 `office365_tenant` to `common`, verified no `tid`, and took the identity from Graph's `mail` — an
@@ -297,7 +323,10 @@ the tenant dimension, so going multi-tenant later is a data migration into a
   `email` is — there is no self-service or UI for this yet, so it is set
   directly in the Supabase SQL editor. The route refuses to even attempt
   `QW_Login` for a `users` row that has none (logged as `no_such_user`, same
-  message as a missing row — no enumeration).
+  message as a missing row — no enumeration). Since 0.2.6 the sign-in form's
+  first field may hold **either** this username or the row's `email` — both are
+  admin-set, and `QW_Login` is always called with the stored
+  `orcanos_user_name`, never with the string that was typed.
 - **`orcanos_account`** is filled automatically, once, the first time that row's
   `QW_Login` succeeds — `lib/users.ts` `linkOrcanosAccount()`. Every login after
   that compares the fresh `Virtual_dir` against the stored value and denies on
@@ -310,11 +339,17 @@ the tenant dimension, so going multi-tenant later is a data migration into a
 
 ```
 QW_Login IsSuccess
-  && Virtual_dir === PLATFORM_ACCOUNT   ← pinned server-side, NEVER client-supplied
+  && Virtual_dir === <tenant segment of the sign-in URL>   ← ⚠️ NO LONGER PINNED (0.2.7)
   && Is_admin === '1'                   ← fails closed
   && orcanos_account (once set) matches Virtual_dir
   && completeLogin() → isPlatformStaff(): users.role === 'admin' && email domain ← re-read every request
 ```
+
+⚠️ **Superseded by 0.2.7 — the tenant is no longer pinned, and the paragraph
+below now describes exactly what was done anyway, on purpose. Read
+[SECURITY.md §9.2](SECURITY.md) (finding B-1) before relying on any gate in this
+section.** Kept as written because it is the clearest statement of what was
+traded away, and of what `ORCANOS_LOGIN_HOST_ALLOWLIST` buys back.
 
 ⚠️ Requiring Orcanos `Is_admin` is safe **only because the tenant is pinned**
 (`identity.virtualDir !== account` is checked before `Is_admin`, both against

@@ -10,7 +10,7 @@
  * which the browser needs to build the authorize URL.
  */
 
-import { office365SignInEnabled, platformAccount } from '@/lib/env';
+import { office365SignInEnabled, orcanosLoginUrl, platformAccount } from '@/lib/env';
 import { getAuthMethodsConfig } from '@/lib/users';
 import type { AuthMethodOption } from '@/lib/types';
 
@@ -59,5 +59,12 @@ export async function GET() {
     methods.push({ type: 'local', password_policy: config.password_policy ?? undefined });
   }
 
-  return Response.json({ account_name: account, methods });
+  // What the sign-in form's Orcanos URL box starts out holding. Not a secret
+  // and not a control — the route accepts any URL the caller sends, this only
+  // saves them typing the usual one. See SECURITY.md §9.2.
+  return Response.json({
+    account_name: account,
+    methods,
+    default_orcanos_url: orcanosLoginUrl(),
+  });
 }

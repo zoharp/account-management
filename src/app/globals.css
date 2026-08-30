@@ -1132,6 +1132,44 @@ button {
   border-color: var(--accent-primary);
 }
 
+/* Sub-label under a field. Only the Orcanos URL box uses it — that box needs a
+   sentence, the email and password boxes do not. */
+.login-hint {
+  margin: 4px 0 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--text-muted);
+}
+
+/* Show/hide password. The toggle sits inside the field's border, so the input
+   keeps the padding right of it clear and the text never runs underneath. */
+.login-password {
+  position: relative;
+}
+
+.login-password input {
+  padding-right: 58px;
+}
+
+.login-password-toggle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  right: 6px;
+  padding: 0 6px;
+  border: none;
+  background: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.login-password-toggle:hover {
+  color: var(--accent-primary);
+}
+
 .login-back {
   background: none;
   border: none;

@@ -40,6 +40,48 @@ export async function findUserByEmail(
 }
 
 /**
+ * Resolve what the sign-in form's first field holds — an email address **or**
+ * the person's Orcanos user name. Both are set deliberately by an admin on the
+ * master `users` row; neither is self-service, so accepting either only widens
+ * what a known person may type, not who may sign in.
+ *
+ * Email wins when a row matches on both: it is the platform's own identity and
+ * the value the session is issued against.
+ *
+ * Two PostgREST quirks are handled here rather than in the filter — there is no
+ * case-insensitive equality operator, and `ilike` treats `_` (common in
+ * usernames) and `%` as wildcards. So the filter is deliberately loose and the
+ * exact, case-insensitive match is re-checked in code.
+ *
+ * The username half is scoped to rows that are unlinked or already bound to
+ * this tenant: `orcanos_user_name` is unique per `orcanos_account`, and this
+ * console signs people into exactly one tenant.
+ */
+export async function findUserByEmailOrOrcanosUserName(
+  identifier: string,
+  orcanosAccount: string,
+): Promise<(PlatformUser & { password_hash?: string | null }) | null> {
+  const wanted = identifier.trim().toLowerCase();
+  if (!wanted) return null;
+
+  const query = (column: 'email' | 'orcanos_user_name') =>
+    pgGet<Array<PlatformUser & { password_hash?: string | null }>>(
+      `users?${column}=ilike.${encodeURIComponent(wanted)}&select=*&limit=50`,
+    );
+
+  const byEmail = (await query('email')).find((r) => (r.email ?? '').trim().toLowerCase() === wanted);
+  if (byEmail) return byEmail;
+
+  return (
+    (await query('orcanos_user_name')).find(
+      (r) =>
+        (r.orcanos_user_name ?? '').trim().toLowerCase() === wanted &&
+        (!r.orcanos_account || r.orcanos_account === orcanosAccount),
+    ) ?? null
+  );
+}
+
+/**
  * Look up a `users` row by its linked Orcanos identity — the join key QW_Login
  * itself cannot provide (it returns no email). Used only to detect a conflict
  * before linking a second row to the same `(orcanos_account, orcanos_user_name)`

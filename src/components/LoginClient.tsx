@@ -17,6 +17,9 @@ import OrcanosLogo from './OrcanosLogo';
  * sessionStorage and verified on return. Without it the callback would accept
  * an authorization code from anywhere, which is the classic OAuth CSRF.
  */
+/** Remembers the last Orcanos server used on this browser. Not a credential. */
+const ORCANOS_URL_KEY = 'orcanos_login_url';
+
 export default function LoginClient() {
   const router = useRouter();
   const [methods, setMethods] = useState<AuthMethodOption[]>([]);
@@ -24,8 +27,14 @@ export default function LoginClient() {
   const [configError, setConfigError] = useState('');
   const [mode, setMode] = useState<'choose' | 'local'>('choose');
 
-  const [email, setEmail] = useState('');
+  const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
+  // The Orcanos server the password is checked against. Free text, at the
+  // user's explicit request (0.2.7) — the security consequence is documented in
+  // SECURITY.md §9.2 and in the route itself, not here. Pre-filled from
+  // `/api/auth/config`, then from whatever was used last on this browser.
+  const [orcanosUrl, setOrcanosUrl] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
@@ -33,9 +42,23 @@ export default function LoginClient() {
     (async () => {
       try {
         const res = await fetch('/api/auth/config', { cache: 'no-store' });
-        const data = (await res.json()) as { methods?: AuthMethodOption[]; detail?: string };
+        const data = (await res.json()) as {
+          methods?: AuthMethodOption[];
+          default_orcanos_url?: string;
+          detail?: string;
+        };
         if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
         setMethods(data.methods ?? []);
+        // localStorage wins so someone who signs in against a non-default
+        // tenant does not retype it every time; the server default is the
+        // fallback, and an empty box just means "use the server's".
+        let remembered = '';
+        try {
+          remembered = localStorage.getItem(ORCANOS_URL_KEY) ?? '';
+        } catch {
+          // Private mode / blocked storage — fall through to the default.
+        }
+        setOrcanosUrl(remembered || data.default_orcanos_url || '');
         // One method and it is local? Skip the pointless menu.
         if (data.methods?.length === 1 && data.methods[0].type === 'local') setMode('local');
       } catch (e) {
@@ -85,10 +108,15 @@ export default function LoginClient() {
       const res = await fetch('/api/auth/local/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ identifier, password, orcanosUrl: orcanosUrl.trim() }),
       });
       const data = (await res.json().catch(() => ({}))) as { detail?: string };
       if (!res.ok) throw new Error(data.detail || 'Sign-in failed');
+      try {
+        localStorage.setItem(ORCANOS_URL_KEY, orcanosUrl.trim());
+      } catch {
+        // Nothing to do — remembering the server is a convenience, not state.
+      }
       router.replace('/accounts');
       router.refresh();
     } catch (e) {
@@ -132,33 +160,69 @@ export default function LoginClient() {
 
             {hasLocal && (
               <button className="login-method" onClick={() => setMode('local')}>
-                Sign in with email
+                Sign in with Orcanos credentials
               </button>
             )}
           </>
         ) : (
           <form onSubmit={signInLocal}>
             <div className="login-field">
-              <label htmlFor="email">Email</label>
+              <label htmlFor="orcanos-url">Orcanos URL</label>
+              {/* The scheme and the /api/v2/Json suffix are added server-side by
+                  normalizeOrcanosUrl, so `app.orcanos.com/orcanos` is enough —
+                  but the tenant path is not optional. */}
               <input
-                id="email"
-                type="email"
+                id="orcanos-url"
+                type="text"
+                autoComplete="url"
+                autoCapitalize="none"
+                spellCheck={false}
+                placeholder="app.orcanos.com/orcanos"
+                value={orcanosUrl}
+                onChange={(e) => setOrcanosUrl(e.target.value)}
+              />
+              <p className="login-hint">
+                The Orcanos server your credentials are checked against. Include the tenant
+                path. Leave blank to use this deployment&rsquo;s configured server.
+              </p>
+            </div>
+            <div className="login-field">
+              <label htmlFor="identifier">Email or Orcanos username</label>
+              {/* Deliberately type="text": type="email" would reject a bare
+                  Orcanos username before the request is even made. */}
+              <input
+                id="identifier"
+                type="text"
                 autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                autoCapitalize="none"
+                spellCheck={false}
+                value={identifier}
+                onChange={(e) => setIdentifier(e.target.value)}
                 required
               />
             </div>
             <div className="login-field">
               <label htmlFor="password">Password</label>
-              <input
-                id="password"
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-              />
+              <div className="login-password">
+                <input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  autoComplete="current-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+                <button
+                  type="button"
+                  className="login-password-toggle"
+                  onClick={() => setShowPassword((v) => !v)}
+                  aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  aria-pressed={showPassword}
+                  tabIndex={-1}
+                >
+                  {showPassword ? 'Hide' : 'Show'}
+                </button>
+              </div>
             </div>
 
             {error && <div className="acl-error">{error}</div>}

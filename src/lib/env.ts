@@ -42,6 +42,36 @@ export const platformEmailDomain = () => process.env.PLATFORM_EMAIL_DOMAIN || 'o
 export const platformAccount = () => process.env.PLATFORM_ACCOUNT || 'orcanos';
 
 /**
+ * What the login screen's **Orcanos URL** field is pre-filled with, and the
+ * last-resort fallback when neither the sign-in request nor the platform
+ * account's `orcanos_api_url` supplies one.
+ *
+ * Deliberately stored un-normalised (`app.orcanos.com/orcanos`, no scheme, no
+ * `/api/v2/Json`) because it is shown in an input box — `normalizeOrcanosUrl`
+ * runs at every point of use. Before 0.2.7 there was no default at all: an
+ * empty `orcanos_api_url` column returned a 500.
+ */
+export const orcanosLoginUrl = () => process.env.ORCANOS_LOGIN_URL || 'app.orcanos.com/orcanos';
+
+/**
+ * Optional host restriction on the client-supplied sign-in URL — the one
+ * control that closes finding B-1 (SECURITY.md §9.2), and it is **empty by
+ * default**, i.e. off, because a free-text URL field was the explicit request.
+ *
+ * Comma-separated hostnames; a host matches itself or any subdomain of it, so
+ * `orcanos.com` covers `app.orcanos.com` and `us.orcanos.com`. Setting it to
+ * `orcanos.com` costs nothing operationally and removes the ability to aim
+ * sign-in at an attacker-controlled server. Applies only to a URL that came in
+ * on the request; a URL from the database or from `ORCANOS_LOGIN_URL` is
+ * already server-side and is not filtered.
+ */
+export const orcanosLoginHostAllowlist = (): string[] =>
+  (process.env.ORCANOS_LOGIN_HOST_ALLOWLIST || '')
+    .split(',')
+    .map((h) => h.trim().toLowerCase().replace(/^\.+/, ''))
+    .filter(Boolean);
+
+/**
  * Office 365 sign-in — **disabled in code, on purpose (2026-08-29).**
  *
  * Not an env var, because this is not a deployment choice: the route is unsafe

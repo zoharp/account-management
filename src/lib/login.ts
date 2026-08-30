@@ -16,6 +16,13 @@ export async function completeLogin(
   displayName: string,
   method: string,
   account: string,
+  /**
+   * Extra fields merged into the `login_succeeded` audit detail. Orcanos
+   * sign-in passes the server it authenticated against, which since 0.2.7 can
+   * come from the request — after an incident, "which host said yes" is the
+   * first thing you need and it is recoverable nowhere else.
+   */
+  extraDetail: Record<string, unknown> = {},
 ): Promise<Response> {
   const existing = await findUserByEmail(email);
 
@@ -59,7 +66,7 @@ export async function completeLogin(
   await logSecurityEvent('login_succeeded', {
     user,
     accountName: account,
-    detail: { method, app: 'account-management' },
+    detail: { method, app: 'account-management', ...extraDetail },
   });
 
   return Response.json({
