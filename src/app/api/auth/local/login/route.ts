@@ -16,8 +16,9 @@
  * against the sign-in URL's tenant segment and, on this row's first successful
  * login, recorded into `orcanos_account`.
  *
- * ⚠️ Since 0.2.7 that URL may come from the request (`orcanosUrl`), so the
- * tenant check is no longer a security boundary — read the long comment on the
+ * Since 0.2.7 that URL may come from the request (`orcanosUrl`), so the tenant
+ * check is no longer a security boundary on its own; the host allowlist
+ * (`orcanos.com` by default, 0.2.8) is what carries it. Read the comment on the
  * URL resolution block below, and SECURITY.md §9.2.
  *
  * Signup, forgot-password and reset-password are deliberately NOT ported —
@@ -67,23 +68,20 @@ export async function POST(req: Request) {
 
   // ── Which Orcanos server this sign-in is checked against ────────────────
   //
-  // ⚠️ CLIENT-SUPPLIED BY DESIGN since 0.2.7, at the user's explicit request
-  // after the risk was put to them. Read SECURITY.md §9.2 before touching this.
+  // Client-supplied since 0.2.7 — the login screen has a free-text URL box, so
+  // the tenant is no longer pinned by the server. That trade is only safe
+  // because of the host allowlist immediately below, which since 0.2.8 defaults
+  // to `orcanos.com`. The two are one control; do not weaken either half
+  // without reading SECURITY.md §9.2 (finding B-1).
   //
-  // What it costs: the tenant pin below no longer constrains anything an
-  // attacker controls, because the SAME string now supplies both the server
-  // that is asked and the `Virtual_dir` that server is expected to report.
-  // Anyone who can reach this route may point it at a host of their own that
-  // answers `IsSuccess` with `Is_admin=1` and any `Virtual_dir`, and thereby
-  // sign in as any master `users` row whose email or `orcanos_user_name` they
-  // can name — without ever knowing that person's password. Requiring
-  // Orcanos `Is_admin` is no longer a control at all; it is an assertion by a
-  // server the caller chose.
-  //
-  // What is left standing: the SSRF guard in `qwLoginIdentity`, the optional
-  // `ORCANOS_LOGIN_HOST_ALLOWLIST` (off by default — set it to `orcanos.com`
-  // and the hole closes), and `isPlatformStaff()` in `completeLogin()`, which
-  // re-reads `role` and `email` from master on every request.
+  // Why it matters: the SAME request-supplied string decides both which server
+  // is asked and which `Virtual_dir` that server is expected to report, so the
+  // tenant comparison further down compares a caller's value against a caller's
+  // value. With an unrestricted host, anyone who can reach this route could
+  // answer their own `QW_Login` with `IsSuccess` + `Is_admin=1` and sign in as
+  // any master `users` row they can name, with no password at all. The
+  // allowlist is what stops that: `Is_admin` means something again only because
+  // the host that asserted it is one of ours.
   //
   // Resolution order: what was typed → the platform account's own stored
   // `orcanos_api_url` → `ORCANOS_LOGIN_URL` (default `app.orcanos.com/orcanos`).
@@ -95,8 +93,9 @@ export async function POST(req: Request) {
     requestedUrl || accountRows[0]?.orcanos_api_url || orcanosLoginUrl(),
   );
 
-  // Host restriction, applied only to a URL that arrived on the request — a URL
-  // from the database or the environment is server-side already.
+  // Applied only to a URL that arrived on the request. A URL from the database
+  // or the environment is server-side already, which is where an on-prem
+  // customer on their own domain is configured — not at the login screen.
   const allowlist = orcanosLoginHostAllowlist();
   if (requestedUrl && allowlist.length) {
     let host = '';
@@ -113,7 +112,9 @@ export async function POST(req: Request) {
         success: false,
       });
       return Response.json(
-        { detail: 'That Orcanos server is not permitted for sign-in.' },
+        {
+          detail: `Sign-in is only accepted against an Orcanos server (${allowlist.join(', ')}).`,
+        },
         { status: 403 },
       );
     }

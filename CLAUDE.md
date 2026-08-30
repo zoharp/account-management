@@ -4,7 +4,23 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.2.7`
+- **App:** `0.2.8`
+
+**0.2.8** (2026-08-29) — **only Orcanos hosts are valid for sign-in.**
+`ORCANOS_LOGIN_HOST_ALLOWLIST` now defaults to `orcanos.com` instead of shipping empty, which is
+what makes 0.2.7's free-text URL box safe: the field still reaches any tenant, but the host is
+ours, so `QW_Login`'s `Is_admin` is an assertion by a server we control again. Finding **B-1** in
+[SECURITY.md §9.2](SECURITY.md) moves from accepted-risk to mitigated. Disabling it is spelled
+`ORCANOS_LOGIN_HOST_ALLOWLIST=*` — deliberately not "unset", so it cannot come back by someone
+clearing a Vercel field. A URL from `accounts.orcanos_api_url` or `ORCANOS_LOGIN_URL` is still not
+filtered; that is where an on-prem customer on their own domain belongs.
+
+Also fixed, in master, not in code: `users.id=1` (`zoharp@orcanos.com`) still had
+`orcanos_user_name='rami.azulay'` — the test data this file warned about. Every password typed was
+being checked as *Rami's*, which is the whole of the `Incorrect credentials` wall. Now
+`zohar.peretz`. Orcanos also answers `"Incorrect credentials. Try Using SSO"` on that tenant, so if
+password sign-in keeps failing with the right username, the account may be SSO-only and Google
+sign-in is the path.
 
 **0.2.7** (2026-08-29) — **the sign-in Orcanos URL is now a free-text field on the login screen,
 and the tenant pin is gone with it.** Requested explicitly, with the consequence stated first and
@@ -345,11 +361,12 @@ QW_Login IsSuccess
   && completeLogin() → isPlatformStaff(): users.role === 'admin' && email domain ← re-read every request
 ```
 
-⚠️ **Superseded by 0.2.7 — the tenant is no longer pinned, and the paragraph
-below now describes exactly what was done anyway, on purpose. Read
-[SECURITY.md §9.2](SECURITY.md) (finding B-1) before relying on any gate in this
-section.** Kept as written because it is the clearest statement of what was
-traded away, and of what `ORCANOS_LOGIN_HOST_ALLOWLIST` buys back.
+⚠️ **Superseded by 0.2.7–0.2.8 — the tenant is no longer pinned to
+`PLATFORM_ACCOUNT`; it comes from the sign-in URL, which the login screen lets
+you type. What keeps the paragraph below true is `ORCANOS_LOGIN_HOST_ALLOWLIST`
+(`orcanos.com` by default): the host is pinned even though the tenant is not.
+Read [SECURITY.md §9.2](SECURITY.md), finding B-1, before touching either.**
+Kept as written because it is the clearest statement of what is being protected.
 
 ⚠️ Requiring Orcanos `Is_admin` is safe **only because the tenant is pinned**
 (`identity.virtualDir !== account` is checked before `Is_admin`, both against

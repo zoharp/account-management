@@ -134,12 +134,13 @@ by default. Egress filtering is the control for both, not this function.
 `redirect: 'manual'` would close the second but would break any real Orcanos
 endpoint that redirects, which is the worse trade on a staff-only path.
 
-**Sign-in is a second URL surface, and since 0.2.7 it is unpinned.**
-`POST /api/auth/local/login` now takes its Orcanos URL from the request body, so
-`isSafeExternalUrl()` is the only URL control on it by default. This is a
-deliberate, requested change and it is not a small one — §9.2 states the
-consequence in full, and `ORCANOS_LOGIN_HOST_ALLOWLIST` is the switch that
-reverses it.
+**Sign-in is a second URL surface, unpinned but host-restricted.**
+`POST /api/auth/local/login` takes its Orcanos URL from the request body
+(0.2.7), so the server-side tenant pin no longer applies to it. What replaces
+the pin is `ORCANOS_LOGIN_HOST_ALLOWLIST`, **`orcanos.com` by default since
+0.2.8** — the field stays free text and can reach any tenant, but not any host.
+§9.2 has the full reasoning; the short version is that the allowlist is the only
+reason `QW_Login`'s `Is_admin` still means anything on that route.
 
 **The pin is only as good as the column.** `orcanos_api_url`, `vector_db_host`
 and `orcanos_db_host` are all in the `PATCHABLE` list, so "the account's own
@@ -300,7 +301,7 @@ ungroupable.
 | **`readServiceKey()` is lenient about response shape**, never verified against a live org. | Open. Tighten after the first real end-to-end run. |
 | **`isSafeExternalUrl` does not resolve DNS.** | Accepted; egress filtering is the control. |
 | **A single `ENCRYPTION_KEY` protects every tenant secret.** No per-account key separation. | Inherited from QMS. Rotation tooling exists; per-tenant keys do not. |
-| ⚠️ **The sign-in Orcanos URL is client-supplied** (0.2.7), so `QW_Login`'s `Is_admin` and `Virtual_dir` are assertions by a server the caller chose — pre-auth account takeover. | **Accepted risk, B-1 — read §9.2.** Reversed by setting `ORCANOS_LOGIN_HOST_ALLOWLIST=orcanos.com`. |
+| **The sign-in Orcanos URL is client-supplied** (0.2.7), so the tenant is not pinned server-side. | **Mitigated in 0.2.8** — `ORCANOS_LOGIN_HOST_ALLOWLIST` defaults to `orcanos.com`, so only Orcanos hosts can be used for sign-in. See §9.2. Do not set it to `*`. |
 | **Service-role key, not RLS.** All master-DB access uses the service key, so PostgREST row-level security is not a second line of defence — `requirePlatformStaff()` is the only one. | By design; it is why the gate discipline in §1 is non-negotiable. |
 
 ### 9.1 Open findings from the 2026-08-29 audit
@@ -319,20 +320,21 @@ security headers (§6.1), the SSRF hostname gaps (§5), and a missing
 | A-7 | Pre-auth routes return raw PostgREST / provider error text. | Low | — |
 | — | **No full CSP** (§6.1), and `fetch` still follows redirects past the SSRF guard (§5). | Low | — |
 
-### 9.2 ⚠️ Accepted risk — the sign-in Orcanos URL is client-supplied (B-1, 0.2.7)
+### 9.2 The sign-in Orcanos URL is client-supplied, host-restricted (B-1, 0.2.7–0.2.8)
 
-**Severity: critical. Accepted deliberately by the product owner on 2026-08-29,
-after the consequence below was put to them explicitly and they chose this
-option over a server-side setting and over a server-controlled allowlist.**
-Recorded here so nobody later reads it as an oversight and nobody re-derives the
-reasoning from scratch.
-
-**What changed.** The login screen has an *Orcanos URL* field, free text,
-pre-filled with `ORCANOS_LOGIN_URL` (default `app.orcanos.com/orcanos`).
+**Status: mitigated.** The login screen has an *Orcanos URL* field, free text,
+pre-filled with `ORCANOS_LOGIN_URL` (default `app.orcanos.com/orcanos`), and
 `POST /api/auth/local/login` accepts `orcanosUrl` in the body and calls
-`QW_Login` against it.
+`QW_Login` against it (0.2.7). **`ORCANOS_LOGIN_HOST_ALLOWLIST` then restricts
+which hosts that may be — `orcanos.com` and its subdomains by default (0.2.8).**
+Any tenant on an Orcanos host is reachable from the box; nothing else is.
 
-**Why it is critical.** Until 0.2.7 the tenant was pinned server-side, and
+The rest of this section is why that allowlist is load-bearing rather than
+belt-and-braces. It describes what 0.2.7 shipped for one release with the
+allowlist empty, and is exactly what returns if anyone sets it to `*`.
+
+**Why the unrestricted form is critical.** Until 0.2.7 the tenant was pinned
+server-side, and
 [CLAUDE.md](CLAUDE.md) said in terms why: *"Requiring Orcanos `Is_admin` is safe
 only because the tenant is pinned."* That is now gone, and the failure is worse
 than the warning anticipated. The same request-supplied string decides **both**
@@ -353,18 +355,26 @@ and one of them is written down in this repo. **This is a pre-auth full account
 takeover of the control plane, not a privilege-escalation edge case.** No
 password is ever needed.
 
-**What still stands.** `isSafeExternalUrl()` (no loopback, private ranges or
-metadata endpoints); `isPlatformStaff()` re-read from master on every request in
-`completeLogin()`, so `role` remains the instant kill switch; and every login
-event now records `orcanos_url`, `virtual_dir` and `client_supplied_url` in
-`security_audit_log`, so an attack is at least visible afterwards.
+**The mitigation, and why it is enough.** `ORCANOS_LOGIN_HOST_ALLOWLIST`
+defaults to `orcanos.com`; a host matches itself or any subdomain, so step 1
+above requires the attacker to control an `*.orcanos.com` name. If they do,
+this route is not the problem you have. Every real tenant
+(`app.orcanos.com/…`, `us.orcanos.com/…`) keeps working untouched.
 
-**The one-line reversal.** Set `ORCANOS_LOGIN_HOST_ALLOWLIST=orcanos.com` in the
-environment. Hosts match themselves or any subdomain, so every real tenant
-(`app.orcanos.com/…`, `us.orcanos.com/…`) keeps working and the field stays free
-text — it just cannot leave Orcanos any more. This closes B-1 essentially
-completely at no operational cost, and is the recommended production setting.
-It is off by default only because the request was for an unrestricted field.
+Three properties to preserve if you change any of it:
+
+1. **The allowlist is checked only for a URL that arrived on the request.** A
+   URL from `accounts.orcanos_api_url` or `ORCANOS_LOGIN_URL` is server-side
+   already. That is also where an on-prem customer on their own domain belongs —
+   configured, not typed at a login screen.
+2. **Turning it off is spelled `*`, not "unset".** An empty or missing variable
+   falls back to the default, so B-1 cannot return by someone clearing a value
+   in a Vercel settings page and not noticing.
+3. **`isSafeExternalUrl()` still runs underneath it** (no loopback, private
+   ranges, metadata endpoints), `isPlatformStaff()` is still re-read from master
+   on every request in `completeLogin()` so `role` remains the instant kill
+   switch, and every login event records `orcanos_url`, `virtual_dir` and
+   `client_supplied_url`.
 
 **If you are re-reading this because something happened:** query
 `security_audit_log` for `detail->>'client_supplied_url' = 'true'` and check

@@ -54,22 +54,34 @@ export const platformAccount = () => process.env.PLATFORM_ACCOUNT || 'orcanos';
 export const orcanosLoginUrl = () => process.env.ORCANOS_LOGIN_URL || 'app.orcanos.com/orcanos';
 
 /**
- * Optional host restriction on the client-supplied sign-in URL — the one
- * control that closes finding B-1 (SECURITY.md §9.2), and it is **empty by
- * default**, i.e. off, because a free-text URL field was the explicit request.
+ * Which hosts the login screen's URL box may point at. **`orcanos.com` by
+ * default (0.2.8)** — the field stays free text, but it cannot leave Orcanos.
+ *
+ * This is what closes finding B-1 (SECURITY.md §9.2). Without it, `QW_Login`'s
+ * `Is_admin` and `Virtual_dir` are assertions by a server the caller chose,
+ * which is a pre-auth takeover of this console. It shipped empty in 0.2.7 and
+ * that was wrong for exactly one release.
  *
  * Comma-separated hostnames; a host matches itself or any subdomain of it, so
- * `orcanos.com` covers `app.orcanos.com` and `us.orcanos.com`. Setting it to
- * `orcanos.com` costs nothing operationally and removes the ability to aim
- * sign-in at an attacker-controlled server. Applies only to a URL that came in
- * on the request; a URL from the database or from `ORCANOS_LOGIN_URL` is
- * already server-side and is not filtered.
+ * the default covers `app.orcanos.com`, `us.orcanos.com` and every future
+ * tenant host without further configuration. Applies only to a URL that arrived
+ * on the request — a URL from `accounts.orcanos_api_url` or from
+ * `ORCANOS_LOGIN_URL` is server-side already, and an on-prem customer whose
+ * Orcanos is on their own domain is configured there, not typed at the login
+ * screen.
+ *
+ * `ORCANOS_LOGIN_HOST_ALLOWLIST=*` turns the restriction off entirely. It is
+ * spelled as an explicit value rather than as "unset" so that nobody disables
+ * it by clearing a variable and never noticing. Do not use it in production.
  */
-export const orcanosLoginHostAllowlist = (): string[] =>
-  (process.env.ORCANOS_LOGIN_HOST_ALLOWLIST || '')
+export const orcanosLoginHostAllowlist = (): string[] => {
+  const raw = (process.env.ORCANOS_LOGIN_HOST_ALLOWLIST ?? 'orcanos.com').trim();
+  if (raw === '*') return [];
+  return (raw || 'orcanos.com')
     .split(',')
     .map((h) => h.trim().toLowerCase().replace(/^\.+/, ''))
     .filter(Boolean);
+};
 
 /**
  * Office 365 sign-in — **disabled in code, on purpose (2026-08-29).**

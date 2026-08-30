@@ -25,7 +25,7 @@ Ten variables, **all server-side**. Nothing is `NEXT_PUBLIC_`, and adding a
 | `PLATFORM_EMAIL_DOMAIN` | no | — | Defaults to `orcanos.com`. Half of the staff gate. |
 | `PLATFORM_ACCOUNT` | no | — | Defaults to `orcanos`. The account whose `auth_methods` row drives the login screen — **this must name an account that actually has one.** |
 | `ORCANOS_LOGIN_URL` | no | — | Defaults to `app.orcanos.com/orcanos`. Pre-fills the login screen's **Orcanos URL** box and is the fallback when neither the request nor the platform account's `orcanos_api_url` supplies one. Scheme and `/api/v2/Json` are added by `normalizeOrcanosUrl`. |
-| `ORCANOS_LOGIN_HOST_ALLOWLIST` | **strongly recommended** | — | Empty by default, meaning **any host** the browser sends is accepted for sign-in. Set it to `orcanos.com` in production. Comma-separated; a host matches itself or any subdomain, so `app.` and `us.` both work. This is the whole control against [SECURITY.md §9.2](SECURITY.md) B-1 — without it, `QW_Login`'s `Is_admin` is an assertion by a server the caller picked. |
+| `ORCANOS_LOGIN_HOST_ALLOWLIST` | no | — | Defaults to `orcanos.com`, which matches itself and every subdomain (`app.`, `us.`, …) — leave it unset. Comma-separated. This is the whole control against [SECURITY.md §9.2](SECURITY.md) B-1: without it, `QW_Login`'s `Is_admin` is an assertion by a server the caller picked. ⚠️ **`*` disables it** and is a pre-auth takeover of the console; clearing the variable does not, it falls back to the default. |
 | `APP_ORIGIN` | no | — | Absolute origin, used to build the OAuth `redirect_uri`. Leave unset on Vercel; it derives from `VERCEL_URL`, then the request. |
 
 The first four must be copied **verbatim** from the QMS backend's `.env`. The

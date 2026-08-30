@@ -29,10 +29,11 @@ export default function LoginClient() {
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  // The Orcanos server the password is checked against. Free text, at the
-  // user's explicit request (0.2.7) — the security consequence is documented in
-  // SECURITY.md §9.2 and in the route itself, not here. Pre-filled from
-  // `/api/auth/config`, then from whatever was used last on this browser.
+  // The Orcanos server the password is checked against. Free text (0.2.7), but
+  // the server only accepts hosts on `ORCANOS_LOGIN_HOST_ALLOWLIST` —
+  // `orcanos.com` and its subdomains by default since 0.2.8. The hint below
+  // says so; the route is what enforces it. See SECURITY.md §9.2.
+  // Pre-filled from `/api/auth/config`, then from whatever was used last here.
   const [orcanosUrl, setOrcanosUrl] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -182,8 +183,9 @@ export default function LoginClient() {
                 onChange={(e) => setOrcanosUrl(e.target.value)}
               />
               <p className="login-hint">
-                The Orcanos server your credentials are checked against. Include the tenant
-                path. Leave blank to use this deployment&rsquo;s configured server.
+                The Orcanos server your credentials are checked against — an{' '}
+                <strong>orcanos.com</strong> address, including the tenant path. Leave blank
+                to use this deployment&rsquo;s configured server.
               </p>
             </div>
             <div className="login-field">
