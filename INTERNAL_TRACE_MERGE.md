@@ -5,8 +5,8 @@
 >
 > **Date:** 2026-08-29 · **Status:** built and typechecking, **not deployed, not verified end to end**
 
-Companion docs: [`CLAUDE.md`](CLAUDE.md) · [`../PLATFORM_AUTH.md`](../PLATFORM_AUTH.md) ·
-[`../PLATFORM_MODULES_PROPOSAL.md`](../PLATFORM_MODULES_PROPOSAL.md) ·
+Companion docs: [`CLAUDE.md`](CLAUDE.md) · [`docs/platform/PLATFORM_AUTH.md`](docs/platform/PLATFORM_AUTH.md) ·
+[`docs/platform/PLATFORM_MODULES_PROPOSAL.md`](docs/platform/PLATFORM_MODULES_PROPOSAL.md) ·
 traceability-matrix `INTERNAL_ACCOUNT_ADMIN.md`
 
 ---

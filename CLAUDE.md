@@ -30,7 +30,7 @@ in `release_notes.json` — it ships to the browser verbatim.
 | [`DEPLOYMENT.md`](DEPLOYMENT.md) | Vercel setup, env vars, OAuth redirect URIs, rollback, retiring the QMS panel | Deploying |
 | [`TESTING.md`](TESTING.md) | The manual test plan, and what has genuinely been verified | Before and after any change |
 | [`INTERNAL_TRACE_MERGE.md`](INTERNAL_TRACE_MERGE.md) | **Internal.** The traceability-matrix merge — decisions taken, what is built, every known gap and risk | Touching the merged list, `lib/trace.ts`, `lib/modules.ts` or `api/accounts/trace/*` |
-| [`../PLATFORM_AUTH.md`](../PLATFORM_AUTH.md) | **Workspace-level.** How auth works across all five projects, and where it is going | Before touching `lib/session.ts`, `lib/login.ts` or `api/auth/*` |
+| [`docs/platform/`](docs/platform/README.md) | **Platform-wide, wider than this app.** [`PLATFORM_AUTH.md`](docs/platform/PLATFORM_AUTH.md) — how auth works across all five projects and where it is going; [`PLATFORM_MODULES_PROPOSAL.md`](docs/platform/PLATFORM_MODULES_PROPOSAL.md) — the module portal and per-module licensing; [`SOURCE_PROJECTS.md`](docs/platform/SOURCE_PROJECTS.md) — what the four source projects are | `PLATFORM_AUTH.md` before touching `lib/session.ts`, `lib/login.ts` or `api/auth/*`; the others for consolidation questions |
 
 ---
 
@@ -130,7 +130,7 @@ filter to show both spellings.
 
 **Built — Orcanos-backed sign-in.** `POST /api/auth/local/login` verifies the password via
 `QW_Login` instead of bcrypt-in-master. Blocked on `sql/002_orcanos_identity.sql` above until that
-runs. Full record in *Orcanos sign-in* below and [`../PLATFORM_AUTH.md`](../PLATFORM_AUTH.md) §5.
+runs. Full record in *Orcanos sign-in* below and [`docs/platform/PLATFORM_AUTH.md`](docs/platform/PLATFORM_AUTH.md) §5.
 
 ---
 
@@ -250,7 +250,7 @@ Identical to the QMS `require_orcanos_admin`. Three properties to preserve:
 
 Email/password sign-in (`POST /api/auth/local/login`) verifies the password via
 `QW_Login` rather than bcrypt against `users.password_hash`. Full specification
-in [`../PLATFORM_AUTH.md`](../PLATFORM_AUTH.md) §5; the parts that matter here:
+in [`docs/platform/PLATFORM_AUTH.md`](docs/platform/PLATFORM_AUTH.md) §5; the parts that matter here:
 
 **The join key.** `QW_Login` returns no email — only `User_details.User_name`
 (e.g. `"orca"`), which is unique per tenant, not globally. Two columns on

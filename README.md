@@ -256,7 +256,7 @@ Do this only after the new app has been exercised against production data.
 | [SECURITY.md](SECURITY.md) | The access gate, the encryption contract, SSRF protection, the audit trail, and the configuration mistakes that break things quietly. |
 | [DEPLOYMENT.md](DEPLOYMENT.md) | Vercel setup, environment variables, OAuth redirect URIs, verification, rollback. |
 | [TESTING.md](TESTING.md) | The manual test plan — and an honest account of what has actually been verified. |
-| [../PLATFORM_AUTH.md](../PLATFORM_AUTH.md) | Workspace-level: how authentication works across all five projects and where it is heading. |
+| [docs/platform/PLATFORM_AUTH.md](docs/platform/PLATFORM_AUTH.md) | Workspace-level: how authentication works across all five projects and where it is heading. |
 
 SQL:
 
