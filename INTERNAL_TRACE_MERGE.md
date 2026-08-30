@@ -77,23 +77,38 @@ Note the tree also carries an entire unshipped Training Management module (`quiz
 `quiz_engine.py`, `QuizBuilder.jsx`, `TakeQuiz.jsx`, `MyTraining.jsx`) wired into `app.py`.
 Deploying ships that too.
 
-### 3.2 `TRACE_ADMIN_PASSWORD` is not in Vercel
+### 3.2 ~~`TRACE_ADMIN_PASSWORD` is not in Vercel~~ — **resolved 2026-08-30**
 
-The value is the Fly `ADMIN_PASSWORD` secret. Until it is set, the deployed console renders the
-QMS AI half and an orange notice where traceability should be. Local `.env.local` is wired.
+Both halves are now set in Vercel Production, and the banner is gone. Two things this cost, worth
+keeping:
 
-### 3.3 Nothing has been verified end to end
+- **`TRACE_API_URL` was set, but to `http://127.0.0.1:8010`** — the local dev value. A wrong value
+  is worse than a missing one: `traceApiUrl()` uses `required()`, so an *unset* variable fails
+  loudly at the named variable, while a laptop address fails as a generic `fetch failed` from a
+  datacenter. Read the banner's URL before assuming anything.
+- **The two must move together.** Fixing only the URL turned `fetch failed` into
+  *"TRACE_ADMIN_PASSWORD was rejected by the traceability API"*, which reads like a new bug rather
+  than the second half of the same one. The Fly `ADMIN_PASSWORD` was then rotated (`fly secrets
+  set`, which restarts the machine and invalidates every issued admin token) and Vercel set to
+  match.
 
-`npx tsc --noEmit` passes. That is all. Specifically **not** verified:
+And the trap underneath both: **a Vercel env change does nothing until something redeploys.** See
+[DEPLOYMENT.md](DEPLOYMENT.md) → *An environment change is not live until something redeploys*.
 
-- The merged list rendering against Fly (only against a local trace instance).
-- Any write from the console to Fly. *(A raw `POST`/`DELETE` against the Fly admin API was
-  proven from inside the machine on 2026-08-29 — the API works. The console's path to it has
-  never run.)*
-- That a Vercel function can reach `traceability-matrix.fly.dev` (public HTTPS, low risk,
-  still unproven).
-- The AI key test, the AI config save, and the usage drill-down against any instance.
-- `npx next build`.
+### 3.3 ~~Nothing has been verified end to end~~ — **mostly resolved 2026-08-30**
+
+Now verified in production:
+
+- ✅ **The merged list renders against Fly.** A Vercel function does reach
+  `traceability-matrix.fly.dev` — that was the open unknown, and it is closed.
+- ✅ `npx next build`, and every deploy since has run it before pushing.
+- ✅ The trace login → `X-Admin-Token` → `/api/admin/accounts` path, including the 401-retry in
+  `lib/trace.ts` (exercised for real by the password rotation above).
+
+Still **not** verified:
+
+- Any **write** from the console to Fly — the module pills, the AI config save.
+- The AI key test and the usage drill-down against any instance.
 
 ---
 
@@ -164,6 +179,19 @@ Consequences worth knowing:
   in `TraceSettingsModal`. Both go through `saveTraceAccount`'s merge, so they agree.
 - **Fly is still 3.21.0 (§3.1).** Against production the Ask Paul pill shows fail-open licensed and
   is not clickable until that deploy lands.
+- ⚠️ **This pill is one of three gates, and the other two are invisible from here (2026-08-30).**
+  What a user actually sees is `ask_paul_enabled`, an AND of: this licence column (fail-open), the
+  user's Orcanos `O` permission letter (fail-open), and the traceability *deployment* having
+  `ASK_PAUL_SSO_SECRET` + `ASK_PAUL_APP_URL` set (**fail-closed**). Only the third hides the
+  button, and this console cannot see it — so the pill reads *licensed* while nobody, in any
+  tenant, can use it. That is exactly what happened on 2026-08-30: neither var was ever set on
+  Fly. Diagnose with the trace API's `/api/admin/info`, which returns
+  `ask_paul.configured` / `.url` / `.secret_present` for this purpose.
+- ⚠️ **And configuring the trace side only makes the button *appear*.** The far side — Ask Paul's
+  own Cloud Run service — needs the byte-identical `ASK_PAUL_SSO_SECRET`, or the click lands on
+  *"SSO is not configured for this deployment"*. It had never been in Ask Paul's `cloudbuild.yaml`
+  at all; added 2026-08-30. Four settings across three clouds, and a licence tick here is one of
+  them. Full table in traceability-matrix's `INTERNAL_ACCOUNT_ADMIN.md`.
 
 ### 4.4 ~~There is no platform-wide account gate — and "Status" implies there is~~ — **resolved 2026-08-29**
 

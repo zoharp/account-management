@@ -36,17 +36,38 @@ in `release_notes.json` — it ships to the browser verbatim.
 
 ## Current state — read this before anything else
 
-The app has now been run against the live master Supabase (`jjiavhexvfahboiodomv`).
-**It is partially verified, not working end to end.** Full record in [TESTING.md](TESTING.md).
+The app runs against the live master Supabase (`jjiavhexvfahboiodomv`) at
+**https://accounts.orcanos.ai**. **Both sign-in methods and the accounts list are now verified;
+everything that writes is not.** Full record in [TESTING.md](TESTING.md).
 
 | | |
 |---|---|
 | ✅ Verified | Dev server on :3100, `GET /api/auth/config`, **Google sign-in** |
+| ✅ **Verified 2026-08-30 — Orcanos sign-in, end to end at last.** `login_succeeded` at `01:43:32Z`, `method: "orcanos"`, for `zoharp@orcanos.com`. The whole gate ran: `QW_Login`, `Is_admin`, the tenant check, `linkOrcanosAccount()` (that row's `orcanos_account` is now `orcanos`) and `completeLogin()`. Two things had to be fixed first — see *Why it had never worked* below. |
+| ✅ Verified 2026-08-30 | **Module licences against the live traceability instance** — `TRACE_API_URL` now points at Fly, not localhost. |
 | ✅ Applied 2026-08-29 | **All three migrations are now in master**, via the Supabase Management API (`database/query`) rather than the SQL editor — same effect: `sql/002_orcanos_identity.sql`, `Orcanos QMS/design/sql/009_security_audit_log.sql`, `sql/001_account_provisioning.sql` |
 | ⬜ Untested | **Audit log.** The table now exists and `GET` answers 200 — but it starts **empty**, and nothing retroactive is recoverable. No event either app produced before 2026-08-29 was ever recorded. |
 | ⬜ Untested | **Create account.** `account_provisioning` now exists; the provisioning job has still never run end to end. Read the provisioning section below before the first real run. |
-| ⬜ **Untested — Orcanos sign-in end to end.** `zoharp@orcanos.com` has `orcanos_user_name='rami.azulay'` set (test data, master DB). Nobody has yet completed a real `POST /api/auth/local/login` with a correct password and watched it succeed. Do this first before trusting the flow. |
-| ⬜ Untested | Accounts list, account detail, connection tests, billing, sign-out |
+| ⬜ Untested | Account detail, connection tests, billing, sign-out. The **accounts list** now renders live, with module licences from Fly. |
+
+### Why Orcanos sign-in had never worked (2026-08-30)
+
+Both causes returned the same `Invalid credentials`, which is deliberate — every failure path in
+`api/auth/local/login` answers identically so the route cannot be used to enumerate users. **The
+real reason only ever reaches `security_audit_log`.** When someone reports a login problem, read
+that table first; the screen cannot tell you anything.
+
+1. **The identity was someone else's.** `users.id=1` (`zoharp@orcanos.com`) carried
+   `orcanos_user_name='rami.azulay'` — test data this file had warned about since 0.2.0. The route
+   calls `QW_Login` with the **stored** username, never with what was typed, so every password was
+   being checked as Rami's and Orcanos rejected it (`reason: orcanos_rejected`,
+   `"Incorrect credentials. Try Using SSO"`). Now `zohar.peretz`.
+2. **The tenant was pinned to the wrong one.** `PLATFORM_ACCOUNT` is `orcanosdemo`, but this person
+   is an Orcanos admin in tenant **`orcanos`**. Under the pre-0.2.7 design the login would have been
+   refused as `wrong_orcanos_tenant` no matter how correct the password was. The successful event
+   records `client_supplied_url: true` and `virtual_dir: "orcanos"` — i.e. **the free-text URL box
+   added in 0.2.7 is what made this sign-in possible at all**, and the host allowlist added in
+   0.2.8 is what keeps that safe. Worth knowing before anyone proposes re-pinning the tenant.
 
 **No migrations are outstanding.** All three were applied on 2026-08-29. None can go through
 PostgREST, so the route used was the Management API:
@@ -371,6 +392,30 @@ running it.** If the per-account schema changes, it changes here.
 8. **Delete does not de-provision the tenant's Supabase project.** Same as QMS.
    The difference is that the warning is now shown to the user instead of being
    discarded — that project keeps costing money until someone removes it.
+9. **A Vercel environment change does nothing until something redeploys.**
+   Vercel snapshots env vars into each deployment. Editing a variable and
+   reloading the site shows the *old* value indefinitely, and a code push that
+   happens to land afterwards picks up the new one — which makes it look like
+   the code fixed it. Order is always: change the variable, **then** redeploy.
+   Cost 2026-08-30: a deploy, then a second deploy, to change one string.
+10. **`TRACE_ADMIN_PASSWORD` must equal the traceability instance's own
+    `ADMIN_PASSWORD`.** They are two names for one shared secret, in two clouds
+    (Vercel and Fly). Change one and the Traceability/Training columns go blank
+    behind a banner. `TRACE_API_URL` and `TRACE_ADMIN_PASSWORD` must move
+    **together** — pointing at Fly while keeping the local password turns
+    "fetch failed" into a 401, which reads like a different bug.
+11. **The Ask Paul pill is a licence, not a switch.** It writes
+    `account_access.allow_ask_paul`, which is one of *three* ANDed gates; the
+    other two — the user's Orcanos `O` letter, and the traceability
+    deployment having `ASK_PAUL_SSO_SECRET`/`ASK_PAUL_APP_URL` set — are
+    invisible from this console. Only the deployment gate fails closed, so the
+    pill can read "licensed" while the button is hidden from everyone. Full
+    table in traceability-matrix's `INTERNAL_ACCOUNT_ADMIN.md`.
+12. **The login screen's failure message is deliberately useless.** Every path
+    in `api/auth/local/login` returns `Invalid credentials` — missing row, no
+    `orcanos_user_name`, wrong password, wrong tenant, not an Orcanos admin,
+    identity already linked. The distinguishing `reason` goes only to
+    `security_audit_log`. Diagnose from that table, never from the screen.
 
 ---
 
@@ -423,7 +468,9 @@ panel.
 The full plan is [TESTING.md](TESTING.md). Two things to internalise:
 
 - **Only sign-in has run against the master database.** Google sign-in is
-  verified; everything past the login screen is not. See *Current state* above.
+  verified, and since 2026-08-30 so is Orcanos sign-in and the accounts list.
+  Nothing that **writes** — account detail, provisioning, billing — has been
+  exercised. See *Current state* above.
 - **The encryption-key check comes first.** Open an existing account and run
   *Test Orcanos DB* before saving anything. A wrong `ENCRYPTION_KEY` renders
   plausible screens and then corrupts credentials on the first save.

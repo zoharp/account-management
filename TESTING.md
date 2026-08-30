@@ -12,7 +12,29 @@ has and has not been exercised.
 
 ## 1. What has actually been verified
 
-Last updated: 2026-08-29.
+Last updated: 2026-08-30.
+
+**Verified in production (https://accounts.orcanos.ai) — 2026-08-30:**
+
+| Check | Evidence |
+|---|---|
+| **Orcanos sign-in, end to end** | `security_audit_log` row at `2026-08-30T01:43:32Z` — `login_succeeded`, `actor_email zoharp@orcanos.com`, `method: "orcanos"`, `virtual_dir: "orcanos"`, `client_supplied_url: true`. The full chain ran: `QW_Login` → `Is_admin` → tenant check → `linkOrcanosAccount()` → `isPlatformStaff()` → cookie. |
+| `linkOrcanosAccount()` binds on first success | `users.id=1` went from `orcanos_account = null` to `'orcanos'`, once, and later logins compare against it. |
+| The audit trail actually records | Fourteen real events, success and failure, with distinguishing `reason` values. It is no longer empty. |
+| Accounts list renders live | Three accounts with spend totals, and module licences fetched from the Fly traceability instance. |
+| Module licence source switchover | `TRACE_API_URL` moved from `http://127.0.0.1:8010` to `https://traceability-matrix.fly.dev`; the warning banner cleared. |
+
+⚠️ **Two prerequisites had to be fixed before any of this passed**, and both are the kind that
+recur — see CLAUDE.md *Why Orcanos sign-in had never worked*: the `users` row carried another
+person's `orcanos_user_name`, and the tenant this admin belongs to (`orcanos`) is **not**
+`PLATFORM_ACCOUNT` (`orcanosdemo`). The second is only survivable because 0.2.7 made the sign-in
+URL client-supplied.
+
+**Still true after all of the above:** nothing that *writes* has been exercised. Account detail,
+saving a credential, provisioning, billing and delete remain untested.
+
+---
+
 
 **Verified — automated:**
 
@@ -52,10 +74,9 @@ Last updated: 2026-08-29.
 
 | Not done | Why it matters |
 |---|---|
-| **A completed Orcanos sign-in.** Session got diverted debugging an unrelated `Orcanos QMS` local-dev port-8000 issue (a stuck/orphaned socket on the tester's machine, needs a machine restart to clear — nothing to do with this app) before a real password was ever submitted to `POST /api/auth/local/login`. | The whole gate — `QW_Login` call, `Is_admin`, tenant pin, `orcanos_account` linking, `completeLogin()` — is still unexercised end to end. **This is the next thing to do.** |
-| A completed sign-in, local or OAuth (general) | The whole gate is unexercised end to end. |
-| Orcanos sign-in against a real tenant | `sql/002_orcanos_identity.sql` not applied; no `users` row has `orcanos_user_name` set yet; the `Virtual_dir === PLATFORM_ACCOUNT` assumption above is unconfirmed. |
-| Any screen rendered while authenticated | Accounts list, detail, billing, audit — all unrendered. |
+| ~~A completed Orcanos sign-in~~ | **Done 2026-08-30** — see the production table above. |
+| ~~Orcanos sign-in against a real tenant~~ | **Done 2026-08-30.** Note the `Virtual_dir === PLATFORM_ACCOUNT` assumption recorded here was **wrong**, and is gone: this admin signs in against tenant `orcanos` while `PLATFORM_ACCOUNT` is `orcanosdemo`. |
+| Account **detail** rendered while authenticated | The list renders; opening an account, and every connection test on it, is still unexercised. |
 | Any differential comparison against the QMS panel | This is the correctness argument, and none of it has been run. |
 | Any connection test against a real account | Vector DB, SQL Server and Orcanos REST all unexercised. |
 | A provisioning run | `readServiceKey()` has still never seen a live Management API response. |

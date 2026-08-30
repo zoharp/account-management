@@ -28,6 +28,38 @@ Ten variables, **all server-side**. Nothing is `NEXT_PUBLIC_`, and adding a
 | `ORCANOS_LOGIN_HOST_ALLOWLIST` | no | — | Defaults to `orcanos.com`, which matches itself and every subdomain (`app.`, `us.`, …) — leave it unset. Comma-separated. This is the whole control against [SECURITY.md §9.2](SECURITY.md) B-1: without it, `QW_Login`'s `Is_admin` is an assertion by a server the caller picked. ⚠️ **`*` disables it** and is a pre-auth takeover of the console; clearing the variable does not, it falls back to the default. |
 | `APP_ORIGIN` | no | — | Absolute origin, used to build the OAuth `redirect_uri`. Leave unset on Vercel; it derives from `VERCEL_URL`, then the request. |
 
+### ⚠️ An environment change is not live until something redeploys
+
+Vercel snapshots environment variables **into each deployment**. Editing a variable in the
+dashboard changes nothing about the site that is currently running — the old value persists
+indefinitely, and if a code push happens to land afterwards it silently picks up the new one,
+which makes the code look responsible. Always: **change the variable, then redeploy.**
+
+```bash
+npx vercel env rm  TRACE_API_URL production -y
+echo "https://traceability-matrix.fly.dev" | npx vercel env add TRACE_API_URL production
+npx vercel redeploy "$(npx vercel ls --prod | grep -oE 'https://[^ ]+vercel\.app' | head -1)"
+```
+
+`vercel env ls` shows only `Encrypted`, never a value, and `vercel env pull` returned every value
+blank in this project — so **you cannot read back what production holds**, and the `created`
+column does not reliably move when a value is edited in the dashboard. Verify by observing the
+app's behaviour, not by inspecting the variable.
+
+### As-built production values (2026-08-30)
+
+| Variable | Value | Notes |
+|---|---|---|
+| `PLATFORM_ACCOUNT` | `orcanosdemo` | The `auth_methods` row driving the login screen. **Not** the tenant staff sign in against — see below. |
+| `TRACE_API_URL` | `https://traceability-matrix.fly.dev` | Was `http://127.0.0.1:8010`, i.e. a developer's laptop, which Vercel cannot reach. Symptom: a yellow *"Traceability: fetch failed"* banner over an otherwise-correct accounts list. |
+| `TRACE_ADMIN_PASSWORD` | = the Fly app's `ADMIN_PASSWORD` | One shared secret under two names in two clouds. Rotated 2026-08-30 with `fly secrets set`, which restarts the Fly machine and invalidates every issued admin token. |
+| `ORCANOS_LOGIN_URL` | unset → `app.orcanos.com/orcanos` | Pre-fills the login screen's URL box. |
+| `ORCANOS_LOGIN_HOST_ALLOWLIST` | unset → `orcanos.com` | Leave unset. See [SECURITY.md §9.2](SECURITY.md). |
+
+Staff sign in against tenant **`orcanos`**, which is deliberately *not* `PLATFORM_ACCOUNT`
+(`orcanosdemo`). That works only because the sign-in URL is client-supplied (0.2.7). Re-pinning the
+tenant to `PLATFORM_ACCOUNT` would lock every current admin out.
+
 The first four must be copied **verbatim** from the QMS backend's `.env`. The
 three things shared with QMS are `JWT_SECRET`, `ENCRYPTION_KEY` and the master
 Supabase itself; breaking any of them breaks the running QMS too.
