@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `0.3.0` | 2026-08-31 | Accounts can be created without a database, licensing modules directly; provisioning is opt-in after it was found unable to work from Vercel at all. |
 | `0.2.9` | 2026-08-29 | Version shown in the sidebar footer, opening release notes; history moved out of CLAUDE.md into this changelog. |
 | `0.2.8` | 2026-08-29 | Sign-in URLs restricted to `orcanos.com` by default; the platform admin row's leftover test identity fixed. |
 | `0.2.7` | 2026-08-29 | Free-text Orcanos URL on the login screen, `ORCANOS_LOGIN_URL` default, richer login audit detail. |

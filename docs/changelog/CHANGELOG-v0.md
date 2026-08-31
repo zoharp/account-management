@@ -9,6 +9,35 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.3.0** (2026-08-31) — **an account no longer needs a database to exist.** Creating one used to
+always provision a dedicated Supabase project, which is the slowest and most failure-prone step in
+the form — and is only needed by **Ask Paul**, the one module with a per-tenant vector database.
+Traceability and Training read from the traceability instance and never needed it. The create form
+now takes the module licences directly (they are written to `account_access`, where all three
+already live) and provisioning is an opt-in checkbox, off by default.
+
+The trigger was a real failure: creating `pcure` died at `running_schema` with
+`getaddrinfo ENOTFOUND db.klrgfaddrnnawvagomxr.supabase.co`, **after** the billable Supabase
+project had been created — an orphan. The retry then failed at creation, because the project name
+was already taken.
+
+That DNS error is structural, not transient, and worth stating plainly: `db.<ref>.supabase.co`
+publishes **only an AAAA record** — Supabase dropped IPv4 for direct connections — and Vercel
+functions are IPv4-only. **`running_schema` has therefore never been able to work from Vercel**,
+which is consistent with provisioning never having completed end to end. The real fix is to dial
+the pooler (`aws-0-<region>.pooler.supabase.com`, user `postgres.<ref>`), which does have A
+records. That is *not* done; it is recorded in CLAUDE.md's provisioning section along with the
+advice to write the `accounts` row **before** creating the project, so a failure is recoverable.
+
+Server: `POST /api/accounts` now takes `provision` and `modules`. With `provision: false` it writes
+the master row directly and returns `201 {account}` with no job at all. Licences are keyed on the
+Orcanos **tenant** — parsed from `orcanos_api_url`, falling back to the account name — through the
+new `upsertTraceModules()`, which creates the `account_access` row for a tenant that has none, and
+only writes the flags it was given (an absent column reads as licensed, so writing 0 where the
+operator said nothing would silently revoke a module). Master and the trace instance share no
+transaction, so master is written first and a failed licence write returns 502 naming which half
+landed — the same contract as the module pills.
+
 **0.2.9** (2026-08-29) — **the running version is on screen, and release notes have a home.**
 The sidebar footer shows `v<version>`; clicking it opens the release notes. Two new files back it:
 `release_notes.json` at the repo root (the short, user-facing list the modal renders) and

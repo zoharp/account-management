@@ -7,9 +7,10 @@
  */
 
 import { requirePlatformStaff } from '@/lib/session';
-import { accountCiFilter, pgGet, pgRpc } from '@/lib/supabase';
+import { accountCiFilter, pgGet, pgPost, pgRpc } from '@/lib/supabase';
 import { encryptSecret } from '@/lib/crypto';
 import { normalizeOrcanosUrl } from '@/lib/orcanos';
+import { orcanosVirtualDirFromUrl } from '@/lib/orcanos-url';
 import { startProvisioning, toJobView } from '@/lib/provisioning';
 import { logSecurityEvent } from '@/lib/audit';
 import { mergeAccounts } from '@/lib/modules';
@@ -18,9 +19,10 @@ import {
   supportsAskPaul,
   supportsModules,
   traceConfigured,
+  upsertTraceModules,
   type TraceAccountRow,
 } from '@/lib/trace';
-import type { AccountListRow, TraceSourceStatus } from '@/lib/types';
+import type { AccountListRow, ModuleKey, TraceSourceStatus } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -108,7 +110,8 @@ export async function POST(req: Request) {
   const { user, error } = await requirePlatformStaff();
   if (error) return error;
 
-  const body = (await req.json().catch(() => ({}))) as Record<string, string | undefined>;
+  const raw = (await req.json().catch(() => ({}))) as Record<string, unknown>;
+  const body = raw as Record<string, string | undefined>;
   const accountName = (body.account_name ?? '').trim();
   if (!accountName) return Response.json({ detail: 'Missing: account_name' }, { status: 400 });
 
@@ -133,6 +136,73 @@ export async function POST(req: Request) {
   }
   if (body.orcanos_api_password) {
     payload.orcanos_api_password_encrypted = encryptSecret(body.orcanos_api_password);
+  }
+
+  // ── No-database accounts ────────────────────────────────────────────────
+  //
+  // Provisioning a Supabase project is only needed by **Ask Paul**, which is
+  // the one module with a per-tenant vector database. Traceability and Training
+  // read from the traceability instance's own SQLite and need nothing here, so
+  // requiring a database to create an account made every account wait on the
+  // slowest, most failure-prone step for a capability most of them do not use.
+  //
+  // This path writes the master row directly and licences the modules. The
+  // database can be added later — `PATCH /api/accounts/:id` already edits every
+  // vector column, and Ask Paul stays unlicensed until it is.
+  const provision = raw.provision === true || raw.provision === 'true';
+  const modules = (raw.modules ?? {}) as Partial<Record<ModuleKey, boolean>>;
+
+  if (!provision) {
+    // Only non-empty values: writing '' would overwrite a column with a blank
+    // rather than leaving it unset, and the UI reads '' as "configured, empty".
+    const row: Record<string, unknown> = { account_name: accountName, is_active: true };
+    for (const [k, v] of Object.entries(payload)) if (v) row[k] = v;
+
+    let created: { id: string; account_name: string };
+    try {
+      const inserted = await pgPost<Array<{ id: string; account_name: string }>>('accounts', row);
+      created = inserted[0];
+    } catch (e) {
+      return Response.json(
+        { detail: `Could not create the account: ${e instanceof Error ? e.message : String(e)}` },
+        { status: 500 },
+      );
+    }
+
+    await logSecurityEvent('account_created', {
+      user,
+      accountName,
+      detail: { account_id: created?.id, provisioned: false, modules },
+    });
+
+    // The licences live in the traceability instance, which shares no
+    // transaction with master. Master is written first (above) and a failure
+    // here is reported as a partial success naming which half landed — the same
+    // contract as the module pills (see INTERNAL_TRACE_MERGE.md §4.4).
+    const anyModule = Object.values(modules).some((v) => v !== undefined);
+    if (anyModule) {
+      // `account_access` is keyed on the Orcanos tenant, not on the master
+      // account name. Derive it from the REST API URL when there is one; fall
+      // back to the account name, which is what the 2026-08-29 rename made true
+      // for every existing account.
+      const tenant = orcanosVirtualDirFromUrl(payload.orcanos_api_url || '') || accountName;
+      try {
+        await upsertTraceModules(tenant, modules);
+      } catch (e) {
+        return Response.json(
+          {
+            account: created,
+            detail:
+              `Account '${accountName}' was created, but its module licences were not saved ` +
+              `(tenant '${tenant}'): ${e instanceof Error ? e.message : String(e)}. ` +
+              `Set them from the account's Traceability dialog.`,
+          },
+          { status: 502 },
+        );
+      }
+    }
+
+    return Response.json({ account: created }, { status: 201 });
   }
 
   try {

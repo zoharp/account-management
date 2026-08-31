@@ -52,6 +52,18 @@ export default function CreateAccountModal({
   const [testingApi, setTestingApi] = useState(false);
   const [apiResult, setApiResult] = useState<ConnectionTestResult | null>(null);
 
+  // Which modules the new tenant is licensed for. These are written to the
+  // traceability instance's `account_access` row, which is where all three
+  // licences live — see lib/module-catalog.ts.
+  const [modTrace, setModTrace] = useState(true);
+  const [modTraining, setModTraining] = useState(false);
+  const [modAskPaul, setModAskPaul] = useState(false);
+
+  // Off by default. Only Ask Paul needs a per-tenant database, and provisioning
+  // one is the slowest and most failure-prone step in this form; an account
+  // that is only licensed for Traceability or Training needs nothing from it.
+  const [provisionDb, setProvisionDb] = useState(false);
+
   const [creating, setCreating] = useState(false);
   const [done, setDone] = useState(false);
   const [error, setError] = useState('');
@@ -152,9 +164,35 @@ export default function CreateAccountModal({
       const res = await fetch('/api/accounts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(body),
+        body: JSON.stringify({
+          ...body,
+          provision: provisionDb,
+          modules: { trace: modTrace, training: modTraining, ask_paul: modAskPaul },
+        }),
       });
-      const data = (await res.json().catch(() => ({}))) as { job?: JobView; detail?: string };
+      const data = (await res.json().catch(() => ({}))) as {
+        job?: JobView;
+        account?: AccountListRow;
+        detail?: string;
+      };
+
+      // No database asked for: the account already exists when this returns,
+      // there is no job to drive. A 502 means master was written but the module
+      // licences were not — `detail` names which half landed, and the account
+      // must still be added to the list.
+      if (!provisionDb) {
+        if (data.account) onCreated(data.account);
+        if (!res.ok) {
+          setError(data.detail || `Server error (${res.status})`);
+          setCreating(false);
+          return;
+        }
+        setLines([{ type: 'complete', text: `Account '${accountName.trim()}' created` }]);
+        setDone(true);
+        setCreating(false);
+        return;
+      }
+
       if (!res.ok || !data.job) {
         setError(data.detail || `Server error (${res.status})`);
         setCreating(false);
@@ -236,10 +274,79 @@ export default function CreateAccountModal({
                 disabled={creating || done}
               />
             </div>
+          </div>
+
+          <div className="acl-section">
+            <h3 className="acl-section-title">Modules</h3>
+            <label className="acl-check">
+              <input
+                type="checkbox"
+                checked={modTrace}
+                onChange={(e) => setModTrace(e.target.checked)}
+                disabled={creating || done}
+              />
+              <span>
+                <strong>Traceability</strong> — requirement-to-test matrices, coverage funnel,
+                trace graph.
+              </span>
+            </label>
+            <label className="acl-check">
+              <input
+                type="checkbox"
+                checked={modTraining}
+                onChange={(e) => setModTraining(e.target.checked)}
+                disabled={creating || done}
+              />
+              <span>
+                <strong>Training</strong> — who owes training on which document revision.
+              </span>
+            </label>
+            <label className="acl-check">
+              <input
+                type="checkbox"
+                checked={modAskPaul}
+                onChange={(e) => setModAskPaul(e.target.checked)}
+                disabled={creating || done}
+              />
+              <span>
+                <strong>Ask Paul</strong> — the RAG compliance assistant.{' '}
+                <em>Needs a database.</em>
+              </span>
+            </label>
             <p className="acl-hint">
-              A dedicated, isolated database is provisioned automatically — no setup needed. This
-              takes about 1–2 minutes.
+              Licences are stored on the traceability instance. Traceability and Training need
+              nothing else — they are usable as soon as the account exists.
             </p>
+          </div>
+
+          <div className="acl-section">
+            <h3 className="acl-section-title">
+              Database <span>only Ask Paul needs one</span>
+            </h3>
+            <label className="acl-check">
+              <input
+                type="checkbox"
+                checked={provisionDb}
+                onChange={(e) => setProvisionDb(e.target.checked)}
+                disabled={creating || done}
+              />
+              <span>
+                Provision a dedicated Supabase database now — takes 1–2 minutes.
+              </span>
+            </label>
+            {modAskPaul && !provisionDb && (
+              <p className="acl-hint">
+                Ask Paul is licensed but has no database, so it will not work yet. Add one later
+                from the account&rsquo;s detail screen, or tick the box above.
+              </p>
+            )}
+            {provisionDb && (
+              <p className="acl-hint">
+                ⚠️ Provisioning creates a <strong>real, billable</strong> Supabase project before
+                the account row exists. If a later step fails the project is left behind and has to
+                be removed by hand.
+              </p>
+            )}
           </div>
 
           <div className="acl-section">

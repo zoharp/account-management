@@ -197,6 +197,46 @@ export async function saveTraceAccount(
   await call('/api/admin/accounts', { method: 'POST', body: JSON.stringify(row) });
 }
 
+/**
+ * Give a tenant exactly these module licences, creating its `account_access`
+ * row if it has none.
+ *
+ * Account creation is the one place the row may legitimately not exist yet:
+ * every other caller is editing a tenant the trace instance already knows
+ * about. A brand-new tenant gets the same defaults the trace `/admin` page
+ * applies — sign-in, AI and add-items all on — and then whatever the operator
+ * actually ticked.
+ *
+ * Only keys present in `modules` are written. Leaving one out means "don't
+ * express an opinion", which is not the same as `false`: an absent column reads
+ * as licensed (`moduleFlag()`), so writing 0 where the operator said nothing
+ * would silently revoke a module.
+ */
+export async function upsertTraceModules(
+  tenant: string,
+  modules: Partial<Record<ModuleKey, boolean>>,
+): Promise<void> {
+  const wanted = tenant.trim().toLowerCase();
+  if (!wanted) throw new TraceApiError('No Orcanos tenant to key the licences on', 0);
+
+  const rows = await listTraceAccounts();
+  const current = rows.find((r) => (r.account ?? '').trim().toLowerCase() === wanted);
+
+  const base: TraceAccountRow = current ?? {
+    account: tenant.trim(),
+    allow_access: 1,
+    allow_ai: 1,
+    allow_add: 1,
+  };
+
+  const changes: Partial<TraceAccountRow> = {};
+  if (modules.ask_paul !== undefined) changes.allow_ask_paul = modules.ask_paul ? 1 : 0;
+  if (modules.trace !== undefined) changes.allow_trace = modules.trace ? 1 : 0;
+  if (modules.training !== undefined) changes.allow_training = modules.training ? 1 : 0;
+
+  await saveTraceAccount(base, changes);
+}
+
 export async function deleteTraceAccount(account: string): Promise<void> {
   await call(`/api/admin/accounts/${encodeURIComponent(account)}`, { method: 'DELETE' });
 }

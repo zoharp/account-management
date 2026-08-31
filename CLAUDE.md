@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.2.9`
+- **App:** `0.3.0`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v0.md`](docs/changelog/CHANGELOG-v0.md) (long form) and
@@ -354,6 +354,27 @@ Things to keep:
   response the first time this runs end to end, and tighten it then.
 - **Orphan projects are findable.** The query is at the bottom of
   `sql/001_account_provisioning.sql`. Check it after any failed run.
+
+⚠️ **`running_schema` cannot work from Vercel, and never could (found 2026-08-31).**
+The DDL step opens a direct `pg` connection to `db.<ref>.supabase.co`. That
+hostname publishes **only an AAAA record** — Supabase dropped IPv4 for direct
+connections — and Vercel functions are IPv4-only, so it fails with
+`getaddrinfo ENOTFOUND`, which reads like a wrong hostname rather than a missing
+address family. Confirmed by resolving it: AAAA answers, A does not, while
+`aws-0-<region>.pooler.supabase.com` has A records.
+
+This is why the very first real run left an orphan: the project
+`klrgfaddrnnawvagomxr` (`qms-pcure`) was created and billable, then the job died
+one step later. **Retrying makes it worse** — the second attempt fails at
+creation with *"Project with name qms-pcure already exists"*, so you get an
+orphan and no account.
+
+The fix is to connect through the **pooler** (`aws-0-<region>.pooler.supabase.com:5432`,
+user `postgres.<ref>`), which is IPv4-reachable. Not done — since 0.3.0 an
+account can be created without a database at all, which removes this from the
+common path. Anything still needing a provisioned project has to fix the host
+first, and should also create the `accounts` row *before* the Supabase project
+so a failure is recoverable.
 
 `sql/bootstrap_new_account.sql` is a copy of the QMS file. **This app now owns
 running it.** If the per-account schema changes, it changes here.

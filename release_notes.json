@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.3.0",
+    "date": "2026-08-31",
+    "changes": [
+      "✨ **Create an account without a database** — pick the modules it is licensed for and the account exists immediately. Only Ask Paul needs a per-tenant database; Traceability and Training never did.",
+      "✨ **Modules chosen at creation** — Traceability, Training and Ask Paul are ticked on the create form and written to the tenant licence row, instead of being set afterwards one pill at a time.",
+      "🐛 **Provisioning could never succeed on Vercel** — the schema step dials `db.<ref>.supabase.co`, which has no IPv4 address, so it failed with a DNS error after creating a real billable project. Provisioning is now opt-in and off by default, and the form says what it costs."
+    ]
+  },
+  {
     "version": "0.2.9",
     "date": "2026-08-29",
     "changes": [
