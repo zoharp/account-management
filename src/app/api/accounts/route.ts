@@ -153,9 +153,28 @@ export async function POST(req: Request) {
   const modules = (raw.modules ?? {}) as Partial<Record<ModuleKey, boolean>>;
 
   if (!provision) {
-    // Only non-empty values: writing '' would overwrite a column with a blank
-    // rather than leaving it unset, and the UI reads '' as "configured, empty".
-    const row: Record<string, unknown> = { account_name: accountName, is_active: true };
+    // `accounts` inherits four NOT NULL columns with no default from QMS —
+    // `db_type`, `db_name`, `db_user`, `db_password_encrypted` — the legacy
+    // half of the vector-DB pair. The provisioning path fills them from the
+    // project it just created; an account with no database has nothing to put
+    // there, and omitting them is a 23502 not_null_violation.
+    //
+    // Empty string, not a sentinel, and deliberately not a schema change:
+    // `accounts` is shared with the running QMS, and this codebase already
+    // treats an empty secret as "not configured" (`orcanosTestLogin` returns
+    // `{success: null}` on one, which renders as a neutral note rather than a
+    // failure). A sentinel like 'none' would have to be taught to every reader.
+    // Making the columns nullable is the cleaner fix and needs QMS to agree.
+    const row: Record<string, unknown> = {
+      account_name: accountName,
+      is_active: true,
+      db_type: '',
+      db_name: '',
+      db_user: '',
+      db_password_encrypted: '',
+    };
+    // Only non-empty values from the form: writing '' over a supplied value
+    // would blank it, and the UI reads '' as "configured, empty".
     for (const [k, v] of Object.entries(payload)) if (v) row[k] = v;
 
     let created: { id: string; account_name: string };

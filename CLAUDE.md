@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.3.0`
+- **App:** `0.3.1`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v0.md`](docs/changelog/CHANGELOG-v0.md) (long form) and
@@ -437,6 +437,17 @@ running it.** If the per-account schema changes, it changes here.
     `orcanos_user_name`, wrong password, wrong tenant, not an Orcanos admin,
     identity already linked. The distinguishing `reason` goes only to
     `security_audit_log`. Diagnose from that table, never from the screen.
+
+13. **`accounts` has five NOT NULL columns with no default**, four of which are
+    the legacy `db_*` pair — `db_type`, `db_name`, `db_user`,
+    `db_password_encrypted`. Nothing in this app's code hints at it, because
+    until 0.3.0 every insert came from the provisioning job, which fills them
+    from the project it just created. Omit one and PostgREST answers `23502`
+    with the offending column name usually truncated out of the message. Full
+    list and the query to re-check it in [SCHEMA.md §2](SCHEMA.md).
+    **`tsc` and `next build` cannot catch this** — a database constraint is
+    invisible to both. Verify a new insert shape by actually running it against
+    the live table and deleting the row, not by building.
 
 ---
 

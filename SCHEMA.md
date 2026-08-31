@@ -36,7 +36,7 @@ One row per customer. The column groups matter more than the individual names:
 | Group | Columns | Purpose |
 |---|---|---|
 | Identity | `id` (uuid), `account_name`, `is_active`, `created_at`, `updated_at` | `account_name` is matched **case-insensitively** everywhere — `accountCiFilter()` in `lib/supabase.ts`, a PostgREST `ilike` with `%`, `_` and `\` escaped. |
-| Legacy DB pair | `db_type`, `db_host`, `db_name`, `db_user`, `db_password_encrypted`, `connection_string` | Still read on some QMS paths. Kept in sync with the vector pair. |
+| Legacy DB pair | `db_type`, `db_host`, `db_name`, `db_user`, `db_password_encrypted`, `connection_string` | Still read on some QMS paths. Kept in sync with the vector pair. **Four of these are NOT NULL — see below.** |
 | Vector DB | `vector_db_type`, `vector_db_host`, `vector_db_name`, `vector_db_user`, `vector_db_password_encrypted`, `vector_connection_string` | The account's own provisioned Supabase project. `vector_db_password_encrypted` holds its `service_role` key. |
 | Orcanos SQL Server | `orcanos_db_type`, `orcanos_db_host`, `orcanos_db_name`, `orcanos_db_user`, `orcanos_db_password_encrypted`, `orcanos_connection_string` | The customer's own Orcanos database, read-only. |
 | Orcanos REST | `orcanos_api_url`, `orcanos_username`, `orcanos_password_encrypted` | QMS `SCHEMA.md` §16. |
@@ -67,6 +67,42 @@ Three rules that are easy to break:
 
 `GET /api/accounts/:id` returns an explicit column allow-list containing **zero**
 `*_encrypted` columns. Check any column you add against that list.
+
+### ⚠️ Five columns are NOT NULL with no default
+
+Inherited from QMS, and not obvious from the app's own code because until 0.3.0 every insert came
+from the provisioning job, which fills all of them from the Supabase project it has just created:
+
+```
+account_name            text  not null
+db_type                 text  not null
+db_name                 text  not null
+db_user                 text  not null
+db_password_encrypted   text  not null
+```
+
+`id` is `not null` too but defaults to `gen_random_uuid()`, so it can be omitted. **Everything
+else on `accounts` is nullable.**
+
+Omitting any of the four `db_*` columns fails with PostgREST `23502`
+(`not_null_violation`) — and the error surfaces as a bare tuple of nulls in `details`, with the
+`message` naming the actual column often truncated by whatever renders it. That cost a release
+(0.3.0 → 0.3.1).
+
+An account with **no** database — the normal case since 0.3.0, because only Ask Paul needs one —
+writes empty strings into all four. Empty already means "not configured" everywhere in this
+codebase (`orcanosTestLogin` answers `{success: null}` on an empty secret, rendered as a neutral
+note). Making them nullable is the cleaner fix and requires QMS to agree that null is legal there,
+since it reads the same table.
+
+To re-check this list against the live database rather than trusting this file:
+
+```sql
+select column_name, is_nullable, column_default
+from information_schema.columns
+where table_schema = 'public' and table_name = 'accounts'
+order by ordinal_position;
+```
 
 ## 3. `account_provisioning`
 

@@ -9,6 +9,30 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.3.1** (2026-08-31) — **0.3.0 did not actually work.** Creating a no-database account was
+rejected by PostgREST with `23502` — a not-null violation — so the feature failed on its first real
+use, with an error naming no column at all (the UI showed the `details` payload, a bare tuple of
+nulls, and truncated the `message` that would have said which one).
+
+`accounts` inherits four **NOT NULL, no-default** columns from QMS: `db_type`, `db_name`,
+`db_user`, `db_password_encrypted` — the legacy half of the vector-DB pair. The provisioning path
+fills all four from the project it has just created, so nothing had ever inserted a row without
+them, and the create form had never been able to reach this code before 0.3.0.
+
+They are now written as **empty strings**. Deliberately not a schema change: `accounts` is shared
+with the running QMS, and making the columns nullable needs QMS to agree that null is legal. Also
+deliberately not a sentinel like `'none'`, which every reader would have to be taught. Empty string
+already means "not configured" throughout this codebase — `orcanosTestLogin` returns
+`{success: null}` on an empty secret, which the UI renders as a neutral note rather than a failure.
+Making those columns nullable remains the cleaner fix if QMS ever agrees.
+
+**Verified before shipping this time**, by inserting exactly the row shape the route builds against
+the live `accounts` table (201) and deleting it again. Confirming that `tsc` and `next build` pass
+says nothing about a database constraint, which is what 0.3.0 relied on.
+
+Also recorded: the not-null set is now in `SCHEMA.md`, so the next person writing an `accounts`
+row does not rediscover it from a 400.
+
 **0.3.0** (2026-08-31) — **an account no longer needs a database to exist.** Creating one used to
 always provision a dedicated Supabase project, which is the slowest and most failure-prone step in
 the form — and is only needed by **Ask Paul**, the one module with a per-tenant vector database.

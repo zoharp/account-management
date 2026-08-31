@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.3.1",
+    "date": "2026-08-31",
+    "changes": [
+      "🐛 **Creating an account without a database failed** — the insert left out four columns the accounts table requires, so it was rejected with a not-null violation. 0.3.0's whole point did not work; this is the fix."
+    ]
+  },
+  {
     "version": "0.3.0",
     "date": "2026-08-31",
     "changes": [
