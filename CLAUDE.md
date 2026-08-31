@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.3.2`
+- **App:** `0.3.3`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v0.md`](docs/changelog/CHANGELOG-v0.md) (long form) and
@@ -436,9 +436,15 @@ running it.** If the per-account schema changes, it changes here.
     **Since 0.3.2 it cannot be turned ON without a database** (`vector_db_host`
     or `db_host`) — it is the only module with a per-tenant vector store, and
     licensing it without one is a hand-off into an app with nothing behind it.
-    Enforced on all three surfaces *and* their routes (`POST /api/accounts`,
-    `PUT /api/accounts/modules`, `PUT /api/accounts/trace/:tenant`), keyed on
-    `ASK_PAUL_NEEDS_DB` / `askPaulDatabaseExists()` in `lib/modules.ts`.
+    Enforced on all **four** surfaces *and* their routes — `POST /api/accounts`,
+    `PUT /api/accounts/modules`, `PUT /api/accounts/trace/:tenant`, and
+    `PATCH /api/accounts/:id` for the account editor's **Status** switch, which
+    writes `is_active` and is therefore an Ask Paul control despite its label
+    (0.2.4 removed the Status *pill* for exactly that reason and missed this
+    one). Keyed on `ASK_PAUL_NEEDS_DB` / `askPaulDatabaseExists()` in
+    `lib/modules.ts`. A no-database account is consequently **created
+    inactive**. The `PATCH` check reads the row the patch *produces*, so the
+    vector host and the switch can be saved together.
     **Turning it OFF is never blocked** and the server checks only a transition
     to on — a pre-3.27.0 row has no `allow_ask_paul` column and reads as
     licensed, so blocking its save would lock the dialog for most tenants.
@@ -446,13 +452,35 @@ running it.** If the per-account schema changes, it changes here.
     *Provisioning* above), Ask Paul currently **cannot be licensed at creation
     time**: create the account, add the DB under Edit → Vector DB, then use the
     pill.
-12. **The login screen's failure message is deliberately useless.** Every path
+12. **The traceability `account_access` row is what makes a tenant exist**, and a
+    module licence is just a column on it. No row means the tenant cannot sign in
+    to traceability at all — the list renders that as a dash, which is *no answer
+    from this source*, never "off". Since 0.3.3 **every account creation writes
+    the row** (even with no module ticked) and **licensing Traceability or
+    Training on a tenant without one creates it**; before that the pill 404'd and
+    the only repair was the trace instance's own `/admin` page. Two things to
+    keep: a new row is licensed for **nothing** (explicit `0` — an *absent*
+    column reads as licensed, which is a fail-open for pre-3.23.0 rows and a
+    wrong default for new ones, `newTraceAccountRow` in `lib/trace.ts`), and
+    **Ask Paul never creates the row** — a row that can sign in but reaches no
+    module is what the "at least one module" invariant exists to prevent.
+
+    **The row is keyed on the Orcanos tenant, which master does not store.** It
+    is parsed out of `orcanos_api_url`, and with no URL there is nothing left but
+    the account name — true since the 2026-08-29 rename, a guess otherwise.
+    `traceTenantForAccount()` (`lib/orcanos-url.ts`, client-safe) returns how it
+    decided; the create form shows it and the audit event records `tenant_from`.
+    An account with **no** Orcanos API URL therefore has no tenant and its
+    Traceability/Training pills stay disabled — set the URL under Edit. The real
+    fix is an `accounts.orcanos_tenant` column (flagged in `lib/modules.ts`).
+
+13. **The login screen's failure message is deliberately useless.** Every path
     in `api/auth/local/login` returns `Invalid credentials` — missing row, no
     `orcanos_user_name`, wrong password, wrong tenant, not an Orcanos admin,
     identity already linked. The distinguishing `reason` goes only to
     `security_audit_log`. Diagnose from that table, never from the screen.
 
-13. **`accounts` has five NOT NULL columns with no default**, four of which are
+14. **`accounts` has five NOT NULL columns with no default**, four of which are
     the legacy `db_*` pair — `db_type`, `db_name`, `db_user`,
     `db_password_encrypted`. Nothing in this app's code hints at it, because
     until 0.3.0 every insert came from the provisioning job, which fills them

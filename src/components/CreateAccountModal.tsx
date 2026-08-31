@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import TestResult from './TestResult';
-import { normalizeOrcanosUrl } from '@/lib/orcanos-url';
+import { normalizeOrcanosUrl, traceTenantForAccount } from '@/lib/orcanos-url';
 import type { AccountListRow, ConnectionTestResult, ProvisionState } from '@/lib/types';
 
 /**
@@ -89,6 +89,13 @@ export default function CreateAccountModal({
   const duplicateName =
     trimmedName.length > 0 &&
     existingNames.some((n) => n.trim().toLowerCase() === trimmedName.toLowerCase());
+
+  // The same answer the create route will compute — `traceTenantForAccount` is
+  // client-safe precisely so the form can show it before the account exists.
+  const licenceTenant = traceTenantForAccount({
+    orcanosApiUrl: orcanosApiUrl.trim() || null,
+    accountName: trimmedName,
+  });
 
   // Ask Paul is the only module with a per-tenant database, and licensing it
   // without one produces a hand-off into an app that has nothing to read. The
@@ -368,6 +375,28 @@ export default function CreateAccountModal({
               Licences are stored on the traceability instance. Traceability and Training need
               nothing else — they are usable as soon as the account exists.
             </p>
+            {/* The allowlist row is keyed on the Orcanos tenant, and with no
+                Orcanos API URL the account name is all there is to key it on.
+                That guess is right for every account since the 2026-08-29
+                rename and wrong for anyone whose label differs from their
+                virtual dir — so it is shown, not assumed. */}
+            {licenceTenant.tenant && (
+              <p
+                className={`acl-hint${licenceTenant.from === 'account_name' ? ' acl-hint--warn' : ''}`}
+              >
+                Written to traceability tenant <strong>{licenceTenant.tenant}</strong>
+                {licenceTenant.from === 'url' ? (
+                  <> — taken from the Orcanos API URL below.</>
+                ) : (
+                  <>
+                    {' '}
+                    — guessed from the account name, because no Orcanos API URL is set. If this
+                    customer&rsquo;s Orcanos URL says something else, set it below: a licence keyed
+                    on the wrong tenant reaches nobody.
+                  </>
+                )}
+              </p>
+            )}
           </div>
 
           <div className="acl-section">

@@ -10,6 +10,7 @@ import { requirePlatformStaff } from '@/lib/session';
 import { pgDelete, pgGet, pgPatch } from '@/lib/supabase';
 import { encryptSecret } from '@/lib/crypto';
 import { logSecurityEvent } from '@/lib/audit';
+import { hasAskPaulDatabase } from '@/lib/modules';
 import type { AccountRow, LlmKeyStatus } from '@/lib/types';
 
 export const runtime = 'nodejs';
@@ -124,6 +125,46 @@ export async function PATCH(req: Request, ctx: Ctx) {
   }
 
   if (!Object.keys(patch).length) return Response.json({ detail: 'Nothing to update' }, { status: 400 });
+
+  // ── Activating is activating Ask Paul ───────────────────────────────────
+  //
+  // `is_active` is not an account-level gate and never was: it is read in
+  // exactly two places, both inside the QMS AI backend, and traceability never
+  // reads it at all (lib/modules.ts). It is Ask Paul's kill switch — which makes
+  // this switch a fourth way to turn Ask Paul on, alongside the create form, the
+  // list pill and the traceability dialog. It gets the same rule: not without a
+  // database (`ASK_PAUL_NEEDS_DB`).
+  //
+  // Evaluated against the row this PATCH *produces*, not the stored one, so
+  // entering the vector host and flipping the switch in one save is allowed —
+  // that is the normal way an account gets its database. Only a transition to
+  // active is checked; an already-active row can always be saved, and
+  // deactivating is never blocked.
+  if (patch.is_active === true) {
+    const current = await pgGet<
+      Array<{ is_active: boolean; db_host: string | null; vector_db_host: string | null }>
+    >(`accounts?id=eq.${encodeURIComponent(id)}&select=is_active,db_host,vector_db_host`);
+    const before = current[0];
+    if (before && !before.is_active) {
+      const after = {
+        db_host: 'db_host' in patch ? (patch.db_host as string | null) : before.db_host,
+        vector_db_host:
+          'vector_db_host' in patch
+            ? (patch.vector_db_host as string | null)
+            : before.vector_db_host,
+      };
+      if (!hasAskPaulDatabase(after)) {
+        return Response.json(
+          {
+            detail:
+              'Active is Ask Paul’s kill switch, and Ask Paul needs a database. ' +
+              'Fill in the Vector DB section below before activating this account.',
+          },
+          { status: 409 },
+        );
+      }
+    }
+  }
 
   try {
     const rows = await pgPatch<AccountRow[]>(`accounts?id=eq.${encodeURIComponent(id)}`, patch);

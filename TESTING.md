@@ -82,6 +82,7 @@ saving a credential, provisioning, billing and delete remain untested.
 | A provisioning run | `readServiceKey()` has still never seen a live Management API response. |
 | `sql/001_account_provisioning.sql` applied | Not applied to the master DB. Account creation will fail until it is. |
 | Deployment to Vercel | Never deployed. Every Vercel-specific claim (function limits, `mssql` reachability) is reasoning, not observation. |
+| **0.3.2 and 0.3.3, all of it** | Deployed 2026-08-31, verified by nothing but `tsc` and `next build`. Both releases change **write** paths — the Ask Paul database rule on four surfaces, and the traceability allowlist row on the module pill and both create paths. §5a is the plan; none of it has been run. The allowlist steps write to the live Fly instance. |
 
 Treat §1 as the honest status. Update it when items move.
 
@@ -147,6 +148,49 @@ For at least two accounts, one with an Orcanos DB configured and one without:
    cleared and Save refuses again. (Otherwise a tick from the previous value
    would authorise a different one.)
 5. Enter a deliberately wrong password, test → a clear failure, not a silent one.
+
+## 5a. Module licences and the traceability allowlist
+
+Added for **0.3.3**, which made the module pill able to *create* an
+`account_access` row rather than only edit one. Everything here writes to the
+**live Fly instance** — there is no staging traceability either. Use a
+disposable tenant name for the create steps and delete it from the trace
+`/admin` page afterwards.
+
+Read the dash correctly before starting: `–` is *no allowlist row for this
+tenant*, which means it cannot sign in to traceability at all. It is not "off".
+
+1. **A tenant with no row is licensable.** Pick (or create) an account whose
+   tenant is absent from the trace allowlist — Traceability and Training show
+   `–`. Hover: the tooltip must warn that the click also **adds the tenant to
+   the allowlist**. Click Traceability.
+2. Reload, then check the row on the trace `/admin` page: `allow_access=1`,
+   `allow_trace=1`, and **`allow_training=0` and `allow_ask_paul=0`** — a new
+   row is licensed for nothing but the module that created it. If either reads
+   as licensed, `newTraceAccountRow()` wrote a sparse row and the absent-column
+   fail-open has licensed everything.
+3. **Ask Paul does not create the row.** On another tenant with no row, click
+   Ask Paul → refused, naming Traceability or Training as the fix. No row is
+   created (check `/admin`).
+4. **No tenant, no licence.** An account with no `orcanos_api_url` shows `–` and
+   both pills stay **disabled**, tooltip *"No Orcanos tenant on this
+   account"*. Set the Orcanos REST URL under Edit, reload — the pills become
+   clickable. (This is the covaris case that prompted 0.3.3.)
+5. **Creation always writes the row.** Create an account with **every module
+   unticked**. A row must appear on the trace `/admin` page with all three
+   module columns 0. Before 0.3.3 no row was written at all.
+6. **The tenant the licence is keyed on is shown, and the guess is flagged.** In
+   the create form, type a name and leave the Orcanos API URL empty → the hint
+   under Modules names the tenant and says it was guessed from the account name,
+   warning-styled. Fill in an Orcanos API URL whose tenant segment **differs**
+   from the name → the hint switches to that segment and drops the warning. The
+   row that gets created must be keyed on whichever one the hint named.
+7. **The last module still cannot be removed.** On a tenant licensed for
+   Traceability only, click Traceability → refused (`would be left with no
+   module`). Ask Paul does not count as one.
+8. **Audit.** `/audit` shows `account_module_changed` for each step, and the one
+   from step 1 carries `created_allowlist_entry: true`. The `account_created`
+   event from step 5 carries `tenant` and `tenant_from`.
 
 ## 6. Provisioning, end to end
 

@@ -10,7 +10,7 @@ import { requirePlatformStaff } from '@/lib/session';
 import { accountCiFilter, pgGet, pgPost, pgRpc } from '@/lib/supabase';
 import { encryptSecret } from '@/lib/crypto';
 import { normalizeOrcanosUrl } from '@/lib/orcanos';
-import { orcanosVirtualDirFromUrl } from '@/lib/orcanos-url';
+import { traceTenantForAccount } from '@/lib/orcanos-url';
 import { startProvisioning, toJobView } from '@/lib/provisioning';
 import { logSecurityEvent } from '@/lib/audit';
 import { mergeAccounts } from '@/lib/modules';
@@ -185,7 +185,12 @@ export async function POST(req: Request) {
     // Making the columns nullable is the cleaner fix and needs QMS to agree.
     const row: Record<string, unknown> = {
       account_name: accountName,
-      is_active: true,
+      // NOT active. `is_active` is Ask Paul's kill switch and nothing else reads
+      // it (lib/modules.ts), so creating a database-less account active would
+      // switch on half of the very licence this route refuses above. It flips
+      // when the account gets a database and Ask Paul is licensed — from the
+      // pill, or from the Status switch in the account editor.
+      is_active: false,
       db_type: '',
       db_name: '',
       db_user: '',
@@ -206,40 +211,49 @@ export async function POST(req: Request) {
       );
     }
 
+    // `account_access` is keyed on the Orcanos tenant, not on the master account
+    // name — `traceTenantForAccount` decides which and says how.
+    const { tenant, from } = traceTenantForAccount({
+      orcanosApiUrl: payload.orcanos_api_url,
+      accountName,
+    });
+
     await logSecurityEvent('account_created', {
       user,
       accountName,
-      detail: { account_id: created?.id, provisioned: false, modules },
+      detail: { account_id: created?.id, provisioned: false, modules, tenant, tenant_from: from },
     });
 
+    // The allowlist row is written even when no module was ticked, and this is
+    // the whole point: it is the ONLY row a tenant can get from this console.
+    // `PUT /api/accounts/modules` used to 404 on a tenant with no row, so an
+    // account created without one was unreachable in traceability and could not
+    // be fixed from here — it had to be added on the trace instance's own
+    // /admin page. A row with every module at 0 is licensed for nothing, which
+    // is exactly what an untouched create form means, and is one pill click
+    // away from being useful.
+    //
     // The licences live in the traceability instance, which shares no
     // transaction with master. Master is written first (above) and a failure
     // here is reported as a partial success naming which half landed — the same
     // contract as the module pills (see INTERNAL_TRACE_MERGE.md §4.4).
-    const anyModule = Object.values(modules).some((v) => v !== undefined);
-    if (anyModule) {
-      // `account_access` is keyed on the Orcanos tenant, not on the master
-      // account name. Derive it from the REST API URL when there is one; fall
-      // back to the account name, which is what the 2026-08-29 rename made true
-      // for every existing account.
-      const tenant = orcanosVirtualDirFromUrl(payload.orcanos_api_url || '') || accountName;
-      try {
-        await upsertTraceModules(tenant, modules);
-      } catch (e) {
-        return Response.json(
-          {
-            account: created,
-            detail:
-              `Account '${accountName}' was created, but its module licences were not saved ` +
-              `(tenant '${tenant}'): ${e instanceof Error ? e.message : String(e)}. ` +
-              `Set them from the account's Traceability dialog.`,
-          },
-          { status: 502 },
-        );
-      }
+    try {
+      await upsertTraceModules(tenant, modules);
+    } catch (e) {
+      return Response.json(
+        {
+          account: created,
+          detail:
+            `Account '${accountName}' was created, but its traceability allowlist entry was ` +
+            `not written (tenant '${tenant}'): ${e instanceof Error ? e.message : String(e)}. ` +
+            `Until it exists this tenant cannot sign in to traceability — retry from the ` +
+            `account's module pills.`,
+        },
+        { status: 502 },
+      );
     }
 
-    return Response.json({ account: created }, { status: 201 });
+    return Response.json({ account: created, tenant, tenant_from: from }, { status: 201 });
   }
 
   try {

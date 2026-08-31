@@ -128,6 +128,20 @@ The union keys on the Orcanos tenant, and on the master side that is **parsed ou
 backfilled from `orcanos_api_url`, and set explicitly on create. Then `tenantOf()` reads the
 column and falls back to parsing.
 
+**Half of the first bullet was fixed in 0.3.3 — the other half is still true.** The half that was
+never a data problem at all was that the *console* had no way to add a missing `account_access`
+row: the module pill answered 404 on a tenant it could not find, and only the create form could
+create one. So an account that missed it at creation was three dashes for ever, repairable only on
+the trace instance's own `/admin` page. Now the pill creates the row (Traceability or Training
+only — never Ask Paul, which would produce a tenant that can sign in and reach nothing), and every
+account creation writes the row whether or not a module was ticked.
+
+What that does **not** fix is a master account with **no `orcanos_api_url`**: there is still no
+tenant to key the row on, so its pills stay disabled and the only fix is to set the URL. And when
+an account is created without one, the licences are keyed on the **account name** as a fallback —
+now surfaced rather than silent (`traceTenantForAccount()`, shown in the create form, recorded as
+`tenant_from` on the audit event), but still a guess. The column above remains the actual fix.
+
 ### 4.2 The 12 traceability-only accounts have no master row
 
 D3 says create them. Not done — the console renders them read-side with a **Trace only** badge.

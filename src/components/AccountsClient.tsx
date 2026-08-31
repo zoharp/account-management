@@ -431,7 +431,12 @@ function disabledReason(
       return 'No master account record, and this traceability instance predates the Ask Paul licence (3.27.0).';
     }
     if (!row.tenant) return 'No Orcanos tenant on this account — set its Orcanos API URL first.';
-    if (!row.trace_present) return `Tenant '${row.tenant}' is not in the traceability allowlist.`;
+    if (!row.trace_present) {
+      return (
+        `Tenant '${row.tenant}' is not in the traceability allowlist, so there is no hand-off ` +
+        `to license. Turn on Traceability or Training first — that adds the tenant.`
+      );
+    }
     return `Sign-in is disabled for '${row.tenant}' in traceability, so the hand-off is unreachable.`;
   }
 
@@ -440,7 +445,10 @@ function disabledReason(
     return 'This traceability instance predates per-module licences — deploy 3.23.0 first.';
   }
   if (!row.tenant) return 'No Orcanos tenant on this account — set its Orcanos API URL first.';
-  if (!row.trace_present) return `Tenant '${row.tenant}' is not in the traceability allowlist.`;
+  // A tenant with no allowlist row is NOT a dead end any more: licensing either
+  // traceability-owned module creates the row (api/accounts/modules). It stays
+  // clickable, and `scopeNote` says that is what the click will do.
+  if (!row.trace_present) return '';
   if (!row.trace_allow_access) {
     return `Sign-in is disabled for '${row.tenant}' in traceability, so no module is reachable.`;
   }
@@ -453,6 +461,15 @@ function disabledReason(
  * discovered afterwards in a toast.
  */
 function scopeNote(row: MergedAccountRow, key: ModuleKey, trace: TraceSourceStatus | null): string {
+  // Adding a tenant to the allowlist grants it sign-in to traceability, which is
+  // more than the pill's label suggests. Said before the click, not after.
+  if (key !== 'ask_paul' && row.tenant && !row.trace_present && trace?.available) {
+    return (
+      ` — this also ADDS '${row.tenant}' to the traceability allowlist, which lets it sign in.` +
+      ` The other modules stay unlicensed.`
+    );
+  }
+
   if (key !== 'ask_paul') return '';
   const { app, handoff } = askPaulHalves(row, trace);
   if (app && handoff) return '';
@@ -479,8 +496,10 @@ function ModuleCell({
   // null is "this source has no row for the tenant" — deliberately not the same
   // rendering as off, which is a decision somebody made.
   const cls = state === null ? 'acl-mod--na' : state ? 'acl-mod--on' : 'acl-mod--off';
-  const title =
-    reason || `${label}: ${state ? 'licensed' : 'not licensed'} — click to change${note}`;
+  // `null` is not "off", so it must not read as "not licensed" — that is the same
+  // conflation the dash exists to avoid.
+  const status = state === null ? 'no licence on record' : state ? 'licensed' : 'not licensed';
+  const title = reason || `${label}: ${status} — click to change${note}`;
 
   return (
     <button

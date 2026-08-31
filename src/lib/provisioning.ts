@@ -33,7 +33,7 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { decryptSecret, encryptSecret, generateDbPassword } from './crypto';
 import { projectRegion, supabaseOrgAccessToken, supabaseOrgId } from './env';
-import { orcanosVirtualDirFromUrl } from './orcanos-url';
+import { traceTenantForAccount } from './orcanos-url';
 import { pgGet, pgPatch, pgPost } from './supabase';
 import { upsertTraceModules } from './trace';
 import type { ModuleKey, ProvisionState } from './types';
@@ -416,18 +416,24 @@ async function tickSavingAccount(job: JobRow): Promise<JobRow> {
   // shares no transaction with master, so a failure here is reported in the job
   // message rather than failing a job whose real work is done — the account is
   // created either way, and the licences are re-settable from its pills.
+  //
+  // Written unconditionally, exactly as on the no-database path in
+  // `api/accounts/route.ts`: the `account_access` row is what makes a tenant
+  // exist in traceability at all, so skipping it when no module was ticked left
+  // the account unreachable there and unfixable from this console.
   let licenceNote = '';
-  const modules = (job.payload as { modules?: Partial<Record<ModuleKey, boolean>> } | null)
-    ?.modules;
-  if (modules && Object.values(modules).some((v) => v !== undefined)) {
-    const tenant = orcanosVirtualDirFromUrl(body.orcanos_api_url || '') || job.account_name;
-    try {
-      await upsertTraceModules(tenant, modules);
-    } catch (e) {
-      licenceNote =
-        ` — but its module licences were not saved (tenant '${tenant}': ` +
-        `${e instanceof Error ? e.message : String(e)}). Set them from the account's pills.`;
-    }
+  const modules =
+    (job.payload as { modules?: Partial<Record<ModuleKey, boolean>> } | null)?.modules ?? {};
+  const { tenant } = traceTenantForAccount({
+    orcanosApiUrl: body.orcanos_api_url,
+    accountName: job.account_name,
+  });
+  try {
+    await upsertTraceModules(tenant, modules);
+  } catch (e) {
+    licenceNote =
+      ` — but its traceability allowlist entry was not written (tenant '${tenant}': ` +
+      `${e instanceof Error ? e.message : String(e)}). Retry from the account's pills.`;
   }
 
   return updateJob(job.id, {

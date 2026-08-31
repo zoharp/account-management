@@ -9,6 +9,69 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.3.3** (2026-08-31) — **an account could exist in master and nowhere else, and this console had
+no way to fix it.** Found on a live account (Traceability and Training both showing a dash, both
+unclickable, no route back).
+
+**What a dash means.** `account_access` on the traceability instance is what makes a tenant exist
+there: it is read at login by `access_control`, and it carries all three module licences. A tenant
+with no row reaches nothing and cannot sign in. The merged list renders that as `–` — *no answer
+from this source*, deliberately not the same as an unticked box.
+
+**The dead end.** `PUT /api/accounts/modules` answered **404** on a tenant with no row, and the
+create form was the only thing in the app that could create one. So an account that missed it at
+creation — an older create form, a trace write that failed after master was written, a row added
+straight to master — could only be repaired on the traceability instance's own `/admin` page. From
+here it was permanently three dashes.
+
+Three changes, all of them about a row existing rather than what it holds:
+
+| | Was | Now |
+|---|---|---|
+| Licensing Traceability or Training on a tenant with no entry | 404 | Creates the entry, licensed for that module only |
+| Creating an account with no module ticked | No entry written at all | Entry always written, licensed for nothing |
+| Licensing Ask Paul on a tenant with no entry | 404, no reason | 404 naming the fix: license Traceability or Training first |
+
+**Ask Paul deliberately does not create the entry.** A new entry is licensed for nothing, and an
+account that can sign in but reaches no module is exactly the state the "at least one module"
+invariant exists to prevent — Ask Paul is a separate app and does not count as one. Licensing
+either traceability-owned module creates the entry; Ask Paul then has something to attach to.
+
+**A new entry starts licensed for nothing** (`newTraceAccountRow` in `lib/trace.ts`), and this is
+the one non-obvious decision. An **absent** module column reads as *licensed* — `moduleFlag()`
+matches `_modules_of`, fail-open, so a row written before 3.23.0 never silently loses a module it
+already had. That is right for old rows and wrong as a default for new ones: a sparse new row would
+license everything. So the three columns are written as an explicit `0`. Absence is a fail-open for
+history, not a default for a row being created now.
+
+`PUT /api/accounts/trace/:tenant` (the Traceability dialog) already created a missing row and still
+does, from its own fail-open defaults — that dialog sends every flag explicitly, so its base only
+supplies fallbacks for fields the payload omits. The two are cross-referenced in the code so the
+difference reads as a decision.
+
+**Adding a tenant to the allowlist grants sign-in**, which is more than the pill's label promises.
+It is said before the click (the tooltip names it) and recorded after (`created_allowlist_entry` on
+the `account_module_changed` audit event).
+
+**Which tenant the licences are keyed on is now shown, and the guess is flagged as one.**
+`account_access` is keyed on the Orcanos tenant; master `accounts` has no tenant column, so it is
+derived from the tenant segment of `orcanos_api_url` — and when an account has no URL, the only
+thing left to key on is the account name. That fallback was already there and was silent. It is
+correct for every account since the 2026-08-29 rename and a guess for anyone whose label differs
+from their virtual dir, so `traceTenantForAccount()` now returns *how* it decided: the create form
+renders it under Modules (warning-styled when guessed) and the `account_created` audit event
+records `tenant` and `tenant_from`.
+
+The fallback was kept rather than removed. Refusing to guess would mean creating an account with no
+allowlist row at all — which is the failure this whole release is about.
+
+**An account with no Orcanos API URL still cannot have its modules set**, and that is unchanged and
+correct: there is no tenant to key the licence on. The pill says so, and the fix is to set the URL
+under *Edit → Orcanos REST API*. The real fix is an `accounts.orcanos_tenant` column instead of
+parsing a URL — still not done, still flagged in `lib/modules.ts`.
+
+---
+
 **0.3.2** (2026-08-31) — **two rules the console let an operator break.** Both were reported from
 use of the 0.3.x create form.
 
@@ -28,13 +91,30 @@ read from. Neither half of the licence (`accounts.is_active`, trace `allow_ask_p
 that: both look perfectly set, so nothing downstream reports it. Until 0.3.1 the create form
 allowed the tick and printed a warning under it; the warning is now the rule.
 
-The check is on all three places the licence can be turned on, and behind each of them:
+The check is on all **four** places the licence can be turned on, and behind each of them:
 
 | Surface | Behaviour | Route that enforces it |
 |---|---|---|
 | Create form | The Ask Paul tick is disabled unless *Provision a dedicated Supabase database* is ticked, and unticking the database clears it | `POST /api/accounts` → 400 |
 | List pill | Disabled while the module is off and the account has no `vector_db_host`/`db_host` | `PUT /api/accounts/modules` → 409 |
 | Traceability dialog | The Ask Paul checkbox is disabled while it is off and the linked master account has no database | `PUT /api/accounts/trace/:tenant` → 409 |
+| Account editor — **Status** | The Active switch is disabled while the account is inactive and has no database | `PATCH /api/accounts/:id` → 409 |
+
+**The fourth one is the one that is easy to miss, and it was still open after the first three were
+closed.** The *Status* switch in the account editor writes `is_active`, which reads like an
+account-level gate and is not one — it is read in exactly two places, both inside the QMS AI
+backend, and traceability never reads it at all. 0.2.4 removed the Status *pill* for that reason and
+folded `is_active` into the Ask Paul pill; the editor's switch was left behind, still labelled
+"Status", still able to switch on half of the licence the other three surfaces now refuse.
+
+It is checked against the row the PATCH **produces**, not the stored one, so entering the vector host
+and flipping the switch in one save is allowed — that is how an account normally gets its database.
+The dialog reads the same way: the switch unlocks as soon as a host is typed, before saving.
+
+Consequently **an account created without a database is now created inactive**. Creating one active
+would have switched on half of the licence `POST /api/accounts` refuses in the request above it.
+Nothing outside Ask Paul notices: `is_active` gates the QMS AI account resolver and its pre-login
+`validate_account`, and an account with no vector database cannot serve either.
 
 **Turning it OFF is never blocked, anywhere.** An account whose database was removed still has to be
 unlicensable, and an existing row whose `allow_ask_paul` column predates 3.27.0 reads as licensed

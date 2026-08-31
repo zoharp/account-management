@@ -6,6 +6,15 @@ import { normalizeOrcanosUrl } from '@/lib/orcanos-url';
 import type { AccountRow, ConnectionTestResult, LlmKeyStatus } from '@/lib/types';
 
 /**
+ * Copy of `ASK_PAUL_NEEDS_DB` in `lib/modules.ts`. Not imported: that module
+ * reaches the Supabase service key and must never be pulled into a client
+ * component (CLAUDE.md, "What NOT to do").
+ */
+const askPaulNeedsDb =
+  'Ask Paul needs a Supabase database for this account and none is configured. ' +
+  'Fill in the Vector DB section below first.';
+
+/**
  * Port of AccountDetail.jsx — three sections (account info, Orcanos DB +
  * API credentials, vector DB) plus the connection tests.
  *
@@ -15,6 +24,10 @@ import type { AccountRow, ConnectionTestResult, LlmKeyStatus } from '@/lib/types
  *  2. A NEW vector key cannot be saved until it has tested green. Getting this
  *     wrong bricks a tenant: the key is write-only from the UI's point of view,
  *     so a bad one is undetectable until the next query fails.
+ *  3. The Status switch is `is_active`, which is ASK PAUL'S kill switch and not
+ *     an account-level gate — nothing outside the QMS AI backend reads it. So it
+ *     obeys the same rule as every other Ask Paul control: it cannot be turned
+ *     ON for an account with no database. See `ASK_PAUL_NEEDS_DB`.
  */
 export default function AccountDetailModal({
   accountId,
@@ -96,6 +109,15 @@ export default function AccountDetailModal({
   useEffect(() => {
     setVectorResult(null);
   }, [vectorType, vectorHost, vectorUser, vectorDb, vectorPassword, vectorConnStr]);
+
+  // `is_active` is Ask Paul's kill switch and nothing else reads it (see
+  // lib/modules.ts), so this switch is a fourth way to turn Ask Paul on and gets
+  // the same rule: not without a database. Read from the LIVE vector field, not
+  // the loaded account, so typing the host unlocks the switch in the same save.
+  // Only blocked while off — deactivating is never blocked, and an account that
+  // is already active must stay saveable. PATCH enforces the same transition.
+  const hasDatabase = Boolean(vectorHost.trim() || (account?.db_host ?? '').trim());
+  const activateBlocked = !hasDatabase && !isActive;
 
   async function save() {
     if (vectorPassword && !vectorResult?.success) {
@@ -232,15 +254,26 @@ export default function AccountDetailModal({
               </div>
               <div className="acl-field-row">
                 <label className="acl-label">Status</label>
-                <label className="acl-switch">
+                <label
+                  className="acl-switch"
+                  title={activateBlocked ? askPaulNeedsDb : undefined}
+                >
                   <input
                     type="checkbox"
                     checked={isActive}
+                    disabled={activateBlocked}
                     onChange={(e) => setIsActive(e.target.checked)}
                   />
                   <span className="acl-switch-label">{isActive ? 'Active' : 'Inactive'}</span>
                 </label>
               </div>
+              {activateBlocked && (
+                <p className="acl-hint acl-hint--warn">
+                  Active is <strong>Ask Paul&rsquo;s</strong> switch — nothing else reads it — and
+                  Ask Paul needs a database. Fill in the <em>Vector DB</em> section below and this
+                  unlocks; the two can be saved together.
+                </p>
+              )}
               {llmKey && (
                 <div className="acl-field-row">
                   <label className="acl-label">LLM Key</label>

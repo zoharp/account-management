@@ -1,10 +1,21 @@
 [
   {
+    "version": "0.3.3",
+    "date": "2026-08-31",
+    "changes": [
+      "🐛 **A tenant missing from traceability is no longer a dead end** — clicking Traceability or Training on an account that has no traceability entry now creates one, licensed for that module alone. Until now the pill refused, and the only way to add the entry was on the traceability instance's own admin page.",
+      "🐛 **Every new account gets its traceability entry, even with no module ticked** — the entry is what lets a tenant sign in at all, so skipping it left the account unreachable there and unfixable from this console. It is created licensed for nothing, one click away from being useful.",
+      "✨ **The create form shows which traceability tenant the licences will be written to** — taken from the Orcanos API URL, or guessed from the account name when there is none. The guess is now flagged as a guess: a licence keyed on the wrong tenant reaches nobody.",
+      "🔄 **A module pill with no licence on record says so** — its tooltip read “not licensed”, which is a decision somebody made; a dash means no answer from the source, which is not."
+    ]
+  },
+  {
     "version": "0.3.2",
     "date": "2026-08-31",
     "changes": [
       "✨ **A duplicate account name is caught while you type** — the name is checked against every account and tenant already on the list, so the clash is shown under the field instead of after the whole form is filled in. The server still refuses one either way.",
-      "✨ **Ask Paul cannot be licensed without a database** — it is the only module with a per-tenant database, and licensing it without one produced a hand-off into an app with nothing behind it. The tick is now tied to the database, on the create form, the list pill and the traceability dialog alike. Turning it off is never blocked.",
+      "✨ **Ask Paul cannot be activated without a database** — it is the only module with a per-tenant database, and licensing it without one produced a hand-off into an app with nothing behind it. Blocked on all four controls that switch it on: the create form, the list pill, the traceability dialog and the account editor's Active switch, each refused by its own route as well. Turning it off is never blocked.",
+      "🔄 **An account created without a database starts Inactive** — Active is Ask Paul's switch and nothing else reads it, so an account with nowhere to read from must not start with half of it on. Adding the Vector DB details unlocks the switch in the same save.",
       "🐛 **Modules ticked on the create form were dropped when a database was provisioned** — only the no-database path ever wrote them. They now travel with the job and are applied once the account row exists."
     ]
   },

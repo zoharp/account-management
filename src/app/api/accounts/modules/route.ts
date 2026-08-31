@@ -37,6 +37,7 @@ import { logSecurityEvent } from '@/lib/audit';
 import { askPaulDatabaseExists, ASK_PAUL_NEEDS_DB } from '@/lib/modules';
 import {
   listTraceAccounts,
+  newTraceAccountRow,
   saveTraceAccount,
   supportsAskPaul,
   supportsModules,
@@ -110,7 +111,18 @@ export async function PUT(req: Request) {
             409,
           );
         }
-        if (!current) throw new TraceApiError(`'${tenant}' is not in the allowlist`, 404);
+        // Deliberately NOT created here, unlike the traceability-owned modules
+        // below. A new allowlist row is licensed for nothing, and a row that can
+        // sign in but reaches no module is the state the invariant on that path
+        // exists to prevent — Ask Paul is a separate app and does not count as
+        // one. License Traceability or Training first; that creates the row.
+        if (!current) {
+          throw new TraceApiError(
+            `'${tenant}' is not in the traceability allowlist, so there is no hand-off to ` +
+              `license. Turn on Traceability or Training first — that adds the tenant`,
+            404,
+          );
+        }
         await saveTraceAccount(current, { allow_ask_paul: enabled ? 1 : 0 });
         wrote.push('the traceability hand-off');
       } catch (e) {
@@ -194,19 +206,39 @@ export async function PUT(req: Request) {
       );
     }
 
+    // ── The tenant has no allowlist row yet.
+    //
+    // Licensing a module CREATES it. This used to be a 404, which made an
+    // account with no `account_access` row a dead end: the row is what lets a
+    // tenant sign in to traceability at all, and the only thing that could
+    // create one was the create form — so an account that missed it there (an
+    // older create form, a failed trace write, a row added straight to master)
+    // could only be fixed on the trace instance's own /admin page. Creating it
+    // here is the same act the create form performs, keyed the same way.
+    //
+    // Unlicensing is still a 404: there is no row, so the tenant already reaches
+    // nothing and there is nothing to revoke. It is not reachable from the UI
+    // either — a dash toggles to ON.
     const current = rows.find((r) => r.account.toLowerCase() === tenant);
-    if (!current) {
+    if (!current && !enabled) {
       return Response.json(
-        { detail: `Tenant '${tenant}' is not in the traceability allowlist.` },
+        {
+          detail:
+            `Tenant '${tenant}' is not in the traceability allowlist, so it holds no licence ` +
+            `to remove.`,
+        },
         { status: 404 },
       );
     }
 
-    // One flag changes; every other column travels back exactly as it arrived.
-    // `saveTraceAccount` does the merge, so a column added on the trace side
-    // (as `ask_paul_account` was in 3.27.0) is preserved without a change here.
+    // A new row starts licensed for nothing (`newTraceAccountRow`) — the module
+    // being switched on is the only one it gets. On an existing row exactly one
+    // flag changes; every other column travels back as it arrived, so a column
+    // added on the trace side (as `ask_paul_account` was in 3.27.0) is preserved
+    // without a change here.
+    const base = current ?? newTraceAccountRow(tenant);
     const changes = { [MODULE_COLUMN[module]]: enabled ? 1 : 0 };
-    const next = { ...current, ...changes };
+    const next = { ...base, ...changes };
 
     // Same invariant the trace admin page enforces in the browser and its API
     // does not enforce at all: an account with no module can sign in and reach
@@ -226,14 +258,22 @@ export async function PUT(req: Request) {
       );
     }
 
-    await saveTraceAccount(current, changes);
+    await saveTraceAccount(base, changes);
 
     await logSecurityEvent('account_module_changed', {
       user,
       accountName: tenant,
-      detail: { module, enabled, tenant, source: 'traceability' },
+      detail: {
+        module,
+        enabled,
+        tenant,
+        source: 'traceability',
+        // Adding a tenant to the allowlist grants sign-in; it is a bigger act
+        // than flipping one of its flags and is recorded as such.
+        created_allowlist_entry: !current,
+      },
     });
-    return Response.json({ ok: true, module, enabled });
+    return Response.json({ ok: true, module, enabled, created: !current });
   } catch (e) {
     const status = e instanceof TraceApiError ? e.status : 500;
     return Response.json(

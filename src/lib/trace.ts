@@ -198,36 +198,57 @@ export async function saveTraceAccount(
 }
 
 /**
+ * The `account_access` row a tenant this console has never seen starts life as.
+ *
+ * Access, AI and add-items are the same defaults the trace `/admin` page
+ * applies. **The three module columns are written as an explicit 0**, which is
+ * the one non-obvious part: an ABSENT column reads as licensed (`moduleFlag()`,
+ * matching `_modules_of`), so a sparse new row would silently license every
+ * module — the opposite of what "the operator said nothing about it" means when
+ * the row is being created rather than edited. Absence is a fail-open for rows
+ * written before the columns existed; it is not a default for new ones.
+ *
+ * Exported because two callers create rows — account creation and the module
+ * pill — and they must agree on what a new tenant starts as.
+ */
+export function newTraceAccountRow(tenant: string): TraceAccountRow {
+  return {
+    account: tenant.trim(),
+    allow_access: 1,
+    allow_ai: 1,
+    allow_add: 1,
+    allow_trace: 0,
+    allow_training: 0,
+    allow_ask_paul: 0,
+  };
+}
+
+/**
  * Give a tenant exactly these module licences, creating its `account_access`
  * row if it has none.
  *
  * Account creation is the one place the row may legitimately not exist yet:
  * every other caller is editing a tenant the trace instance already knows
- * about. A brand-new tenant gets the same defaults the trace `/admin` page
- * applies — sign-in, AI and add-items all on — and then whatever the operator
- * actually ticked.
+ * about. A brand-new tenant gets `newTraceAccountRow()` and then whatever the
+ * operator actually ticked.
  *
- * Only keys present in `modules` are written. Leaving one out means "don't
- * express an opinion", which is not the same as `false`: an absent column reads
- * as licensed (`moduleFlag()`), so writing 0 where the operator said nothing
- * would silently revoke a module.
+ * Only keys present in `modules` are written **to an existing row**. Leaving one
+ * out means "don't express an opinion", which is not the same as `false`: an
+ * absent column reads as licensed (`moduleFlag()`), so writing 0 where the
+ * operator said nothing would silently revoke a module. On a new row the
+ * unstated columns are 0 — see `newTraceAccountRow()` for why the two differ.
  */
 export async function upsertTraceModules(
   tenant: string,
   modules: Partial<Record<ModuleKey, boolean>>,
-): Promise<void> {
+): Promise<{ created: boolean }> {
   const wanted = tenant.trim().toLowerCase();
   if (!wanted) throw new TraceApiError('No Orcanos tenant to key the licences on', 0);
 
   const rows = await listTraceAccounts();
   const current = rows.find((r) => (r.account ?? '').trim().toLowerCase() === wanted);
 
-  const base: TraceAccountRow = current ?? {
-    account: tenant.trim(),
-    allow_access: 1,
-    allow_ai: 1,
-    allow_add: 1,
-  };
+  const base: TraceAccountRow = current ?? newTraceAccountRow(tenant);
 
   const changes: Partial<TraceAccountRow> = {};
   if (modules.ask_paul !== undefined) changes.allow_ask_paul = modules.ask_paul ? 1 : 0;
@@ -235,6 +256,7 @@ export async function upsertTraceModules(
   if (modules.training !== undefined) changes.allow_training = modules.training ? 1 : 0;
 
   await saveTraceAccount(base, changes);
+  return { created: !current };
 }
 
 export async function deleteTraceAccount(account: string): Promise<void> {

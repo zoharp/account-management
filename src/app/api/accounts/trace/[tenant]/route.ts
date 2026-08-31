@@ -152,6 +152,11 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
 
     // A row this app has never seen starts from the trace API's own defaults,
     // which are the fail-open ones. Everything else starts from what is stored.
+    //
+    // Deliberately NOT `newTraceAccountRow()` (which starts licensed for
+    // nothing): this dialog sends every flag explicitly, so these are only
+    // fallbacks for fields the payload omits, whereas a row created from the
+    // create form or a single module pill has only that one stated opinion.
     const base: TraceAccountRow = current ?? {
       account: name,
       allow_access: 1,

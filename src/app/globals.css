@@ -726,6 +726,17 @@ button {
   accent-color: var(--accent-primary);
 }
 
+/* Activating is activating Ask Paul, which needs a database — see the hint
+ * rendered beneath. Deactivating is never disabled. */
+.acl-switch:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.acl-switch input[type='checkbox']:disabled {
+  cursor: not-allowed;
+}
+
 .acl-switch-label {
   font-size: 13px;
   color: var(--text-primary);
