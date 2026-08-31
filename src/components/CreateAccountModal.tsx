@@ -33,9 +33,18 @@ interface JobView {
 }
 
 export default function CreateAccountModal({
+  existingNames,
   onCreated,
   onClose,
 }: {
+  /**
+   * Every name already taken — master account names AND traceability tenants,
+   * since a new account whose name collides with a tenant would merge into that
+   * row on the next load. The server answers 409 on a duplicate regardless (it
+   * is the only check that cannot race); this is so the operator finds out while
+   * typing rather than after filling the whole form in.
+   */
+  existingNames: string[];
   onCreated: (account: AccountListRow) => void;
   onClose: () => void;
 }) {
@@ -72,6 +81,22 @@ export default function CreateAccountModal({
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastKeyRef = useRef<string>('');
+
+  // Case-insensitively, because the server's duplicate check is `ilike` and
+  // because two accounts differing only in case would be indistinguishable in
+  // the list.
+  const trimmedName = accountName.trim();
+  const duplicateName =
+    trimmedName.length > 0 &&
+    existingNames.some((n) => n.trim().toLowerCase() === trimmedName.toLowerCase());
+
+  // Ask Paul is the only module with a per-tenant database, and licensing it
+  // without one produces a hand-off into an app that has nothing to read. The
+  // tick is therefore tied to the database box rather than merely warned about,
+  // and unticking the database takes the licence with it.
+  useEffect(() => {
+    if (!provisionDb && modAskPaul) setModAskPaul(false);
+  }, [provisionDb, modAskPaul]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -141,6 +166,10 @@ export default function CreateAccountModal({
   async function create() {
     if (!accountName.trim()) {
       setError('Account name is required.');
+      return;
+    }
+    if (duplicateName) {
+      setError(`An account named '${accountName.trim()}' already exists.`);
       return;
     }
     setCreating(true);
@@ -272,8 +301,16 @@ export default function CreateAccountModal({
                 onChange={(e) => setAccountName(e.target.value)}
                 placeholder="e.g. medtech-corp"
                 disabled={creating || done}
+                aria-invalid={duplicateName || undefined}
               />
             </div>
+            {duplicateName && (
+              <p className="acl-hint acl-hint--warn">
+                <strong>{accountName.trim()}</strong> is already taken — account names are unique,
+                and a name is matched without regard to case. Pick another one, or edit the existing
+                account instead.
+              </p>
+            )}
           </div>
 
           <div className="acl-section">
@@ -301,18 +338,32 @@ export default function CreateAccountModal({
                 <strong>Training</strong> — who owes training on which document revision.
               </span>
             </label>
-            <label className="acl-check">
+            <label
+              className="acl-check"
+              title={
+                provisionDb
+                  ? undefined
+                  : 'Ask Paul needs a database. Tick “Provision a dedicated Supabase database” below.'
+              }
+            >
               <input
                 type="checkbox"
                 checked={modAskPaul}
                 onChange={(e) => setModAskPaul(e.target.checked)}
-                disabled={creating || done}
+                disabled={creating || done || !provisionDb}
               />
               <span>
                 <strong>Ask Paul</strong> — the RAG compliance assistant.{' '}
                 <em>Needs a database.</em>
               </span>
             </label>
+            {!provisionDb && (
+              <p className="acl-hint">
+                Ask Paul cannot be licensed until this account has a database — tick{' '}
+                <em>Provision a dedicated Supabase database</em> below, or license it later from the
+                account&rsquo;s pills once one exists.
+              </p>
+            )}
             <p className="acl-hint">
               Licences are stored on the traceability instance. Traceability and Training need
               nothing else — they are usable as soon as the account exists.
@@ -334,12 +385,6 @@ export default function CreateAccountModal({
                 Provision a dedicated Supabase database now — takes 1–2 minutes.
               </span>
             </label>
-            {modAskPaul && !provisionDb && (
-              <p className="acl-hint">
-                Ask Paul is licensed but has no database, so it will not work yet. Add one later
-                from the account&rsquo;s detail screen, or tick the box above.
-              </p>
-            )}
             {provisionDb && (
               <p className="acl-hint">
                 ⚠️ Provisioning creates a <strong>real, billable</strong> Supabase project before
@@ -482,7 +527,7 @@ export default function CreateAccountModal({
             <button
               className="btn-primary"
               onClick={() => void create()}
-              disabled={creating || done}
+              disabled={creating || done || duplicateName || !trimmedName}
             >
               {creating ? 'Creating…' : 'Create'}
             </button>

@@ -74,6 +74,13 @@ export interface MergedAccountRow {
   // ── master `accounts` half — every field null for a traceability-only tenant
   id: string | null;
   db_type: string | null;
+  /**
+   * Whether a vector database is configured for this account. Ask Paul is the
+   * only module that needs one, and it cannot be licensed without it — see
+   * `ASK_PAUL_NEEDS_DB` in `lib/modules.ts`. False for a traceability-only
+   * tenant, which has no master row at all.
+   */
+  has_database: boolean;
   is_active: boolean | null;
   created_at: string | null;
   orcanos_api_url: string | null;

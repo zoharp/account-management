@@ -34,6 +34,7 @@
 import { requirePlatformStaff } from '@/lib/session';
 import { pgPatch } from '@/lib/supabase';
 import { logSecurityEvent } from '@/lib/audit';
+import { askPaulDatabaseExists, ASK_PAUL_NEEDS_DB } from '@/lib/modules';
 import {
   listTraceAccounts,
   saveTraceAccount,
@@ -81,6 +82,15 @@ export async function PUT(req: Request) {
   // error. Only a write that was attempted and failed is an error.
   if (module === 'ask_paul') {
     const wrote: string[] = [];
+
+    // Licensing Ask Paul for an account with no vector database hands users a
+    // button into an app that has nowhere to read from — and both halves of the
+    // licence look correctly set, so nothing downstream can report it.
+    // Unlicensing is never blocked: an account whose database was removed still
+    // has to be switchable off.
+    if (enabled && !(await askPaulDatabaseExists({ accountId: body.account_id, tenant }))) {
+      return Response.json({ detail: ASK_PAUL_NEEDS_DB }, { status: 409 });
+    }
 
     if (body.account_id) {
       await pgPatch(`accounts?id=eq.${encodeURIComponent(body.account_id)}`, {

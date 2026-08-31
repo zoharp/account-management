@@ -9,6 +9,59 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.3.2** (2026-08-31) — **two rules the console let an operator break.** Both were reported from
+use of the 0.3.x create form.
+
+**A duplicate account name is now refused before the form is filled in.** `POST /api/accounts` has
+always answered 409 on one (case-insensitively, via `accountCiFilter`), but the browser only found
+out after everything had been typed and the button pressed. The create dialog now takes the names
+already on the merged list and checks as you type: the field goes red, the reason sits under it and
+Create is disabled. The list is checked, not just master `accounts` — a name that collides with a
+**traceability tenant** produces a row that merges into that tenant on the next load, which looks
+like the new account silently taking over an existing one. The server check is unchanged and is
+still the boundary; it is the only one that cannot race.
+
+**Ask Paul cannot be licensed for an account with no database.** It is the only module with a
+per-tenant vector store — Traceability and Training read from the traceability instance's own
+SQLite — and licensing it without one produced a hand-off button into an app that has nowhere to
+read from. Neither half of the licence (`accounts.is_active`, trace `allow_ask_paul`) can express
+that: both look perfectly set, so nothing downstream reports it. Until 0.3.1 the create form
+allowed the tick and printed a warning under it; the warning is now the rule.
+
+The check is on all three places the licence can be turned on, and behind each of them:
+
+| Surface | Behaviour | Route that enforces it |
+|---|---|---|
+| Create form | The Ask Paul tick is disabled unless *Provision a dedicated Supabase database* is ticked, and unticking the database clears it | `POST /api/accounts` → 400 |
+| List pill | Disabled while the module is off and the account has no `vector_db_host`/`db_host` | `PUT /api/accounts/modules` → 409 |
+| Traceability dialog | The Ask Paul checkbox is disabled while it is off and the linked master account has no database | `PUT /api/accounts/trace/:tenant` → 409 |
+
+**Turning it OFF is never blocked, anywhere.** An account whose database was removed still has to be
+unlicensable, and an existing row whose `allow_ask_paul` column predates 3.27.0 reads as licensed
+(`_modules_of` is fail-open) — blocking its save would have locked the dialog for every such
+tenant. The server check therefore fires only on a transition to on, never on a row that already
+holds the flag.
+
+`has_database` is computed server-side in `mergeAccounts` from `vector_db_host || db_host`; only the
+boolean crosses to the browser. `GET /api/accounts/trace/:tenant` gained `master_has_database` for
+the same reason. `ASK_PAUL_NEEDS_DB` lives in `lib/modules.ts`, which reaches the service key, so
+`TraceSettingsModal` carries a copy of the string rather than importing it.
+
+**Found while wiring this up: the modules ticked on the create form were silently discarded whenever
+a database was provisioned.** `POST /api/accounts` only wrote `account_access` on the no-database
+path; the provisioning branch passed the payload to `startProvisioning()` and dropped `modules` on
+the floor. Since Ask Paul can now *only* be ticked together with provisioning, that path had to work
+before the rule above meant anything. The licences now ride on the job row and are written by
+`tickSavingAccount` after the `accounts` row exists — deliberately at the end, because a job that
+fails halfway must not leave a tenant licensed for a database that was never created. A failure
+there is appended to the job's completion message instead of failing a job whose real work is done.
+
+⚠️ Note what this composes to in production today: `running_schema` still cannot work from Vercel
+(IPv4, see CLAUDE.md), so the provisioning path cannot complete — which means **Ask Paul cannot be
+licensed at creation time at all**. The working sequence is: create the account without it, add the
+vector DB under *Edit → Vector DB*, then license Ask Paul from its pill, which is exactly what the
+new tooltips say to do.
+
 **0.3.1** (2026-08-31) — **0.3.0 did not actually work.** Creating a no-database account was
 rejected by PostgREST with `23502` — a not-null violation — so the feature failed on its first real
 use, with an error naming no column at all (the UI showed the `details` payload, a bare tuple of

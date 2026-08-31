@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `0.3.2` | 2026-08-31 | Duplicate account names caught while typing; Ask Paul can no longer be licensed without a database; modules ticked at creation no longer dropped by the provisioning path. |
 | `0.3.1` | 2026-08-31 | Fixes 0.3.0: the no-database insert omitted four NOT NULL columns and was rejected outright. |
 | `0.3.0` | 2026-08-31 | Accounts can be created without a database, licensing modules directly; provisioning is opt-in after it was found unable to work from Vercel at all. |
 | `0.2.9` | 2026-08-29 | Version shown in the sidebar footer, opening release notes; history moved out of CLAUDE.md into this changelog. |

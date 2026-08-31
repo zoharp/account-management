@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.3.1`
+- **App:** `0.3.2`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v0.md`](docs/changelog/CHANGELOG-v0.md) (long form) and
@@ -432,6 +432,20 @@ running it.** If the per-account schema changes, it changes here.
     invisible from this console. Only the deployment gate fails closed, so the
     pill can read "licensed" while the button is hidden from everyone. Full
     table in traceability-matrix's `INTERNAL_ACCOUNT_ADMIN.md`.
+
+    **Since 0.3.2 it cannot be turned ON without a database** (`vector_db_host`
+    or `db_host`) — it is the only module with a per-tenant vector store, and
+    licensing it without one is a hand-off into an app with nothing behind it.
+    Enforced on all three surfaces *and* their routes (`POST /api/accounts`,
+    `PUT /api/accounts/modules`, `PUT /api/accounts/trace/:tenant`), keyed on
+    `ASK_PAUL_NEEDS_DB` / `askPaulDatabaseExists()` in `lib/modules.ts`.
+    **Turning it OFF is never blocked** and the server checks only a transition
+    to on — a pre-3.27.0 row has no `allow_ask_paul` column and reads as
+    licensed, so blocking its save would lock the dialog for most tenants.
+    Combined with `running_schema` being unusable from Vercel (see
+    *Provisioning* above), Ask Paul currently **cannot be licensed at creation
+    time**: create the account, add the DB under Edit → Vector DB, then use the
+    pill.
 12. **The login screen's failure message is deliberately useless.** Every path
     in `api/auth/local/login` returns `Invalid credentials` — missing row, no
     `orcanos_user_name`, wrong password, wrong tenant, not an Orcanos admin,

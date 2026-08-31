@@ -19,7 +19,12 @@
 import { requirePlatformStaff } from '@/lib/session';
 import { logSecurityEvent } from '@/lib/audit';
 import { pgGet } from '@/lib/supabase';
-import { tenantOf } from '@/lib/modules';
+import {
+  askPaulDatabaseExists,
+  hasAskPaulDatabase,
+  tenantOf,
+  ASK_PAUL_NEEDS_DB,
+} from '@/lib/modules';
 import {
   deleteTraceAccount,
   getTraceEngine,
@@ -78,12 +83,22 @@ export async function GET(_req: Request, ctx: { params: Promise<{ tenant: string
     // master DB; this console can see both, so it is the only place the two can
     // actually be checked against each other. Non-fatal if it fails.
     let masterAccountName: string | null = null;
+    // Whether that master account has a vector database, which is what decides
+    // if Ask Paul may be licensed at all (`ASK_PAUL_NEEDS_DB`). Read here rather
+    // than in the browser: the hosts never need to leave the server.
+    let masterHasDatabase = false;
     try {
-      const masters = await pgGet<Array<{ account_name: string; orcanos_api_url: string | null }>>(
-        'accounts?select=account_name,orcanos_api_url',
-      );
-      masterAccountName =
-        masters.find((m) => tenantOf(m) === name)?.account_name ?? null;
+      const masters = await pgGet<
+        Array<{
+          account_name: string;
+          orcanos_api_url: string | null;
+          db_host: string | null;
+          vector_db_host: string | null;
+        }>
+      >('accounts?select=account_name,orcanos_api_url,db_host,vector_db_host');
+      const master = masters.find((m) => tenantOf(m) === name) ?? null;
+      masterAccountName = master?.account_name ?? null;
+      masterHasDatabase = master ? hasAskPaulDatabase(master) : false;
     } catch (e) {
       console.error(`[GET /api/accounts/trace/${name}] master name lookup failed:`, e);
     }
@@ -93,6 +108,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ tenant: string
       row,
       engine,
       master_account_name: masterAccountName,
+      master_has_database: masterHasDatabase,
       supports_modules: supportsModules(rows),
     });
   } catch (e) {
@@ -162,6 +178,17 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
     }
 
     const next = { ...base, ...changes };
+
+    // Same rule as the create form and the list pill: Ask Paul is the one module
+    // with a per-tenant database and cannot be licensed without one. Checked only
+    // when this save turns it ON — a tenant that already holds the flag can
+    // always be saved, and turning it off must never be blocked.
+    const askPaulWasOn = creating ? false : Boolean(base.allow_ask_paul ?? 1);
+    if (next.allow_ask_paul && !askPaulWasOn) {
+      if (!(await askPaulDatabaseExists({ tenant: name }))) {
+        return Response.json({ detail: ASK_PAUL_NEEDS_DB }, { status: 409 });
+      }
+    }
 
     // The trace admin page refuses this in the browser and the API does not
     // check it at all, so it has to be enforced here too: an account with no

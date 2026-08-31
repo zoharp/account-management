@@ -65,8 +65,62 @@
  */
 
 import { orcanosVirtualDirFromUrl } from './orcanos-url';
+import { pgGet } from './supabase';
 import { moduleFlag, type TraceAccountRow } from './trace';
 import type { AccountListRow, MergedAccountRow } from './types';
+
+/**
+ * ## Ask Paul cannot be licensed without a database
+ *
+ * Ask Paul is the only module with a per-tenant vector store — Traceability and
+ * Training read from the traceability instance's own SQLite. Licensing it for an
+ * account that has no Supabase project behind it produces a button that leads to
+ * an app with nowhere to read from, and neither half of the licence
+ * (`accounts.is_active`, trace `allow_ask_paul`) can tell you that: both look
+ * perfectly set. So the database is checked wherever the licence can be turned
+ * ON — the create form, the list pill, and the traceability dialog — and on
+ * every route behind them.
+ *
+ * Turning it OFF is never blocked. An account whose database was removed must
+ * still be unlicensable.
+ */
+export const ASK_PAUL_NEEDS_DB =
+  'Ask Paul needs a Supabase database for this account and none is configured. ' +
+  'Provision or enter one under Edit → Vector DB first.';
+
+/** Does this master row point at a database Ask Paul could actually use? */
+export function hasAskPaulDatabase(a: {
+  vector_db_host?: string | null;
+  db_host?: string | null;
+}): boolean {
+  return Boolean((a.vector_db_host ?? '').trim() || (a.db_host ?? '').trim());
+}
+
+/**
+ * The same question for an account identified by master id or Orcanos tenant.
+ * A tenant with no master row has no database by definition — that is the
+ * 12-of-15 trace-only case, not an error.
+ */
+export async function askPaulDatabaseExists(opts: {
+  accountId?: string | null;
+  tenant?: string | null;
+}): Promise<boolean> {
+  if (opts.accountId) {
+    const rows = await pgGet<Array<{ db_host: string | null; vector_db_host: string | null }>>(
+      `accounts?id=eq.${encodeURIComponent(opts.accountId)}&select=db_host,vector_db_host`,
+    );
+    return rows.length ? hasAskPaulDatabase(rows[0]) : false;
+  }
+  if (opts.tenant) {
+    const tenant = opts.tenant.toLowerCase();
+    const rows = await pgGet<
+      Array<{ orcanos_api_url: string | null; db_host: string | null; vector_db_host: string | null }>
+    >('accounts?select=orcanos_api_url,db_host,vector_db_host');
+    const row = rows.find((r) => tenantOf(r) === tenant);
+    return row ? hasAskPaulDatabase(row) : false;
+  }
+  return false;
+}
 
 // The catalog itself lives in `module-catalog.ts` because the accounts table
 // renders it from a client component and this file reaches the admin password.
@@ -151,6 +205,8 @@ function buildRow(args: {
 
     id: master?.id ?? null,
     db_type: master?.db_type ?? null,
+    // Only the boolean crosses to the browser — the hosts stay server-side.
+    has_database: master ? hasAskPaulDatabase(master) : false,
     is_active: master ? Boolean(master.is_active) : null,
     created_at: master?.created_at ?? null,
     orcanos_api_url: master?.orcanos_api_url ?? null,

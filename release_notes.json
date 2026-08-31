@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.3.2",
+    "date": "2026-08-31",
+    "changes": [
+      "✨ **A duplicate account name is caught while you type** — the name is checked against every account and tenant already on the list, so the clash is shown under the field instead of after the whole form is filled in. The server still refuses one either way.",
+      "✨ **Ask Paul cannot be licensed without a database** — it is the only module with a per-tenant database, and licensing it without one produced a hand-off into an app with nothing behind it. The tick is now tied to the database, on the create form, the list pill and the traceability dialog alike. Turning it off is never blocked.",
+      "🐛 **Modules ticked on the create form were dropped when a database was provisioned** — only the no-database path ever wrote them. They now travel with the job and are applied once the account row exists."
+    ]
+  },
+  {
     "version": "0.3.1",
     "date": "2026-08-31",
     "changes": [

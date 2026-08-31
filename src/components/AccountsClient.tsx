@@ -323,6 +323,10 @@ export default function AccountsClient() {
 
       {createOpen && (
         <CreateAccountModal
+          // Both halves of the merged list: a master account name and a
+          // traceability tenant occupy the same namespace here, and reusing
+          // either produces a row that is not the account that was just created.
+          existingNames={accounts.flatMap((a) => [a.account_name, a.tenant ?? ''])}
           onClose={() => setCreateOpen(false)}
           onCreated={() => {
             setCreateOpen(false);
@@ -408,6 +412,17 @@ function disabledReason(
   // for a master-only account whose kill switch is perfectly writable.
   if (key === 'ask_paul') {
     const { app, handoff } = askPaulHalves(row, trace);
+
+    // Ask Paul is the only module with a per-tenant database and is useless
+    // without one, so it cannot be licensed until the account has one. Only
+    // turning it ON is blocked — a click on a pill that is already licensed
+    // turns it off, which must always be possible, and a dash would turn it on.
+    if (row.modules.ask_paul !== true && !row.has_database) {
+      return row.id
+        ? 'No database on this account — Ask Paul has nowhere to read from. Add one under Edit → Vector DB first.'
+        : 'No master account record, so this tenant has no Ask Paul database. Create the account and give it one first.';
+    }
+
     if (app || handoff) return '';
     if (!trace?.available) {
       return 'No master account record, and the traceability instance is not reachable.';

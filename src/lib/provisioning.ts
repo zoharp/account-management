@@ -33,8 +33,10 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { decryptSecret, encryptSecret, generateDbPassword } from './crypto';
 import { projectRegion, supabaseOrgAccessToken, supabaseOrgId } from './env';
+import { orcanosVirtualDirFromUrl } from './orcanos-url';
 import { pgGet, pgPatch, pgPost } from './supabase';
-import type { ProvisionState } from './types';
+import { upsertTraceModules } from './trace';
+import type { ModuleKey, ProvisionState } from './types';
 
 const MANAGEMENT_API = 'https://api.supabase.com/v1';
 const HEALTHY_STATUSES = new Set(['ACTIVE_HEALTHY']);
@@ -52,13 +54,30 @@ function mgmtHeaders(): Record<string, string> {
   };
 }
 
-/** Port of `_slugify`. */
+/**
+ * The Supabase project name for an account's own database.
+ *
+ * **Convention (2026-08-31): `askpaul-<account_name>`.** The prefix names the
+ * product that actually owns the database — Ask Paul is the only module with a
+ * per-tenant vector store — and the suffix is the account name verbatim, so a
+ * project in the Supabase dashboard can be matched to an account by reading it.
+ * The existing projects were renamed to match: `qms-orcanos` →
+ * `askpaul-orcanos`, `qms-medical-portal` → `askpaul-orca60` (that account had
+ * been renamed to its Orcanos tenant), and the master is `accounts-master`.
+ *
+ * Was `qms-<slug>`, which named a product this app is not and left names
+ * stranded when an account was renamed.
+ *
+ * Lower-cased and non-alphanumerics collapsed to `-`, because a project name
+ * ends up in hostnames and CLI arguments. So account `Orcanos` yields
+ * `askpaul-orcanos` — the same string, normalised, not a different one.
+ */
 export function slugify(accountName: string): string {
   const slug = accountName
     .toLowerCase()
     .replace(/[^a-z0-9-]+/g, '-')
     .replace(/^-+|-+$/g, '');
-  return (`qms-${slug}`).slice(0, 63) || 'qms-account';
+  return (`askpaul-${slug}`).slice(0, 63) || 'askpaul-account';
 }
 
 export interface JobRow {
@@ -392,9 +411,28 @@ async function tickSavingAccount(job: JobRow): Promise<JobRow> {
   const inserted = await pgPost<Array<{ id: string }>>('accounts', row);
   const account = inserted[0];
 
+  // The module licences the create form asked for, applied now that the account
+  // and its database both exist. They live in the traceability instance, which
+  // shares no transaction with master, so a failure here is reported in the job
+  // message rather than failing a job whose real work is done — the account is
+  // created either way, and the licences are re-settable from its pills.
+  let licenceNote = '';
+  const modules = (job.payload as { modules?: Partial<Record<ModuleKey, boolean>> } | null)
+    ?.modules;
+  if (modules && Object.values(modules).some((v) => v !== undefined)) {
+    const tenant = orcanosVirtualDirFromUrl(body.orcanos_api_url || '') || job.account_name;
+    try {
+      await upsertTraceModules(tenant, modules);
+    } catch (e) {
+      licenceNote =
+        ` — but its module licences were not saved (tenant '${tenant}': ` +
+        `${e instanceof Error ? e.message : String(e)}). Set them from the account's pills.`;
+    }
+  }
+
   return updateJob(job.id, {
     state: 'done',
-    message: 'Account created',
+    message: `Account created${licenceNote}`,
     account_id: account.id,
     // The job has served its purpose; drop the secrets it was carrying.
     db_password_encrypted: null,

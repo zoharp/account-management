@@ -64,6 +64,15 @@ interface UsageRow {
 /** An absent flag is ON — see note 1 above. */
 const on = (v: number | undefined, fallback = true) => (v === undefined ? fallback : Boolean(v));
 
+/**
+ * Copy of `ASK_PAUL_NEEDS_DB` in `lib/modules.ts`. Not imported: that module
+ * reaches the Supabase service key and must never be pulled into a client
+ * component (CLAUDE.md, "What NOT to do"). The PUT returns the real one.
+ */
+const askPaulNeedsDb =
+  'Ask Paul needs a Supabase database for this account and none is configured. ' +
+  'Provision or enter one under Edit → Vector DB first.';
+
 export default function TraceSettingsModal({
   tenant,
   accountName,
@@ -95,6 +104,8 @@ export default function TraceSettingsModal({
   const [allowAskPaul, setAllowAskPaul] = useState(true);
   const [askPaulAccount, setAskPaulAccount] = useState('');
   const [masterName, setMasterName] = useState<string | null>(null);
+  /** Whether the linked master account has a vector DB — Ask Paul's precondition. */
+  const [masterHasDatabase, setMasterHasDatabase] = useState(false);
   const [note, setNote] = useState('');
 
   // AI engine
@@ -122,6 +133,7 @@ export default function TraceSettingsModal({
         engine: Engine | null;
         supports_modules: boolean;
         master_account_name: string | null;
+        master_has_database: boolean;
         detail?: string;
       };
       if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
@@ -130,6 +142,7 @@ export default function TraceSettingsModal({
       setEngine(data.engine);
       setSupportsModules(data.supports_modules);
       setMasterName(data.master_account_name);
+      setMasterHasDatabase(Boolean(data.master_has_database));
 
       const r = data.row;
       setAllowAccess(r ? Boolean(r.allow_access) : true);
@@ -383,7 +396,24 @@ export default function TraceSettingsModal({
                   hint="The hand-off button into the QMS AI app. Off hides it and 403s the SSO endpoint."
                   checked={allowAskPaul}
                   onChange={setAllowAskPaul}
+                  // Ask Paul is the only module with a per-tenant database and
+                  // cannot be licensed without one. Turning it OFF is never
+                  // blocked, so this disables the box only while it is already
+                  // off — otherwise an account whose database went away could
+                  // not be unlicensed. The PUT enforces the same transition.
+                  disabled={!masterHasDatabase && !allowAskPaul}
+                  disabledReason={askPaulNeedsDb}
                 />
+                {!masterHasDatabase && (
+                  <p className="acl-hint acl-hint--warn">
+                    {masterName
+                      ? `“${masterName}” has no vector database, so Ask Paul has nowhere to read from.`
+                      : 'No master account is linked to this tenant, so it has no Ask Paul database.'}{' '}
+                    {allowAskPaul
+                      ? 'The licence below is stored but the hand-off leads nowhere — give the account a database under Edit → Vector DB, or turn it off.'
+                      : 'Give the account a database under Edit → Vector DB before licensing it.'}
+                  </p>
+                )}
 
                 <label className="acl-field-row acl-field-row--stack">
                   <span>Account name inside Ask Paul</span>
@@ -604,15 +634,25 @@ function Check({
   hint,
   checked,
   onChange,
+  disabled,
+  disabledReason,
 }: {
   label: string;
   hint: string;
   checked: boolean;
   onChange: (v: boolean) => void;
+  /** Only ever used to stop a flag being turned ON — see the Ask Paul section. */
+  disabled?: boolean;
+  disabledReason?: string;
 }) {
   return (
-    <label className="acl-check">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
+    <label className="acl-check" title={disabled ? disabledReason : undefined}>
+      <input
+        type="checkbox"
+        checked={checked}
+        disabled={disabled}
+        onChange={(e) => onChange(e.target.checked)}
+      />
       <span>
         <strong>{label}</strong>
         <em>{hint}</em>

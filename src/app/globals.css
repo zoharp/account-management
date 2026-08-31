@@ -705,6 +705,13 @@ button {
   color: var(--text-muted);
 }
 
+/* A value that is rejected before it is submitted — a duplicate account name.
+ * Kept on focus too, since the field is where the fix is made. */
+.acl-input[aria-invalid='true'],
+.acl-input[aria-invalid='true']:focus {
+  border-color: var(--err-fg);
+}
+
 .acl-switch {
   display: flex;
   align-items: center;
@@ -876,6 +883,18 @@ button {
   font-style: normal;
   color: var(--text-muted);
   line-height: 1.45;
+}
+
+/* A licence that cannot be turned on yet — Ask Paul without a database. The
+ * label carries the reason in its title, so the row has to LOOK unavailable or
+ * the tooltip is never sought. Turning one off is never disabled. */
+.acl-check:has(input:disabled) {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.acl-check input[type='checkbox']:disabled {
+  cursor: not-allowed;
 }
 
 /* The dialog's fields stack rather than sit in the label/input columns the

@@ -38,8 +38,11 @@ export async function GET() {
   if (error) return error;
   void user;
 
+  // `db_host` and `vector_db_host` are read only to answer "does this account
+  // have a database at all" — `mergeAccounts` reduces them to `has_database` and
+  // neither host reaches the browser. Both are non-secret regardless.
   const accounts = await pgGet<AccountListRow[]>(
-    'accounts?select=id,account_name,db_type,is_active,created_at,orcanos_api_url' +
+    'accounts?select=id,account_name,db_type,db_host,vector_db_host,is_active,created_at,orcanos_api_url' +
       '&order=account_name.asc',
   );
 
@@ -152,6 +155,21 @@ export async function POST(req: Request) {
   const provision = raw.provision === true || raw.provision === 'true';
   const modules = (raw.modules ?? {}) as Partial<Record<ModuleKey, boolean>>;
 
+  // Ask Paul is the one module that needs the database, so licensing it on an
+  // account that will not have one produces a hand-off into an app with nothing
+  // behind it. The form disables the tick; this is the boundary that enforces it.
+  if (modules.ask_paul && !provision) {
+    return Response.json(
+      {
+        detail:
+          'Ask Paul cannot be licensed for an account with no database. Tick ' +
+          '“Provision a dedicated Supabase database”, or create the account without ' +
+          'Ask Paul and license it once its database exists.',
+      },
+      { status: 400 },
+    );
+  }
+
   if (!provision) {
     // `accounts` inherits four NOT NULL columns with no default from QMS —
     // `db_type`, `db_name`, `db_user`, `db_password_encrypted` — the legacy
@@ -225,7 +243,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    const job = await startProvisioning(accountName, payload, user.email);
+    // The licences ride along on the job row and are written by its final step,
+    // after the `accounts` row exists. Writing them here instead would licence a
+    // tenant whose provisioning may still fail — and Ask Paul, the only module
+    // that can be ticked on this path, is exactly the one that would then point
+    // at a database that was never created.
+    const job = await startProvisioning(accountName, { ...payload, modules }, user.email);
     await logSecurityEvent('account_provisioning_started', {
       user,
       accountName,
