@@ -1,0 +1,13 @@
+# Batch files MUST be CRLF.
+#
+# cmd.exe mis-parses a multi-line `( ... )` block in an LF-only .bat: it
+# executes fragments of the block's own lines as commands and skips the rest.
+# `deploy.bat` was checked in with LF and failed exactly that way — steps 1-4
+# (dependencies, typecheck, production build) printed nothing at all and the
+# script went straight to the push prompt. A gate that silently does not run is
+# worse than no gate: it would have pushed a broken build to production.
+#
+# Found 2026-08-31 while running the 0.3.3 deploy. `eol=crlf` is what stops a
+# clone or a checkout from putting it back.
+*.bat text eol=crlf
+*.cmd text eol=crlf

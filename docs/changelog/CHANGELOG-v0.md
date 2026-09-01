@@ -70,6 +70,23 @@ correct: there is no tenant to key the licence on. The pill says so, and the fix
 under *Edit → Orcanos REST API*. The real fix is an `accounts.orcanos_tenant` column instead of
 parsing a URL — still not done, still flagged in `lib/modules.ts`.
 
+**Found while deploying this release: `deploy.bat`'s build gate had never been running.** The file
+was checked in with **LF line endings**, and `cmd.exe` mis-parses a multi-line `( … )` block in an
+LF-only batch file — it executes fragments of the block's own lines as commands and skips the rest.
+Steps 1–4 (dependencies, typecheck, production build) printed *nothing at all*; the script went
+straight to the push prompt. Every `if errorlevel 1 ( … )` guard was part of the wreckage, so the
+one thing the script exists to guarantee — that a red build cannot be pushed — was not happening.
+It looked like it was working because the push prompt, the last thing on screen, still behaved.
+
+All four batch files (`deploy.bat`, `run_dev.bat`, `open_login.bat`, and the launcher
+`deploy.bat` one level up in `compliance-platform/`) are now CRLF, and a new `.gitattributes` pins
+`*.bat` and `*.cmd` to `eol=crlf` so a clone cannot put it back. Re-run afterwards, the script
+prints all five steps and the build actually gates.
+
+Worth knowing when driving it non-interactively: `set /p` reads stdin, so redirected input is
+consumed by the **commit message** prompt first when there is anything to commit, and only then by
+the `DEPLOY` confirmation. Commit first, then feed it one line.
+
 ---
 
 **0.3.2** (2026-08-31) — **two rules the console let an operator break.** Both were reported from
