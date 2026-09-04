@@ -1289,26 +1289,275 @@ button {
   color: var(--accent-primary);
 }
 
+/* ── Mobile top bar + off-canvas drawer ───────────────────────────────────
+ * Desktop: hidden. Mobile: a slim bar with a hamburger and the brand, and the
+ * sidebar becomes an off-canvas drawer slid in from the left over a scrim.
+ * The desktop markup is unchanged — just restyled below 860px.
+ */
+
+.app-topbar {
+  display: none;
+}
+
+.app-hamburger {
+  display: none;
+}
+
+.app-scrim {
+  display: none;
+}
+
+/* ── Mobile (≤ 860 px) ─────────────────────────────────────────────────── */
+
 @media (max-width: 860px) {
+  /* Top bar with hamburger + compact brand */
+  .app-topbar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    position: sticky;
+    top: 0;
+    z-index: 900;
+    background: var(--bg-surface);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    /* Above main, but the drawer/scrim (z:1000+) still land on top of it. */
+  }
+
+  .app-topbar-brand {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent-primary);
+  }
+
+  .app-topbar-brand .orcanos-logo {
+    width: 22px;
+    height: 22px;
+    margin-top: 0;
+  }
+
+  .app-hamburger {
+    display: inline-flex;
+    flex-direction: column;
+    justify-content: space-between;
+    width: 40px;
+    height: 40px;
+    padding: 10px 8px;
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+  }
+
+  .app-hamburger span {
+    display: block;
+    height: 2px;
+    background: var(--text-primary);
+    border-radius: 2px;
+  }
+
+  /* Shell stacks; the aside becomes an absolutely positioned drawer instead
+     of a stacked full-width block (that wastes the whole first screen). */
   .app-shell {
     flex-direction: column;
+    min-height: 100vh;
   }
 
   .app-sidebar {
-    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 280px;
+    max-width: 84vw;
+    z-index: 1050;
+    transform: translateX(-100%);
+    transition: transform 0.22s ease;
+    box-shadow: 0 8px 40px rgba(0, 0, 0, 0.18);
+    overflow-y: auto;
+  }
+
+  .app-shell--nav-open .app-sidebar {
+    transform: translateX(0);
+  }
+
+  .app-scrim {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    border: none;
+    padding: 0;
+    z-index: 1040;
+    cursor: pointer;
   }
 
   .app-main {
-    padding: 18px;
+    padding: 16px 14px 40px;
   }
 
+  /* Page header stacks; the primary action becomes a full-width button so the
+     tap target actually spans the row. */
+  .app-page-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .app-page-header .btn-primary {
+    width: 100%;
+    padding: 12px 18px;
+    font-size: 14px;
+  }
+
+  /* Toolbar (search + refresh) — same treatment. */
+  .acl-toolbar {
+    flex-direction: column;
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .acl-toolbar .acl-btn-cancel {
+    width: 100%;
+    padding: 10px 18px;
+  }
+
+  /* Chip filter bar scrolls horizontally rather than wrapping into five rows. */
+  .acl-filterbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 10px 12px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .acl-chip {
+    flex-shrink: 0;
+    padding: 8px 14px;
+    font-size: 13px;
+  }
+
+  /* Tables: keep the table itself, but wrap in a horizontal scroller so a
+     wide row doesn't blow out the viewport. Wrapping every list into a card
+     view would drift from the QMS panel it is meant to mirror. */
+  .acl-table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    white-space: nowrap;
+  }
+
+  .acl-table thead,
+  .acl-table tbody,
+  .acl-table tr {
+    display: table;
+    width: 100%;
+    table-layout: auto;
+  }
+
+  .acl-table th,
+  .acl-table td {
+    padding: 10px 12px;
+  }
+
+  /* Input font-size 16px on mobile: iOS Safari zooms into any input with a
+     smaller font size on focus, and the resulting layout shift is jarring. */
+  .acl-input,
+  .acl-search,
+  .login-field input,
+  .acl-field-row--stack input,
+  .acl-field-row--stack select {
+    font-size: 16px;
+    padding: 10px 12px;
+  }
+
+  /* Fields stack label above input rather than side-by-side. */
   .acl-field-row {
     flex-direction: column;
-    gap: 4px;
+    gap: 6px;
   }
 
   .acl-label {
     width: auto;
     padding-top: 0;
+  }
+
+  /* Modals go essentially full-screen — a 620 px card on a 390 px phone is
+     hemmed in on all sides and its body barely scrolls. */
+  .acl-overlay {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .acl-modal,
+  .acl-modal--billing {
+    width: 100%;
+    max-width: 100vw;
+    height: 100dvh;
+    max-height: 100dvh;
+    border-radius: 0;
+  }
+
+  .acl-header {
+    padding: 14px 16px 12px;
+  }
+
+  .acl-detail-body {
+    padding: 0 16px 16px;
+  }
+
+  .acl-actions {
+    flex-direction: column-reverse;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .acl-actions .btn-primary,
+  .acl-actions .acl-btn-cancel {
+    width: 100%;
+    padding: 12px 18px;
+  }
+
+  /* Toast: full-width strip at the bottom so it doesn't hide behind a thumb. */
+  .acl-toast {
+    left: 12px;
+    right: 12px;
+    bottom: 12px;
+    text-align: center;
+  }
+
+  /* Bigger tap targets on the small pill-buttons the table rows use. */
+  .btn-sm,
+  .btn-danger-sm {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+
+  /* Analytics totals stack rather than sit three-across as narrow slivers. */
+  .analytics-totals {
+    flex-direction: column;
+  }
+
+  /* Login card: full-bleed with a little breathing room, and a bigger touch
+     target on the primary button. */
+  .login-wrap {
+    padding: 16px;
+  }
+
+  .login-card {
+    width: 100%;
+    padding: 22px 18px;
+  }
+
+  .login-method {
+    padding: 12px 14px;
+    font-size: 14px;
+  }
+
+  .btn-primary {
+    padding: 12px 18px;
+    font-size: 14px;
   }
 }

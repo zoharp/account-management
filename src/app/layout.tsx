@@ -6,6 +6,15 @@ export const metadata: Metadata = {
   description: 'Account management for the Orcanos platform',
 };
 
+// Explicit viewport is what makes the CSS breakpoints below fire on phones —
+// without it Mobile Safari renders at a 980px viewport and the whole responsive
+// layout is bypassed. `maximum-scale` is deliberately unset so users can still
+// zoom.
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
