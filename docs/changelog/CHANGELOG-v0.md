@@ -9,6 +9,45 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.3.4** (2026-09-05) — **the console was unusable on a phone**, and the CSS that was meant to
+soften that was silently doing nothing.
+
+**Why the earlier mobile CSS never fired.** `layout.tsx` had no viewport meta tag. Mobile Safari
+and Chrome default to a 980px viewport when the tag is absent, so `@media (max-width: 860px)` was
+false on every real phone and the rules underneath never applied. Now set via Next's `viewport`
+export (`width: device-width, initial-scale: 1`, `maximum-scale` deliberately unset so users can
+still zoom).
+
+**Sidebar → off-canvas drawer** under 860px. A new sticky top bar carries a hamburger and a
+compact brand; the sidebar itself is absolutely positioned, slid off-screen by default, and
+translated in when the hamburger is tapped. A scrim behind it dismisses on tap, body scroll is
+locked while it is open, and a `usePathname()` effect closes it when navigation happens (the
+shell does not unmount on route change, so the drawer would otherwise stay open behind the new
+page). Desktop markup is unchanged — the topbar, hamburger and scrim are all `display:none` above
+the breakpoint.
+
+**The rest of the mobile pass**, all in `globals.css`:
+
+| Where | What |
+|---|---|
+| Page header | Stacks; the primary button spans the row at 12px vertical padding for a real tap target. |
+| Search toolbar | Stacks; refresh becomes full-width. |
+| Audit chip bar | Scrolls horizontally rather than wrapping into five rows. |
+| Tables | Wrap in a horizontal scroller (`display:block; overflow-x:auto; white-space:nowrap`). Kept as tables rather than reflowed to cards so the QMS panel this mirrors stays easy to diff. |
+| Modals | Full-screen (100dvh, no rounded corners, no overlay padding). Actions stack, buttons full-width. |
+| Toast | Full-width strip at the bottom rather than pinned to the right corner where a thumb hides it. |
+| Inputs | 16px font-size and 10-12px padding, on every input class. Below 16px iOS Safari zooms in on focus and the resulting layout shift is jarring. |
+| Small pill buttons | Bumped from 4-10px to 8-12px. |
+| Analytics totals | Stack rather than three narrow slivers across. |
+| Login | Card is full-width with breathing room; primary and OAuth buttons at 12-14px padding. |
+
+Nothing about the desktop layout changed — every rule is inside the 860px media query and there
+are no changes to the underlying component markup other than the drawer wiring in `AppShell`.
+
+Files: `src/app/layout.tsx`, `src/app/globals.css`, `src/components/AppShell.tsx`.
+
+---
+
 **0.3.3** (2026-08-31) — **an account could exist in master and nowhere else, and this console had
 no way to fix it.** Found on a live account (Traceability and Training both showing a dash, both
 unclickable, no route back).

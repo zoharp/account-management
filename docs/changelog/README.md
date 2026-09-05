@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `0.3.4` | 2026-09-05 | Mobile-friendly layout: hamburger drawer under 860px, stacked headers and toolbars, full-screen modals, horizontally scrolling tables, 16px inputs to stop iOS zoom-on-focus; the missing viewport meta added so the breakpoints actually fire on phones. |
 | `0.3.3` | 2026-08-31 | A tenant with no traceability entry is no longer a dead end — the module pill creates one, and every new account gets one; the tenant a licence is keyed on is shown, and the guess flagged. |
 | `0.3.2` | 2026-08-31 | Duplicate account names caught while typing; Ask Paul cannot be activated without a database on any of its four controls, and a database-less account starts inactive; modules ticked at creation no longer dropped by the provisioning path. |
 | `0.3.1` | 2026-08-31 | Fixes 0.3.0: the no-database insert omitted four NOT NULL columns and was rejected outright. |

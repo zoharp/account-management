@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.3.4",
+    "date": "2026-09-05",
+    "changes": [
+      "✨ **The console is usable on a phone.** The sidebar becomes a hamburger drawer under 860px, page headers and toolbars stack, the primary button spans the row, tables scroll horizontally rather than blowing out the viewport, and modals go full-screen so their body actually scrolls.",
+      "🔄 **Inputs are 16px on mobile** so iOS Safari stops zooming on focus, and the small pill buttons the account rows use have tap targets big enough for a thumb.",
+      "🐛 **The viewport meta was missing** — without it mobile browsers render at a 980px desktop viewport and the CSS breakpoints below never fire, so previous 'mobile' styling was invisible on any real phone."
+    ]
+  },
+  {
     "version": "0.3.3",
     "date": "2026-08-31",
     "changes": [

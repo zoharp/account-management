@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.3.3`
+- **App:** `0.3.4`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v0.md`](docs/changelog/CHANGELOG-v0.md) (long form) and
