@@ -1,0 +1,1825 @@
+<title>Orcanos AI Infrastructure</title>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&family=Fira+Code:wght@400;500&display=swap">
+<style>
+:root{
+  --navy:#0F0B2A; --navy2:#171139; --navy3:#1F1848;
+  --pur:#5C35A8; --purl:#7B52C8; --pursoft:rgba(123,82,200,.14);
+  --or:#F5A623; --ord:#E08B00;
+  --ink:#EDE9F7; --mute:#A79FC4; --dim:#6F6795;
+  --line:rgba(123,82,200,.28); --line2:rgba(123,82,200,.16);
+  --ok:#57D9A3; --bad:#FF6B6B;
+  --sans:'Inter',-apple-system,'Segoe UI',system-ui,sans-serif;
+  --mono:'Fira Code','Cascadia Mono',ui-monospace,'SFMono-Regular',Consolas,monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0;height:100%}
+body{
+  background:var(--navy); color:var(--ink); font-family:var(--sans);
+  font-size:16px; line-height:1.5; overflow:hidden;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* ---------- deck surface ---------- */
+#deck{position:fixed;inset:0}
+.slide{
+  position:absolute; inset:0; display:none;
+  padding:44px 56px 56px 96px; overflow:auto;
+  background:
+    radial-gradient(900px 520px at 88% -10%, rgba(92,53,168,.32), transparent 62%),
+    radial-gradient(700px 460px at -8% 108%, rgba(245,166,35,.09), transparent 60%),
+    var(--navy);
+}
+.slide.on{display:block}
+.pad{max-width:1180px;margin:0 auto;min-height:100%;display:flex;flex-direction:column;gap:18px}
+
+/* ---------- type ---------- */
+.eyebrow{
+  font-family:var(--mono); font-size:12px; letter-spacing:.16em; text-transform:uppercase;
+  color:var(--or); display:flex; align-items:center; gap:10px;
+}
+.eyebrow::after{content:'';height:1px;flex:1;background:linear-gradient(90deg,var(--line),transparent)}
+h1{font-size:64px;line-height:1.02;font-weight:800;letter-spacing:-.03em;margin:0;text-wrap:balance}
+h2{font-size:38px;line-height:1.12;font-weight:800;letter-spacing:-.022em;margin:0;text-wrap:balance}
+h3{font-size:16px;font-weight:600;margin:0;letter-spacing:-.005em}
+.sub{font-size:18px;color:var(--mute);margin:0;max-width:74ch;line-height:1.55}
+p{margin:0}
+.small{font-size:14px;color:var(--mute);line-height:1.55}
+strong{color:#fff;font-weight:600}
+em{color:var(--ink);font-style:italic}
+code,.mono{font-family:var(--mono);font-size:.88em;color:var(--purl)}
+a{color:var(--or);text-decoration:none;border-bottom:1px solid rgba(245,166,35,.35)}
+a:hover{border-bottom-color:var(--or)}
+a:focus-visible,button:focus-visible{outline:2px solid var(--or);outline-offset:3px;border-radius:4px}
+
+/* ---------- grids ---------- */
+.g2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px}
+.g3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.g4{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+.g64{display:grid;grid-template-columns:3fr 2fr;gap:20px}
+.g46{display:grid;grid-template-columns:2fr 3fr;gap:20px}
+.stack{display:flex;flex-direction:column;gap:12px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.grow{flex:1}
+
+/* ---------- cards ---------- */
+.card{
+  background:linear-gradient(180deg,rgba(123,82,200,.10),rgba(123,82,200,.04));
+  border:1px solid var(--line2); border-radius:12px; padding:16px 18px;
+  display:flex; flex-direction:column; gap:8px;
+}
+.card h3{color:#fff}
+.card .small{color:var(--mute)}
+.card.or{border-color:rgba(245,166,35,.34);background:linear-gradient(180deg,rgba(245,166,35,.10),rgba(245,166,35,.03))}
+.card.ok{border-color:rgba(87,217,163,.30);background:linear-gradient(180deg,rgba(87,217,163,.09),transparent)}
+.card.bad{border-color:rgba(255,107,107,.30);background:linear-gradient(180deg,rgba(255,107,107,.09),transparent)}
+.kicker{font-family:var(--mono);font-size:11px;letter-spacing:.13em;text-transform:uppercase;color:var(--dim)}
+.hero-num{font-family:var(--mono);font-size:34px;font-weight:500;color:var(--or);line-height:1}
+
+/* ---------- the silent-failure marker ---------- */
+.trap{
+  border-left:3px solid var(--or); padding:12px 16px; border-radius:0 10px 10px 0;
+  background:linear-gradient(90deg,rgba(245,166,35,.10),rgba(245,166,35,.02));
+  border-top:1px dotted rgba(245,166,35,.35); border-right:1px dotted rgba(245,166,35,.2);
+  border-bottom:1px dotted rgba(245,166,35,.35);
+  font-size:15px; line-height:1.55;
+}
+.trap b{color:var(--or);font-weight:600}
+.trap .tag{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--or);display:block;margin-bottom:4px}
+.note{border-left:3px solid var(--purl);padding:10px 16px;background:var(--pursoft);border-radius:0 10px 10px 0;font-size:15px;line-height:1.55}
+
+/* ---------- tables ---------- */
+.tw{overflow-x:auto;border:1px solid var(--line2);border-radius:12px}
+table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:520px}
+th,td{text-align:left;padding:9px 14px;border-bottom:1px solid var(--line2);vertical-align:top}
+th{font-family:var(--mono);font-size:11px;letter-spacing:.11em;text-transform:uppercase;color:var(--dim);font-weight:400;background:rgba(123,82,200,.08)}
+tr:last-child td{border-bottom:none}
+td strong{color:#fff}
+td.num{font-family:var(--mono);text-align:right;font-variant-numeric:tabular-nums;color:var(--ink)}
+
+/* ---------- pills ---------- */
+.pill{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:999px;border:1px solid var(--line);color:var(--purl);white-space:nowrap;display:inline-block}
+.pill.or{color:var(--or);border-color:rgba(245,166,35,.4)}
+.pill.ok{color:var(--ok);border-color:rgba(87,217,163,.4)}
+.pill.bad{color:var(--bad);border-color:rgba(255,107,107,.4)}
+.pill.dim{color:var(--dim);border-color:var(--line2)}
+
+/* ---------- code ---------- */
+pre{
+  font-family:var(--mono);font-size:13.5px;line-height:1.65;margin:0;
+  background:#0A0720;border:1px solid var(--line2);border-radius:10px;padding:14px 16px;
+  overflow-x:auto;color:var(--mute);white-space:pre;
+}
+pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .o{color:var(--or)}
+
+/* ---------- flow diagram ---------- */
+.flow{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+.fbox{
+  background:rgba(123,82,200,.12);border:1px solid var(--line);border-radius:10px;
+  padding:10px 14px;font-size:13.5px;line-height:1.4;min-width:0;flex:1;
+  display:flex;flex-direction:column;justify-content:center;gap:3px;
+}
+.fbox b{color:#fff;font-weight:600;font-size:14px}
+.fbox span{color:var(--mute);font-size:12.5px;font-family:var(--mono)}
+.fbox.or{background:rgba(245,166,35,.10);border-color:rgba(245,166,35,.36)}
+.fbox.db{background:rgba(87,217,163,.08);border-color:rgba(87,217,163,.3)}
+.arrow{display:flex;align-items:center;padding:0 10px;color:var(--or);font-family:var(--mono);font-size:18px;flex:none}
+.arrow.down{justify-content:center;padding:6px 0}
+
+/* ---------- importance marker ---------- */
+.slide[data-imp]::before{
+  position:absolute; top:26px; right:28px; z-index:5;
+  font-family:var(--mono); font-size:11px; letter-spacing:.13em; text-transform:uppercase;
+  padding:5px 12px 5px 10px; border-radius:999px; border:1px solid; white-space:nowrap;
+  display:flex; align-items:center; gap:7px; backdrop-filter:blur(4px);
+}
+.slide[data-imp="crit"]::before{content:'⚠  Must know';color:var(--or);border-color:rgba(245,166,35,.5);background:rgba(245,166,35,.12)}
+.slide[data-imp="key"]::before{content:'★  Core';color:var(--purl);border-color:rgba(123,82,200,.5);background:rgba(123,82,200,.14)}
+.slide[data-imp="ref"]::before{content:'○  Reference';color:var(--dim);border-color:var(--line2);background:rgba(123,82,200,.05)}
+.slide[data-imp] .eyebrow{padding-right:150px}
+.legend{display:flex;gap:10px;flex-wrap:wrap}
+.lg{display:flex;align-items:center;gap:8px;font-size:13.5px;color:var(--mute);border:1px solid var(--line2);border-radius:10px;padding:8px 13px}
+.lg b{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase}
+.lg.crit b{color:var(--or)} .lg.key b{color:var(--purl)} .lg.ref b{color:var(--dim)}
+
+/* ---------- part divider ---------- */
+.slide.part .pad{justify-content:center;gap:24px}
+.part-n{font-family:var(--mono);font-size:15px;letter-spacing:.3em;color:var(--or)}
+.part-rule{height:2px;width:120px;background:linear-gradient(90deg,var(--or),transparent)}
+.part-list{display:flex;flex-wrap:wrap;gap:10px;max-width:800px}
+
+/* ---------- spine ---------- */
+#spine{position:fixed;left:0;top:0;bottom:0;width:56px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;z-index:40;border-right:1px solid var(--line2);background:rgba(10,7,32,.55)}
+.sp{width:3px;flex:1;max-height:76px;background:rgba(123,82,200,.25);border-radius:2px;border:none;padding:0;cursor:pointer;transition:background .18s}
+.sp:hover{background:var(--purl)}
+.sp.act{background:var(--or)}
+#spine .sp-lab{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.1em;writing-mode:vertical-rl;transform:rotate(180deg);margin-bottom:8px}
+
+/* ---------- chrome ---------- */
+#bar{
+  position:fixed;right:20px;bottom:16px;left:76px;display:flex;align-items:center;gap:12px;z-index:40;
+  font-family:var(--mono);font-size:12px;color:var(--dim);pointer-events:none;
+}
+#bar>*{pointer-events:auto}
+#bar button{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;background:rgba(123,82,200,.16);border:1px solid var(--line);color:var(--mute);padding:9px 16px;border-radius:999px;cursor:pointer;display:flex;align-items:center;gap:8px}
+#bar button:hover:not(:disabled){color:#fff;border-color:rgba(245,166,35,.55);background:rgba(245,166,35,.14)}
+#bar button:disabled{opacity:.32;cursor:default}
+#nav{display:flex;gap:8px;margin-left:auto}
+#nav button{padding:9px 20px}
+#next{background:rgba(245,166,35,.16);border-color:rgba(245,166,35,.42);color:var(--or)}
+#count{font-variant-numeric:tabular-nums;color:var(--mute);min-width:74px;text-align:right}
+#here{color:var(--dim);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:38vw;font-family:var(--sans);font-size:13px}
+#hint{color:rgba(111,103,149,.75);font-size:11px;letter-spacing:.08em}
+@media (max-width:900px){#bar{left:12px;right:12px;flex-wrap:wrap}#here,#hint{display:none}}
+
+/* ---------- menu ---------- */
+#menu{position:fixed;inset:0;z-index:60;background:rgba(8,5,24,.97);display:none;overflow:auto;padding:40px 48px}
+#menu.on{display:block}
+#menu h2{margin-bottom:6px}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:8px;margin:10px 0 26px}
+.mitem{text-align:left;background:rgba(123,82,200,.08);border:1px solid var(--line2);border-left:3px solid var(--dim);border-radius:9px;padding:9px 12px;color:var(--mute);cursor:pointer;font-family:var(--sans);font-size:13.5px;line-height:1.35;display:flex;gap:9px}
+.mitem:hover{border-color:rgba(245,166,35,.45);color:#fff}
+.mitem i{font-family:var(--mono);font-style:normal;color:var(--dim);font-size:11.5px;padding-top:2px}
+.mitem[data-imp="crit"]{border-left-color:var(--or)}
+.mitem[data-imp="key"]{border-left-color:var(--purl)}
+.mitem[data-imp="ref"]{border-left-color:rgba(123,82,200,.2)}
+.mitem.here{background:rgba(245,166,35,.12);color:#fff;border-color:rgba(245,166,35,.5)}
+.mlegend{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin-top:10px}
+.mlegend span{display:flex;align-items:center;gap:7px}
+.mlegend i{width:14px;height:3px;border-radius:2px;display:inline-block}
+.mpart{font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--or);margin-top:18px;display:flex;align-items:center;gap:10px}
+.mpart::after{content:'';height:1px;flex:1;background:var(--line2)}
+
+@media print{
+  body{overflow:visible}
+  #spine,#bar,#menu{display:none!important}
+  #deck{position:static}
+  .slide{position:relative;display:block;page-break-after:always;min-height:0;background:var(--navy);padding:40px}
+}
+@media (max-width:900px){
+  .g2,.g3,.g4,.g64,.g46{grid-template-columns:1fr}
+  h1{font-size:40px} h2{font-size:28px} .sub{font-size:16px}
+  .slide{padding:32px 20px 60px 72px}
+  .arrow{transform:rotate(90deg)}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<nav id="spine" aria-label="Parts"></nav>
+
+<div id="deck">
+
+<!-- ============ 00 COVER ============ -->
+<section class="slide part on" data-part="0" data-title="Cover">
+<div class="pad">
+  <div class="part-n">ORCANOS&nbsp;AI · INFRASTRUCTURE HANDBOOK · 2026</div>
+  <h1>Everything we run,<br>and why it runs<br>the way it does.</h1>
+  <div class="part-rule"></div>
+  <p class="sub">Three applications, five hosting platforms, two tenancy models, one shared login token. This deck is the whole picture &mdash; for IT, for developers, for auditors, and for anyone joining this week.</p>
+  <div class="row">
+    <span class="pill or">7 parts</span><span class="pill">73 slides</span>
+    <span class="pill dim">Next ▶ or → to move</span>
+    <span class="pill dim">☰ Index for everything at once</span>
+  </div>
+  <div class="legend">
+    <span class="lg crit"><b>⚠ Must know</b> &mdash; a trap that fails silently</span>
+    <span class="lg key"><b>★ Core</b> &mdash; how the platform works</span>
+    <span class="lg ref"><b>○ Reference</b> &mdash; look it up when you need it</span>
+  </div>
+</div>
+</section>
+
+<!-- ============ 01 HOW TO USE ============ -->
+<section class="slide" data-part="0" data-title="How to read this" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Start here</div>
+  <h2>How to read this.</h2>
+  <p class="sub">Every slide stands on its own. The seven parts answer seven different questions, and you can jump straight to the one you came for.</p>
+  <div class="g3">
+    <div class="card"><div class="kicker">Parts 1&ndash;2</div><h3>The map</h3><p class="small">What the applications are, where each one runs, and why one customer means a whole database in one app and a single row in another.</p></div>
+    <div class="card"><div class="kicker">Parts 3&ndash;5</div><h3>How it works</h3><p class="small">The Orcanos API, sign-in, the RAG pipeline, caching, cost, the LLM routing, and how we handle security.</p></div>
+    <div class="card"><div class="kicker">Parts 6&ndash;7</div><h3>How we build &amp; where it goes</h3><p class="small">Working with Claude Code, skills, CI/CD, the IIS install &mdash; then the AWS question and the next steps.</p></div>
+  </div>
+  <div class="g3">
+    <div class="card or"><h3>⚠ Must know &mdash; 25 slides</h3><p class="small">A trap that <strong>fails silently</strong>. Nothing crashes; the screen looks right; the answer is wrong. Each one has already cost us a release. Read these before touching the thing they describe.</p></div>
+    <div class="card"><h3>★ Core &mdash; 20 slides</h3><p class="small">How the platform actually works. If you are new, read these in order and you will understand the shape of everything.</p></div>
+    <div class="card"><h3>○ Reference &mdash; 19 slides</h3><p class="small">Tables, addresses, step-by-step procedures. Look them up when you need them; do not try to memorise them.</p></div>
+  </div>
+  <div class="trap">
+    <span class="tag">⚠ The recurring theme</span>
+    Almost every trap in this deck produces a <b>clean, plausible, wrong result</b> rather than an error. That is why the marker in the top-right corner of each slide matters more than it looks: <b>the orange ones are the slides where being wrong is invisible.</b>
+  </div>
+  <div class="note"><strong>The source of truth is the code, not this deck.</strong> Each repo's own <code>CLAUDE.md</code> wins. This deck and its long-form handbook (<code>docs/platform/ORCANOS_AI_INFRASTRUCTURE.md</code>) are the orientation layer.</div>
+</div>
+</section>
+
+<!-- ============ PART 1 ============ -->
+<section class="slide part" data-part="1" data-title="Part 1 — What we run">
+<div class="pad">
+  <div class="part-n">PART ONE</div>
+  <h1>What we run.</h1>
+  <div class="part-rule"></div>
+  <p class="sub">Orcanos AI is not one system. It is a small family of applications that share three things &mdash; one login token, one encryption key, and one master database.</p>
+  <div class="part-list">
+    <span class="pill">The big picture</span><span class="pill">The three shared things</span>
+    <span class="pill">Ask Paul</span><span class="pill">Traceability Matrix</span>
+    <span class="pill">Account Management</span><span class="pill">The other two</span>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="1" data-title="The big picture" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">The big picture</div>
+  <h2>Three apps, three data stores, one Orcanos.</h2>
+  <div class="g3">
+    <div class="card or"><div class="kicker">askpaul.orcanos.ai</div><h3>Ask Paul</h3><p class="small">RAG compliance assistant + IEC 62304 pipeline. FastAPI on Cloud Run, React on Vercel.</p></div>
+    <div class="card or"><div class="kicker">traceability.orcanos.ai</div><h3>Traceability Matrix</h3><p class="small">Requirement→test L1→L6, plus Training. One container on Fly.io.</p></div>
+    <div class="card or"><div class="kicker">accounts.orcanos.ai</div><h3>Account Management</h3><p class="small">The control plane: tenants, credentials, licences, spend, audit. Next.js on Vercel.</p></div>
+  </div>
+  <div class="flow">
+    <div class="fbox db"><b>Master Supabase</b><span>accounts · users · audit · spend</span></div>
+    <div class="arrow">·</div>
+    <div class="fbox db"><b>Per-tenant Supabase</b><span>one project per customer · pgvector</span></div>
+    <div class="arrow">·</div>
+    <div class="fbox db"><b>SQLite on Fly</b><span>15 tables · one volume · Litestream</span></div>
+  </div>
+  <div class="flow">
+    <div class="fbox"><b>All three apps</b><span>→ Orcanos QMS REST API</span></div>
+    <div class="arrow">→</div>
+    <div class="fbox or"><b>app.orcanos.com/&lt;tenant&gt;</b><span>QW_Login · QW_Get_Filter_Results · …</span></div>
+  </div>
+  <p class="small">Traceability also opens Ask Paul with a <strong>silent SSO handoff</strong>, and reads its module licences from Account Management.</p>
+</div>
+</section>
+
+<section class="slide" data-part="1" data-title="The three shared things" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Do not break these</div>
+  <h2>Three things are shared. Break one and live customers break with it.</h2>
+  <div class="tw"><table>
+  <tr><th style="width:22%">Shared</th><th style="width:34%">What it is</th><th>What happens if it differs between apps</th></tr>
+  <tr><td><strong>JWT_SECRET</strong></td><td>One HS256 session token. Claims <code>sub</code>, <code>email</code>, <code>name</code>, <code>account</code>, <code>auth_method</code>, <code>iss:"orcanos-qms"</code>, 24&nbsp;h.</td><td>Sessions stop working across apps. <strong>This token is the entire basis of "one login"</strong> &mdash; it is the platform's single most valuable existing asset.</td></tr>
+  <tr><td><strong>ENCRYPTION_KEY</strong></td><td>base64, 32 bytes. AES-256-GCM, <code>base64(12-byte nonce ‖ ciphertext ‖ 16-byte tag)</code>.</td><td>Every stored customer secret becomes <strong>undecryptable</strong>. Rotation tool is Ask Paul's <code>rotate_encryption_key.py</code> &mdash; it must run <em>before</em> the variable changes, for every app.</td></tr>
+  <tr><td><strong>Master Supabase</strong></td><td><code>accounts</code>, <code>users</code>, <code>auth_methods</code>, <code>account_usage_logs</code>, <code>security_audit_log</code>, <code>account_llm_keys</code>, <code>account_provisioning</code>.</td><td>Two apps disagree about who a customer is.</td></tr>
+  </table></div>
+  <div class="trap"><span class="tag">⚠ Silent failure</span>A wrong <b>ENCRYPTION_KEY</b> does not error. It renders plausible screens, and then <b>corrupts credentials on the first save</b>. Open an existing account and run <em>Test Orcanos DB</em> before saving anything.</div>
+</div>
+</section>
+
+<section class="slide" data-part="1" data-title="Ask Paul" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Application 1</div>
+  <h2>Ask Paul &mdash; the QMS AI assistant.</h2>
+  <div class="g46">
+    <div class="stack">
+      <div class="tw"><table>
+        <tr><th>URL</th><td>askpaul.orcanos.ai</td></tr>
+        <tr><th>Repo</th><td><code>zoharp/orcanos_qms_AI</code></td></tr>
+        <tr><th>Version</th><td>backend <code>2.38.5</code> · frontend <code>1.39.0</code></td></tr>
+        <tr><th>Runtime</th><td>FastAPI (Py 3.11) on <strong>Cloud Run</strong> + React/Vite on <strong>Vercel</strong></td></tr>
+        <tr><th>Data</th><td>Master Supabase + <strong>one Supabase project per customer</strong> (pgvector) + customer SQL Server, read-only</td></tr>
+        <tr><th>Auth</th><td>Platform JWT in <code>localStorage</code>. Google / O365 / Orcanos</td></tr>
+        <tr><th>Help</th><td>orcanos.gitbook.io/orcanos-qms-ai</td></tr>
+      </table></div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>What it does</h3><p class="small">Multi-tenant <strong>RAG</strong> compliance assistant over ISO 27001 / 13485 / 14971, plus an IEC 62304 requirements pipeline.</p></div>
+      <div class="card"><h3>Why it is the complex one</h3><p class="small">A document ETL, a vector index, a two-stage query router, streaming answers, and per-account LLM routing &mdash; all of it multiplied by a database per customer. Part 3 walks the whole pipeline.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="1" data-title="Traceability Matrix" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Application 2</div>
+  <h2>Traceability Matrix &mdash; and the Training module.</h2>
+  <div class="g46">
+    <div class="stack">
+      <div class="tw"><table>
+        <tr><th>URL</th><td>traceability.orcanos.ai &mdash; <em>also installable on customer IIS</em></td></tr>
+        <tr><th>Repo</th><td><code>zoharp/traceability-matrix</code></td></tr>
+        <tr><th>Version</th><td><code>3.42.1</code> · 158 releases</td></tr>
+        <tr><th>Runtime</th><td>FastAPI + React in <strong>one container on Fly.io</strong> &mdash; single machine, 1&nbsp;GB volume, Litestream</td></tr>
+        <tr><th>Data</th><td><strong>SQLite</strong> on the Fly volume, 15 tables</td></tr>
+        <tr><th>Auth</th><td>Proxies <code>QW_Login</code>, then its <strong>own</strong> session row + httpOnly cookie + CSRF</td></tr>
+        <tr><th>Help</th><td>orcanos.gitbook.io/traceability-marix</td></tr>
+      </table></div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>What it does</h3><p class="small">Requirement→test traceability across levels L1→L6, gap detection, funnels, a graph view, HTML/Excel export &mdash; plus the <strong>Training</strong> module: training traceability panels and quizzes.</p></div>
+      <div class="card or"><h3>55 documented traps</h3><p class="small"><code>docs/notes/</code> holds 55 numbered notes, each one a mistake that produced a clean, plausible, wrong result. The numbering is global and stable, so <code>See Critical Note #19</code> resolves forever.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="1" data-title="Account Management" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Application 3</div>
+  <h2>Account Management &mdash; the control plane.</h2>
+  <div class="g46">
+    <div class="stack">
+      <div class="tw"><table>
+        <tr><th>URL</th><td>accounts.orcanos.ai</td></tr>
+        <tr><th>Repo</th><td><code>zoharp/account-management</code></td></tr>
+        <tr><th>Version</th><td><code>0.3.4</code></td></tr>
+        <tr><th>Runtime</th><td>Next.js 15 + React 19 + TS on <strong>Vercel</strong>, route handlers only &mdash; no backend of our own</td></tr>
+        <tr><th>Data</th><td>Master Supabase, via PostgREST</td></tr>
+        <tr><th>Auth</th><td>Platform JWT in an <strong>httpOnly cookie</strong></td></tr>
+      </table></div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>What it manages</h3><p class="small">Tenant <strong>accounts</strong> &mdash; their databases, credentials, module licences, status and spend &mdash; plus the shared security audit trail.</p></div>
+      <div class="card"><h3>Where it came from</h3><p class="small">Extracted from the Accounts panel inside Ask Paul. <strong>Both still run, on the same data</strong>, so they can be compared before the old panel is retired.</p></div>
+      <div class="card bad"><h3>⚠ Mostly unverified</h3><p class="small">Sign-in and the accounts list are verified. <strong>Nothing that writes has been exercised</strong> &mdash; account detail, provisioning, billing. That is written down honestly in <code>TESTING.md</code>, and it is a gap.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="1" data-title="The other two, and the portal" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Context</div>
+  <h2>Two more apps, and one that does not exist yet.</h2>
+  <div class="g2">
+    <div class="card"><div class="kicker">covaris-bom</div><h3>BOM tree browser</h3><p class="small">Read-only, one customer. Static React on Vercel, <strong>no backend, no database</strong>, logs in to Orcanos <strong>client-side</strong>.</p><p class="small">Simultaneously the <strong>cheapest to absorb</strong> into a portal and the one that <strong>gains the least</strong>. Its real value is as a pilot: if it breaks, one customer loses a read-only view.</p></div>
+    <div class="card"><div class="kicker">quiz-management</div><h3>Training quizzes</h3><p class="small">Next.js on Vercel + Supabase <strong>queried from the browser</strong>. Supabase Auth + RLS, so its security boundary <em>is</em> the database.</p><p class="small">The plan: <strong>absorb the domain, discard the code.</strong> Its 14 migrations and schema are the asset; its architecture conflicts directly with the platform session.</p></div>
+  </div>
+  <div class="note">
+    <strong><code>zoharp/ai-portal</code> is an empty repo with a plan</strong> &mdash; one front door, one login, a module launcher. Read <code>ai-portal/CLAUDE.md</code> before proposing any consolidation work; it already records the decisions taken and the recommended order. That order is <strong>identity → domain → data → hosting</strong>, deliberately the reverse of the intuitive one.
+  </div>
+</div>
+</section>
+
+<!-- ============ PART 2 ============ -->
+<section class="slide part" data-part="2" data-title="Part 2 — Where it runs">
+<div class="pad">
+  <div class="part-n">PART TWO</div>
+  <h1>Where it runs.</h1>
+  <div class="part-rule"></div>
+  <p class="sub">Five platforms, each good at something different &mdash; and one architectural split that explains most of the differences between our two main apps.</p>
+  <div class="part-list">
+    <span class="pill">What each platform gives</span><span class="pill">The differences that bite</span>
+    <span class="pill">Every address</span><span class="pill">Picking a platform</span>
+    <span class="pill">Single-tenant</span><span class="pill">Multi-tenant</span><span class="pill or">⚠ Two tenant IDs</span>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="2" data-title="What each platform gives us" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Environments</div>
+  <h2>What each one is good at &mdash; and what it cannot do.</h2>
+  <div class="tw"><table>
+  <tr><th style="width:13%">Platform</th><th style="width:22%">We use it for</th><th style="width:32%">Good at</th><th>Cannot do</th></tr>
+  <tr><td><strong>Vercel</strong></td><td>Account Management, Ask Paul frontend, covaris-bom, quiz-management</td><td>Push to <code>main</code> = deployed. Free SSL, global CDN, preview deploys per branch. Zero servers.</td><td><strong>No long-running work.</strong> <strong>IPv4 only</strong> &mdash; cannot reach <code>db.&lt;ref&gt;.supabase.co</code>. No ODBC driver. No disk.</td></tr>
+  <tr><td><strong>Fly.io</strong></td><td>Traceability Matrix &mdash; one container: FastAPI + React + SQLite</td><td>A real always-on machine with a <strong>persistent volume</strong>. Multi-minute background jobs survive. Litestream replicates continuously.</td><td>One machine only. <strong>Never <code>fly scale count 2</code></strong> &mdash; the second machine gets its own volume.</td></tr>
+  <tr><td><strong>Cloud Run</strong></td><td>Ask Paul backend</td><td>Containers, autoscaling, Secret Manager, Cloud Build. Handles streaming well.</td><td>Cold starts. Config split across build triggers and Secret Manager, so it is easy to set something that the next build erases.</td></tr>
+  <tr><td><strong>Supabase</strong></td><td>Master DB + one project per Ask Paul tenant</td><td>Postgres + <strong>pgvector</strong> + PostgREST + a Management API that can <strong>create projects by API</strong>.</td><td>PostgREST cannot run DDL. Direct-connection hostnames are IPv6-only.</td></tr>
+  <tr><td><strong>IIS</strong></td><td>Traceability on the customer's own Windows Server</td><td>All data stays on-premises. No internet dependency.</td><td>Manual install and upgrade. Needs URL Rewrite + ARR. <code>/admin</code> only reachable on the server itself.</td></tr>
+  </table></div>
+</div>
+</section>
+
+<section class="slide" data-part="2" data-title="The differences that bite" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Operational reality</div>
+  <h2>Five differences that have actually cost us time.</h2>
+  <div class="stack">
+    <div class="trap"><span class="tag">⚠ Vercel</span><b>An environment variable change does nothing until you redeploy.</b> Vercel snapshots variables into each deployment. Change the value, reload the site, and you still see the old one &mdash; then an unrelated code push picks it up and it looks like the code fixed it. <b>Order is always: change the variable, then redeploy.</b> Cost on 2026-08-30: two deploys to change one string.</div>
+    <div class="trap"><span class="tag">⚠ Cloud Run</span><b>Secrets must be in <code>cloudbuild.yaml</code>, not just on the running service.</b> <code>gcloud run services update</code> works immediately &mdash; and is erased by the next build.</div>
+    <div class="trap"><span class="tag">⚠ Supabase + Vercel</span><b>Vercel cannot open a direct Postgres connection.</b> <code>db.&lt;ref&gt;.supabase.co</code> publishes only an AAAA record; Vercel functions are IPv4. The error is <code>getaddrinfo ENOTFOUND</code>, which reads like a typo in the hostname. The fix is the <b>pooler</b>: <code>aws-0-&lt;region&gt;.pooler.supabase.com:5432</code>, user <code>postgres.&lt;ref&gt;</code>.</div>
+    <div class="g2">
+      <div class="card"><h3>Fly restarts on <code>fly secrets set</code></h3><p class="small">Which invalidates every issued admin token. Usually fine &mdash; know it before doing it mid-day.</p></div>
+      <div class="card bad"><h3>Some settings fail loudly, some silently</h3><p class="small"><code>JWT_SECRET</code> missing = the container will not boot, obvious. <code>ASK_PAUL_SSO_SECRET</code> missing = the app runs perfectly and one button fails. That one went unnoticed for weeks.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="2" data-title="Where everything is" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Addresses</div>
+  <h2>Everything, in one table.</h2>
+  <div class="tw"><table>
+  <tr><th style="width:26%">Thing</th><th style="width:20%">Host</th><th>Address</th></tr>
+  <tr><td>Ask Paul frontend</td><td>Vercel</td><td><code>https://askpaul.orcanos.ai</code></td></tr>
+  <tr><td>Ask Paul backend</td><td>Cloud Run <span class="pill dim">us-east4</span></td><td>service <code>orcanos-qms</code></td></tr>
+  <tr><td>Traceability Matrix</td><td>Fly.io <span class="pill dim">iad</span></td><td><code>https://traceability.orcanos.ai</code> · <code>traceability-matrix.fly.dev</code></td></tr>
+  <tr><td>Account Management</td><td>Vercel</td><td><code>https://accounts.orcanos.ai</code></td></tr>
+  <tr><td>Master database</td><td>Supabase</td><td>project <code>jjiavhexvfahboiodomv</code></td></tr>
+  <tr><td>Per-tenant vector DBs</td><td>Supabase</td><td>one project per account, created on demand</td></tr>
+  <tr><td>Orcanos QMS itself</td><td>Orcanos hosting</td><td><code>https://app.orcanos.com/&lt;tenant&gt;</code></td></tr>
+  <tr><td>Bedrock LLM gateway</td><td>Orcanos AWS</td><td><code>https://br.orcanos.com/ext/chat</code></td></tr>
+  <tr><td>Help sites</td><td>GitBook</td><td><code>orcanos.gitbook.io</code></td></tr>
+  </table></div>
+</div>
+</section>
+
+<section class="slide" data-part="2" data-title="Picking a platform for a new app" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Decisions</div>
+  <h2>Choosing a platform, before you build.</h2>
+  <p class="sub">Three questions settle it: does it need a database? Does it need <em>direct</em> access to the Orcanos database, or only the API? How sensitive is the data?</p>
+  <div class="tw"><table>
+  <tr><th style="width:14%">Platform</th><th style="width:44%">Use it for</th><th>Frontend / Backend</th></tr>
+  <tr><td><strong>Orcanos AWS</strong></td><td>Direct database access, or part of the legacy estate. <strong>⚠ Must not hold confidential customer data</strong> unless explicitly cleared.</td><td>separate deploy / EC2 · Lambda</td></tr>
+  <tr><td><strong>Vercel</strong></td><td>Addons that use <strong>only the Orcanos API</strong>. Fast, zero-config. The default for a new lightweight addon.</td><td>Vercel CDN / Vercel serverless</td></tr>
+  <tr><td><strong>Supabase</strong></td><td>The app needs <strong>its own database</strong>. Good for full apps and prototyping; the DB can move to Orcanos AWS for production.</td><td>Vercel / Supabase + Cloud Run</td></tr>
+  <tr><td><strong>Railway</strong></td><td>Services with <strong>persistent processes or workers</strong> running continuously.</td><td>Vercel / Railway service</td></tr>
+  <tr><td><strong>Fly.io</strong></td><td>App, interactive files and a database <strong>together</strong>. When Supabase is too limited and Orcanos AWS too heavy.</td><td>served by the Fly app / Fly VM + volumes</td></tr>
+  </table></div>
+  <div class="note"><strong>Quick rule:</strong> API-only → <strong>Vercel</strong>. Needs a DB → <strong>Supabase</strong> (prototype) or <strong>Fly</strong> (production). Legacy or direct DB → <strong>Orcanos AWS</strong>. &nbsp;Railway is on the menu but <strong>nothing runs on it today</strong> &mdash; a sixth platform is a real cost, so reach for one we already operate unless the persistent-worker case is genuine.</div>
+</div>
+</section>
+
+<section class="slide" data-part="2" data-title="Single-tenant — Ask Paul" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Tenancy · Ask Paul</div>
+  <h2>A database per customer.</h2>
+  <div class="flow">
+    <div class="fbox"><b>Browser</b><span>X-Account: acme</span></div>
+    <div class="arrow">→</div>
+    <div class="fbox or"><b>account_middleware</b><span>look up · decrypt · ContextVars</span></div>
+    <div class="arrow">→</div>
+    <div class="fbox db"><b>Supabase: acme</b><span>pgvector</span></div>
+  </div>
+  <div class="g2">
+    <div class="stack">
+      <div class="card"><h3>How a request is routed</h3><p class="small">Every call carries <code>X-Account</code>. Middleware looks the account up in master <strong>case-insensitively</strong>, and returns <strong>403</strong> if unknown or inactive &mdash; it never falls back silently. It then decrypts that account's vector-DB key and LLM key into <strong>ContextVars</strong>, so everything downstream automatically hits the right customer.</p></div>
+      <div class="card"><h3>Users are global</h3><p class="small"><code>users</code> lives <strong>only</strong> in master, keyed by email. Per-tenant tables store the user id as a plain bigint with <strong>no foreign key</strong> &mdash; there is deliberately no <code>users</code> table in a tenant database.</p></div>
+    </div>
+    <div class="stack">
+      <div class="card ok"><h3>What this buys</h3><p class="small">Documents and embeddings are <strong>physically separated</strong>. Strong isolation, easy deletion, easy to explain to an auditor.</p></div>
+      <div class="card bad"><h3>What it costs</h3><p class="small">Every new customer is a real, <strong>billable</strong> Supabase project that must be provisioned &mdash; and deleting the account does not remove it.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="2" data-title="Multi-tenant — Traceability" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Tenancy · Traceability</div>
+  <h2>One database for everyone.</h2>
+  <div class="g2">
+    <div class="stack">
+      <div class="card"><h3>How it works</h3><p class="small">One SQLite file serves <strong>every</strong> account. Rows carry an <code>account_id</code>; the tenant name is the Orcanos <code>Virtual_dir</code>. The id is computed locally: <code class="mono">sha256("&lt;url&gt;|&lt;virtual_dir&gt;")[:32]</code>.</p></div>
+      <div class="card"><h3>Writers are the scarce resource</h3><p class="small">SQLite has one writer. <strong>WAL mode is mandatory, not an optimisation</strong> &mdash; a <code>matrix_cache</code> blob can exceed 1.4&nbsp;MB, and a session refresh writes on every authenticated request.</p></div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Cache is budgeted per account</h3><p class="small"><code>DB_CACHE_BUDGET_MB</code> evicts an account's oldest pages, so one busy tenant cannot fill the disk. Eviction only costs speed &mdash; the page rebuilds.</p></div>
+      <div class="card ok"><h3>What this buys</h3><p class="small">Cheap and fast. It started as an on-premises IIS app, where per-customer databases made no sense.</p></div>
+    </div>
+  </div>
+  <div class="trap"><span class="tag">⚠ Two silent failures</span><b>Isolation is enforced by code, not by the database</b> &mdash; every query must be account-scoped, and a missed scope is a data leak. And <b>an empty allowlist table means the access gate is OFF</b>, not that nobody is allowed in.</div>
+</div>
+</section>
+
+<section class="slide" data-part="2" data-title="⚠ The same customer, two tenant IDs" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">The one to remember</div>
+  <h2>The same customer has two different tenant IDs.</h2>
+  <div class="g2">
+    <div class="card"><div class="kicker">Traceability</div><h3>Computed locally</h3><pre><span class="c"># src/backend/db.py</span>
+account_id = sha256(
+  <span class="s">"&lt;url&gt;|&lt;virtual_dir&gt;"</span>
+)[:<span class="o">32</span>]</pre></div>
+    <div class="card"><div class="kicker">Master Supabase</div><h3>Its own UUID</h3><pre><span class="c">-- accounts</span>
+id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
+  </div>
+  <div class="trap"><span class="tag">⚠ Silent failure</span><b>They do not match, and both systems work perfectly on their own.</b> Any consolidation needs an explicit mapping table and a backfill. This is easy to miss precisely because nothing is broken today.</div>
+  <div class="note">A related gap: the Traceability <code>account_access</code> row is keyed on the <strong>Orcanos tenant</strong>, which master does not store. It is <strong>parsed out of <code>orcanos_api_url</code></strong>, and with no URL there is nothing left but the account name &mdash; true since the 2026-08-29 rename, a guess otherwise. The real fix is an <code>accounts.orcanos_tenant</code> column.</div>
+</div>
+</section>
+
+<!-- ============ PART 3 ============ -->
+<section class="slide part" data-part="3" data-title="Part 3 — How it works">
+<div class="pad">
+  <div class="part-n">PART THREE</div>
+  <h1>How it works.</h1>
+  <div class="part-rule"></div>
+  <p class="sub">The Orcanos API underneath everything, the four ways in, the silent handoff into Ask Paul, the RAG pipeline end to end, caching, and the data.</p>
+  <div class="part-list">
+    <span class="pill">Orcanos web services</span><span class="pill">Authentication</span>
+    <span class="pill">Silent SSO</span><span class="pill or">Ask Paul's RAG</span>
+    <span class="pill">Caching</span><span class="pill">SQLite → Postgres</span>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="Working with Orcanos web services" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">The layer underneath everything</div>
+  <h2>Orcanos web services, and the quirks that cost releases.</h2>
+  <div class="g46">
+    <div class="stack">
+      <div class="tw"><table>
+        <tr><th>Base URL</th><td><code>https://app.orcanos.com/&lt;tenant&gt;/api/v2/Json/</code><br><span class="small">tenant = <code>Virtual_dir</code> &mdash; <code>orca60</code>, <code>orcanosdemo</code>, <code>orcanos</code></span></td></tr>
+        <tr><th>Auth</th><td>HTTP <strong>Basic</strong> with the user's credentials, or an API key</td></tr>
+        <tr><th>Style</th><td>POST with a JSON body &mdash; <strong>even for reads</strong></td></tr>
+        <tr><th>CORS</th><td><strong>No CORS headers at all.</strong> A browser cannot call Orcanos directly &mdash; a server-side proxy is mandatory</td></tr>
+      </table></div>
+      <div class="note">Read the <code>orcanos-api</code> skill before writing any integration code. It documents these quirks and about 100 endpoints, with Ask Paul's <code>backend/api.py</code> as the reference proxy implementation.</div>
+    </div>
+    <div class="stack">
+      <div class="trap"><span class="tag">⚠ Six quirks that fail silently</span>
+        <div class="small" style="color:var(--ink)">
+        <b>XML-wrapped arrays</b> &mdash; a list of one comes back as an object, not an array of one.<br>
+        <b><code>Display_text</code> vs <code>Text</code></b> on picklists &mdash; not interchangeable.<br>
+        <b>Item id shape is <code>"46584 (42195)"</code></b> &mdash; key plus id. Parse it; never compare raw strings.<br>
+        <b>Pagination has exact required settings</b> &mdash; wrong ones return a partial set that looks complete.<br>
+        <b><code>GetFilterList</code> matches the display <em>label</em>, spelled exactly</b> &mdash; not the code.<br>
+        <b>"Changed since" works in <code>Filter_By</code></b> &mdash; but only on a column the filter selects, and only with <code>ISNULL</code>.
+        </div>
+      </div>
+      <div class="card bad"><h3>Orcanos item fields are untrusted input</h3><p class="small">Anyone who can edit an item &mdash; or use the app's own Add flow &mdash; controls names, descriptions and custom fields. Treat them as hostile in any sink.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="Three Orcanos clients" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Duplication</div>
+  <h2>We have written the same client three times.</h2>
+  <div class="g3">
+    <div class="card"><div class="kicker">JavaScript</div><h3>covaris-bom</h3><p class="small"><code>src/api/orcanosClient.js</code></p></div>
+    <div class="card"><div class="kicker">Python</div><h3>Ask Paul</h3><p class="small"><code>backend/api.py</code></p></div>
+    <div class="card"><div class="kicker">Python</div><h3>Traceability</h3><p class="small"><code>src/backend/orcanos_client.py</code></p></div>
+  </div>
+  <p class="sub">Each one independently rediscovered the same quirks: Basic auth with an empty body, XML-wrapped arrays, <code>Display_text</code> vs <code>Text</code>, the <code>"46584 (42195)"</code> id shape, and no CORS headers so a proxy is mandatory.</p>
+  <div class="note"><strong>One shared client is the highest-value piece of de-duplication available to us.</strong> The skill documents the quirks; the code does not share them. The open question is which language wins &mdash; one Python client behind a backend, or a JS client per frontend.</div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="Authentication — four doors" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Authentication</div>
+  <h2>Four ways in. One token out.</h2>
+  <div class="flow">
+    <div class="fbox"><b>Google OAuth</b></div><div class="arrow">↘</div>
+    <div class="fbox"><b>Office 365</b></div><div class="arrow">→</div>
+    <div class="fbox or"><b>completeLogin()</b><span>issue the platform JWT</span></div>
+    <div class="arrow">→</div>
+    <div class="fbox ok"><b>Signed in</b><span>auth_method records the door</span></div>
+  </div>
+  <div class="flow" style="margin-top:-4px">
+    <div class="fbox"><b>Orcanos email + password</b><span>verified by QW_Login</span></div>
+    <div class="arrow">↗</div>
+    <div class="fbox"><b>Silent SSO from Traceability</b><span>relayed credentials, re-verified</span></div>
+  </div>
+  <div class="tw"><table>
+  <tr><th>Method</th><th style="width:52%">How it works</th><th>Token goes to</th></tr>
+  <tr><td><strong>Google</strong></td><td>Standard OAuth2 authorization-code flow. A CSPRNG <code>state</code> is round-tripped to block authorization-code injection.</td><td>Ask Paul: <code>localStorage</code><br>Account Mgmt: <strong>httpOnly cookie</strong></td></tr>
+  <tr><td><strong>Office 365</strong></td><td>Same flow, Microsoft endpoints, per-account tenant id.</td><td>same</td></tr>
+  <tr><td><strong>Orcanos email</strong></td><td>The password is verified by <strong><code>QW_Login</code> against the tenant's own Orcanos</strong>, not against a stored hash. <strong>Orcanos is the sole credential authority.</strong></td><td>same</td></tr>
+  <tr><td><strong>Silent SSO</strong></td><td>Two slides on.</td><td>same</td></tr>
+  </table></div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="Google sign-in and the staff gate" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Authentication</div>
+  <h2>Google sign-in, and the gate behind it.</h2>
+  <div class="g2">
+    <div class="stack">
+      <div class="card"><h3>The flow, in four steps</h3><p class="small">1 &mdash; The app calls <code>GET /api/auth/config</code> (public) to learn which methods this account has enabled, from the <code>auth_methods</code> table.<br>2 &mdash; It generates a random <code>state</code>, stores it, and redirects to Google.<br>3 &mdash; Google returns to our <strong>redirect URI</strong> with a <code>code</code>.<br>4 &mdash; The server exchanges the code, checks <code>state</code> matches, and issues our own JWT.</p></div>
+      <div class="trap"><span class="tag">⚠ Two things to know</span>The redirect URI must be registered on the OAuth client of the account named by <b>PLATFORM_ACCOUNT</b> &mdash; for Account Management, <code>https://accounts.orcanos.ai/auth/callback</code>. And <b>the <code>state</code> check is a hard failure here</b>: Ask Paul used to skip it for a legacy path, but skipping it in a new app only buys a CSRF hole.</div>
+    </div>
+    <div class="stack">
+      <div class="card or"><h3>The staff gate</h3><pre><span class="k">user</span>.role === <span class="s">'admin'</span>
+  &amp;&amp; <span class="k">user</span>.email.endsWith(<span class="s">'@orcanos.com'</span>)</pre></div>
+      <div class="card"><h3>Three properties never to weaken</h3><p class="small"><strong>1. API routes answer 404, not 403.</strong> A non-staff caller must not learn the routes exist.<br><strong>2. <code>role</code> and <code>email</code> are re-read from the database on every request</strong>, never trusted from the JWT &mdash; so revoking an admin takes effect immediately, not in 24 hours.<br><strong>3. The page-level check is not the boundary.</strong> Pages redirect for UX; the route handlers protect the data.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="⚠ The login error says nothing" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Diagnosing sign-in</div>
+  <h2>The login error message is deliberately useless.</h2>
+  <div class="g2">
+    <div class="card bad"><h3>What the user sees</h3><pre style="font-size:16px;color:var(--bad)">Invalid credentials</pre><p class="small">Every failure path returns exactly this: missing user, no <code>orcanos_user_name</code>, wrong password, wrong tenant, not an Orcanos admin, identity already linked.</p></div>
+    <div class="card ok"><h3>Why</h3><p class="small">So the route cannot be used to <strong>enumerate users</strong>. This is deliberate and should stay.</p></div>
+  </div>
+  <div class="trap"><span class="tag">⚠ How to actually diagnose it</span><b>Read the <code>security_audit_log</code> table.</b> The distinguishing <code>reason</code> goes there and <b>only</b> there. The screen cannot tell you anything &mdash; ever.</div>
+  <div class="note"><strong>A worked example.</strong> Orcanos sign-in to the control plane had never worked. Both causes returned the same message: the <code>users</code> row carried <strong>someone else's</strong> <code>orcanos_user_name</code> (test data), so every password was being checked as another person's; and the tenant was pinned to the wrong one. Only the audit log said so. It was fixed on 2026-08-30 &mdash; the successful event is timestamped <code>01:43:32Z</code>.</div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="Silent login to Ask Paul" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Cross-app SSO</div>
+  <h2>Silent login into Ask Paul.</h2>
+  <div class="flow">
+    <div class="fbox"><b>User clicks "Ask Paul"</b><span>in Traceability</span></div><div class="arrow">→</div>
+    <div class="fbox or"><b>Encrypt</b><span>AES-256-GCM · 60s TTL</span></div><div class="arrow">→</div>
+    <div class="fbox"><b>?sso=&lt;token&gt;</b><span>opens Ask Paul</span></div><div class="arrow">→</div>
+    <div class="fbox or"><b>Re-run QW_Login</b><span>with the relayed credentials</span></div><div class="arrow">→</div>
+    <div class="fbox ok"><b>Session issued</b><span>auth_method: orcanos_sso</span></div>
+  </div>
+  <div class="note"><strong>The design rule: the shared secret protects the <em>channel</em>, not the authentication.</strong> The token carries <strong>real credentials that are re-verified</strong>, never an assertion of "this user is fine". A forged or replayed token can at most attempt a real Orcanos login with credentials it already knew.</div>
+  <div class="tw"><table>
+  <tr><th>Secret</th><td><code>ASK_PAUL_SSO_SECRET</code> &mdash; base64, 32 random bytes, <strong>separate from <code>ENCRYPTION_KEY</code></strong> (which is Ask Paul's own and must never be handed to another app)</td></tr>
+  <tr><th>Token</th><td><code>base64url(12-byte nonce + AES-GCM ciphertext)</code>, passed as <code>?sso=</code></td></tr>
+  <tr><th>Lifetime</th><td><strong>60 seconds</strong>, plus a best-effort single-use nonce check</td></tr>
+  <tr><th>Payload</th><td><code>{username, password, account_name, display_name, iat, nonce}</code></td></tr>
+  </table></div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="⚠ SSO needs three settings in two clouds" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">The classic silent failure</div>
+  <h2>Three settings, two clouds &mdash; and the missing half is invisible.</h2>
+  <div class="tw"><table>
+  <tr><th style="width:32%">Where</th><th style="width:30%">Setting</th><th>Effect if missing</th></tr>
+  <tr><td>Fly &mdash; traceability-matrix</td><td><code>ASK_PAUL_APP_URL</code></td><td>Button does not appear</td></tr>
+  <tr><td>Fly &mdash; traceability-matrix</td><td><code>ASK_PAUL_SSO_SECRET</code></td><td>Button does not appear</td></tr>
+  <tr><td>Cloud Run &mdash; orcanos-qms</td><td><code>ASK_PAUL_SSO_SECRET</code> <span class="pill or">byte-identical</span></td><td><strong>Button appears and the click fails</strong></td></tr>
+  </table></div>
+  <div class="trap"><span class="tag">⚠ Why nobody noticed</span>Unlike <code>JWT_SECRET</code>, this one <b>does not crash the container</b>. Ask Paul boots and runs perfectly; only <code>/auth/sso/consume</code> answers <em>"SSO is not configured for this deployment"</em>. It worked in local development because both <code>.env</code> files had it, so the feature looked finished &mdash; but it was <b>never on the <code>--update-secrets</code> line in <code>cloudbuild.yaml</code></b>, so no deploy would ever have added it. <b>Configuring one side makes the door visible; only configuring both makes it open.</b></div>
+  <div class="g2">
+    <div class="card"><h3>Three more prerequisites</h3><p class="small">The account row must exist with an <code>orcanos_api_url</code>; its <code>auth_methods</code> row must have <code>local_enabled = true</code>; and <strong>the account name is not the Orcanos tenant name</strong> &mdash; <code>orca60</code> was "Medical Portal". Traceability keeps a mapping.</p></div>
+    <div class="card"><h3>The button is a licence, not a switch</h3><p class="small">Three gates are ANDed: the account's <code>allow_ask_paul</code> column, the user's Orcanos <code>O</code> permission letter, and the deployment secrets above. <strong>Only the last fails closed</strong> &mdash; so the console pill can read "licensed" while the button is hidden from everyone.</p></div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="Ask Paul's RAG — the two halves" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Inside Ask Paul</div>
+  <h2>Two halves, meeting at one table.</h2>
+  <p class="sub">Getting documents <em>in</em>, and answering questions <em>out</em>. They meet at <code>doc_chunks</code> &mdash; the table holding every chunk with its vector.</p>
+  <div class="g2">
+    <div class="card"><div class="kicker">1 · Indexing · offline</div>
+      <div class="flow" style="margin-top:6px">
+        <div class="fbox"><b>Documents</b></div><div class="arrow">→</div>
+        <div class="fbox"><b>Chunk</b></div><div class="arrow">→</div>
+        <div class="fbox"><b>Embed</b></div>
+      </div>
+    </div>
+    <div class="card"><div class="kicker">2 · Query · live, streaming</div>
+      <div class="flow" style="margin-top:6px">
+        <div class="fbox"><b>Route</b></div><div class="arrow">→</div>
+        <div class="fbox"><b>Embed</b></div><div class="arrow">→</div>
+        <div class="fbox"><b>Search</b></div><div class="arrow">→</div>
+        <div class="fbox"><b>Answer</b></div>
+      </div>
+    </div>
+  </div>
+  <div class="flow">
+    <div class="fbox db"><b>Tenant Supabase &mdash; <code>documents</code> + <code>doc_chunks</code></b><span>pgvector (cosine) + tsvector (full text)</span></div>
+  </div>
+  <div class="note">Reference skill: <code>orcanos-rag-architecture</code>. Code: <code>backend/etl.py</code>, <code>chunker.py</code>, <code>router.py</code>, <code>rag.py</code>. Every tunable lives in the <code>rag_settings</code> table and is <strong>read live on every request</strong> &mdash; a change takes effect with no deploy.</div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="RAG — importing data" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">RAG · the ETL</div>
+  <h2>Three ways in, one pipeline.</h2>
+  <div class="flow">
+    <div class="fbox"><b>Google Drive</b><span>OAuth · recursive</span></div>
+    <div class="fbox"><b>ZIP upload</b><span>max 1 GB</span></div>
+    <div class="fbox"><b>Direct files</b><span>max 200 MB each</span></div>
+    <div class="arrow">→</div>
+    <div class="fbox or"><b>SHA-256 hash check</b><span>same → skipped<br>changed → delete + re-index<br>new → index</span></div>
+  </div>
+  <div class="flow">
+    <div class="fbox"><b>Chunk</b></div><div class="arrow">→</div>
+    <div class="fbox"><b>Summarise first 3 chunks</b><span>→ one summary chunk</span></div><div class="arrow">→</div>
+    <div class="fbox"><b>LLM metadata extraction</b><span>doc_type · version · owner · topics · iso_controls</span></div><div class="arrow">→</div>
+    <div class="fbox or"><b>Embed the document NAME</b><span>update_doc_name_vector()</span></div><div class="arrow">→</div>
+    <div class="fbox db"><b>Embed all chunks</b><span>insert_chunks()</span></div>
+  </div>
+  <div class="g2">
+    <div class="card"><h3>The rules</h3><p class="small"><strong>File types:</strong> <code>.pdf</code> (PyMuPDF), <code>.docx</code>, <code>.txt</code>, <code>.md</code>, <code>.csv</code>. <strong>Google Drive removes documents no longer in the folder</strong> &mdash; the folder is the source of truth. <strong>It stops after 3 consecutive errors</strong> rather than grinding through a thousand broken files. Progress streams as <code>start</code> / <code>progress</code> / <code>result</code> / <code>fatal</code>.</p></div>
+    <div class="trap"><span class="tag">⚠ The one that breaks routing</span><b>The document-name vector is easy to forget.</b> Stage 2 of the router searches <em>document names</em>, not content. If <code>name_vector</code> is not populated the router finds no candidate, picks a document that does not exist, and the user gets <em>"0 chunks searched / information not available"</em>. <b>Fix: re-index.</b></div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="RAG — chunking" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">RAG · chunking</div>
+  <h2>How a document becomes searchable.</h2>
+  <div class="g2">
+    <div class="tw"><table>
+    <tr><th>Chunk size</th><td><strong>~1000 characters</strong> <code>chunk_size</code></td></tr>
+    <tr><th>Overlap</th><td><strong>~200 characters</strong> <code>chunk_overlap</code></td></tr>
+    <tr><th>Boundaries</th><td>Paragraph / section first, falling back to sentences &mdash; <strong>never a blind character cut</strong></td></tr>
+    <tr><th>Stored per chunk</th><td><code>text</code>, <code>vector</code>, <code>doc_name</code>, <code>chunk_index</code>, <code>chunk_type</code>, <code>metadata</code></td></tr>
+    <tr><th>Source</th><td>A file path <strong>or raw bytes</strong> &mdash; which is what makes Drive streaming possible</td></tr>
+    </table></div>
+    <div class="stack">
+      <div class="card or"><h3>One summary chunk per document</h3><p class="small"><code>chunk_type = summary</code>, written from the first three chunks. It is what lets a question about a <strong>whole document</strong> find anything at all &mdash; without it, only fragments are searchable.</p></div>
+      <div class="card"><h3>Metadata the LLM extracts</h3><p class="small"><code>doc_type</code> (Form, Policy, Procedure, Work Instruction, Record, Checklist, Manual, Guideline), <code>doc_id</code>, <code>doc_title</code>, <code>version</code>, <code>owner</code>, <code>department</code>, <code>effective_date</code>, <code>description</code>, 2&ndash;5 <code>topics</code>, and <code>iso_controls</code> &mdash; the actual clause ids, e.g. <code>["7.3.2","8.2.1"]</code>.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="RAG — the two-stage router" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">RAG · routing</div>
+  <h2>Most questions never reach the LLM.</h2>
+  <div class="flow">
+    <div class="fbox"><b>User query</b></div><div class="arrow">→</div>
+    <div class="fbox or"><b>Stage 1 — fast rules</b><span>no LLM · no cost</span></div><div class="arrow">→</div>
+    <div class="fbox"><b>Stage 2 — embed &amp; search<br>DOCUMENT NAMES</b><span>top 5 candidates</span></div><div class="arrow">→</div>
+    <div class="fbox"><b>Stage 3 — one LLM call</b><span>classify + pick the document</span></div>
+  </div>
+  <p class="small"><strong>Stage 1 returns immediately</strong> with <code>router_rule</code> set and no LLM call &mdash; theme analysis, coverage analysis, aggregation, obvious meta, filtered meta. That is the cheap path, and it is checked <strong>first</strong>.</p>
+  <div class="g4">
+    <div class="card"><h3>meta</h3><p class="small">List or count documents. <strong>No RAG at all.</strong></p></div>
+    <div class="card"><h3>specific_doc</h3><p class="small">A question about one named document.</p></div>
+    <div class="card"><h3>general</h3><p class="small">Cross-document or general ISO question.</p></div>
+    <div class="card"><h3>search_only</h3><p class="small">Return raw chunks, generate no answer.</p></div>
+    <div class="card"><h3>aggregation</h3><p class="small">Count/list items inside documents.</p></div>
+    <div class="card"><h3>coverage_analysis</h3><p class="small">Which ISO clauses no document covers.</p></div>
+    <div class="card"><h3>theme_analysis</h3><p class="small">"What are the main issues?" &mdash; ranked FTS + stratified sample.</p></div>
+    <div class="card bad"><h3>unknown</h3><p class="small">Gibberish. Say so rather than inventing an answer.</p></div>
+  </div>
+  <div class="trap"><span class="tag">⚠ The most common cause of an empty answer</span><b><code>doc_name</code> must be EXACT</b>, chosen from the candidate list. A near-miss name returns nothing, and looks like the documents are missing.</div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="RAG — answering" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">RAG · the streaming pipeline</div>
+  <h2>Twelve steps, streamed as they happen.</h2>
+  <div class="g46">
+    <div class="stack">
+      <pre><span class="c">1 </span>load live settings from rag_settings
+<span class="c">2 </span>route the query
+<span class="c">3 </span><span class="o">handled inline?</span> unknown · meta ·
+   coverage · aggregation · search_only
+<span class="c">4 </span>expand_query()  <span class="c">— synonyms</span>
+<span class="c">5 </span>adjust top_k by confidence
+<span class="c">6 </span>embed search_text     <span class="k">→ step event</span>
+<span class="c">7 </span>search_chunks_hybrid  <span class="k">→ step event</span>
+<span class="c">8 </span>filter by threshold, sort
+<span class="c">9 </span>limit_context()  <span class="c">— cap 12,000 chars</span>
+<span class="c">10</span> build messages: system + history
+   + context + question
+<span class="c">11</span> generate            <span class="k">→ step event</span>
+<span class="c">12</span> yield result</pre>
+      <div class="trap"><span class="tag">⚠ Never match on the text</span>Step events carry a stable <code>key</code> &mdash; <code>routing</code>, <code>embedding</code>, <code>search</code>, <code>generating</code>. <b>The frontend matches on <code>key</code>, never the display text.</b> Change the wording freely; never change the key.</div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Retrieval</h3><p class="small"><strong>Hybrid</strong> &mdash; pgvector cosine <strong>+</strong> full-text tsvector, merged with <strong>RRF</strong>. Falls back to pure vector with no keyword query. Always scoped to <code>repository_id</code>.</p></div>
+      <div class="card"><h3>Thresholds</h3><p class="small">Similarity filter applied <strong>after</strong> search, default <code>0.20</code>. <strong>0.20+ passes; 0.60+ is good relevance.</strong> Context capped at 12,000 characters.</p></div>
+      <div class="card or"><h3>Dynamic <code>top_k</code></h3><p class="small">Confidence <code>&lt; 0.5</code> → <strong><code>top_k × 2</code></strong>, cast a wider net.<br>Confidence <code>&gt; 0.8</code> <em>with</em> a document filter → <strong><code>max(3, top_k // 2)</code></strong> &mdash; we already know where to look.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="RAG — debuggability, and when it goes wrong" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">RAG · operations</div>
+  <h2>Debuggability is a designed feature.</h2>
+  <p class="sub">Every result event carries the full router trace: <code>confidence</code>, <code>router_rule</code>, <code>router_candidates</code> with similarity scores, <code>router_system_prompt</code>, <code>router_user_message</code>, <code>router_raw_output</code>, plus <code>llm_engine</code> and a token/cost breakdown.</p>
+  <div class="trap"><span class="tag">⚠ If you add an early-exit path</span>You <b>must</b> spread <code>**_router_debug</code> and <code>"llm_engine"</code> into it. Forgetting is not a crash &mdash; the debug panel simply shows <em>"No LLM call"</em>, <b>incorrectly</b>. A silent wrong answer, which is the kind of bug this whole deck keeps warning about.</div>
+  <div class="tw"><table>
+  <tr><th style="width:42%">Symptom</th><th>First thing to check</th></tr>
+  <tr><td>"0 chunks searched" / "information not available"</td><td>The router returned a <code>doc_name</code> matching no document. <code>GET /documents?repository_id=X</code> for the real names; check <code>name_vector</code> is populated &mdash; if not, <strong>re-index</strong></td></tr>
+  <tr><td>All similarity scores low</td><td>Re-index, and verify the embedding model still matches the one the chunks were embedded with</td></tr>
+  <tr><td>Debug panel says "No LLM call" on a routed query</td><td>An early-exit <code>result</code> is missing <code>**_router_debug</code></td></tr>
+  <tr><td>Google Drive indexing stops early</td><td>3 consecutive errors halt it &mdash; read the <strong>first</strong> error in the progress log, not the last</td></tr>
+  </table></div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="Caching — quick and slow" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Caching</div>
+  <h2>Almost nothing is built when you look at it.</h2>
+  <p class="sub">Building a matrix or a training report means many Orcanos calls and can take minutes. Understanding the two speeds is the single most useful operational thing to know about Traceability.</p>
+  <div class="flow">
+    <div class="fbox"><b>View a panel</b><span>instant</span></div><div class="arrow">→</div>
+    <div class="fbox db"><b>Cached snapshot</b><span>matrix_cache · funnel_cache</span></div><div class="arrow">→</div>
+    <div class="fbox"><b>Display</b></div>
+  </div>
+  <div class="flow">
+    <div class="fbox or"><b>Refresh — smart</b><span>only rows changed since the watermark</span></div>
+    <div class="arrow">↑</div>
+    <div class="fbox"><b>Full rebuild</b><span>every level, every page</span></div>
+    <div class="arrow">←</div>
+    <div class="fbox"><b>Orcanos</b></div>
+  </div>
+  <div class="tw"><table>
+  <tr><th style="width:22%">Speed</th><th style="width:52%">What it does</th><th>When</th></tr>
+  <tr><td><strong>Quick cache</strong><br><span class="pill ok">instant</span></td><td>Serves the stored snapshot. <strong>Never calls Orcanos, never builds.</strong> No snapshot means "not cached" &mdash; <strong>not</strong> an error.</td><td>Every page view, dashboard card and report</td></tr>
+  <tr><td><strong>Smart refresh</strong><br><span class="pill or">seconds–a minute</span></td><td>Re-reads only rows Orcanos reports created or updated since a <strong>watermark</strong>, merges them into the stored corpus, rescores. Returns a <code>job_id</code> you poll.</td><td>The Refresh button</td></tr>
+  <tr><td><strong>Full rebuild</strong><br><span class="pill bad">minutes</span></td><td>Reads everything from scratch.</td><td>First build, or when smart refresh cannot be trusted</td></tr>
+  </table></div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="Caching — the rules that matter" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Caching</div>
+  <h2>Five rules, and what to ask when "the data is wrong".</h2>
+  <div class="g2">
+    <div class="stack">
+      <div class="card"><h3>Smart refresh escalates by itself</h3><p class="small">Inside the same job, and it says why: no stored rows, no Updated/Created date column in the filter, a source that errored or truncated, or a merged count that no longer matches <code>Total_records</code> &mdash; <strong>which is the only signal a deletion produces.</strong></p></div>
+      <div class="card"><h3>An export renders the snapshot</h3><p class="small">It never re-reads Orcanos and never builds. <strong>An export is exactly as fresh as the last refresh, no more.</strong></p></div>
+      <div class="card"><h3>Quiz results are overlaid at read time</h3><p class="small">A newly passed quiz shows without a rebuild, while the cached JSON stays pure Orcanos.</p></div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>A background job outlives its page</h3><p class="small">Closing the tab kills the <strong>polling</strong>, not the job. <code>GET /api/matrix/{id}/active-job</code> is how a returning page re-attaches. One job per user; exports have their own slot so a download cannot block a rebuild.</p></div>
+      <div class="card ok"><h3>Cache is disposable</h3><p class="small"><code>matrix_cache</code>, <code>funnel_cache</code>, <code>export_jobs</code>, <code>ai_jobs</code>, <code>pending_traces</code> can all be deleted &mdash; they rebuild. Which is exactly why they are also the tables we would <strong>not</strong> migrate to Postgres.</p></div>
+    </div>
+  </div>
+  <div class="trap"><span class="tag">⚠ When someone says "the data is wrong"</span>Ask in this order: <b>1</b> When was it last refreshed? <b>2</b> Is the change inside the panel's filters? <b>3</b> Was the change a <b>deletion</b> &mdash; those only surface via the count mismatch. <b>4</b> Only then look for a bug.</div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="The databases we run" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Data</div>
+  <h2>Four stores, and how to change one safely.</h2>
+  <div class="tw"><table>
+  <tr><th style="width:26%">Store</th><th style="width:22%">Used by</th><th>Notes</th></tr>
+  <tr><td><strong>Supabase Postgres (master)</strong></td><td>all apps</td><td>Identity, tenant registry, encrypted secrets, spend, audit</td></tr>
+  <tr><td><strong>Supabase per tenant</strong> <span class="pill">pgvector</span></td><td>Ask Paul</td><td>Documents, embeddings, conversations. <strong>No <code>users</code> table by design</strong></td></tr>
+  <tr><td><strong>SQLite on a Fly volume</strong></td><td>Traceability</td><td>15 tables, WAL, single writer, Litestream replication</td></tr>
+  <tr><td><strong>Customer SQL Server</strong></td><td>Ask Paul, read-only</td><td>Reached with <code>mssql</code>/tedious, because Vercel has no ODBC driver</td></tr>
+  </table></div>
+  <div class="g46">
+    <div class="stack">
+      <div class="card or"><h3>Changing schema on Supabase</h3><p class="small">PostgREST <strong>cannot run DDL</strong>. Do not hand-edit in the SQL editor &mdash; you lose the record of what was run. Use the Management API and keep the <code>.sql</code> file as the source of truth.</p><pre>POST https://api.supabase.com/v1/projects/
+     &lt;ref&gt;/database/query
+<span class="k">Authorization:</span> Bearer $SUPABASE_ORG_ACCESS_TOKEN
+<span class="k">body:</span> {<span class="s">"query"</span>: <span class="s">"&lt;the .sql file&gt;"</span>}</pre><p class="small">Write every migration as <code>create table if not exists</code> / <code>add column if not exists</code>, so re-running one is a no-op.</p></div>
+    </div>
+    <div class="trap"><span class="tag">⚠ A constraint is invisible to the build</span><b><code>accounts</code> has five NOT NULL columns with no default</b>, four of them the legacy <code>db_*</code> pair. Nothing in the code hints at it, because until 0.3.0 every insert came from the provisioning job. Omit one and PostgREST answers <code>23502</code> with the column name usually truncated out of the message.<br><br><b><code>tsc</code> and <code>next build</code> cannot catch this.</b> Verify a new insert shape by actually running it against the live table and deleting the row &mdash; not by building.</div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="Converting SQLite to SQL / Postgres" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Data</div>
+  <h2>Two different questions people mean by "convert the database".</h2>
+  <div class="g2">
+    <div class="stack">
+      <div class="card"><div class="kicker">(a)</div><h3>"Give me the SQL / a copy"</h3><pre><span class="c"># full text dump</span>
+sqlite3 traceability.db .dump &gt; trace.sql
+<span class="c"># schema only</span>
+sqlite3 traceability.db .schema &gt; schema.sql
+<span class="c"># one table to CSV</span>
+sqlite3 -header -csv traceability.db \
+  <span class="s">"select * from trace_setups;"</span> &gt; out.csv</pre></div>
+      <div class="trap"><span class="tag">⚠ Stop the backend first</span>The database runs in <b>WAL</b> mode, so the newest writes may still be in a <code>traceability.db-wal</code> sidecar. A clean shutdown folds the WAL back in. If the process was killed and a <code>-wal</code> file is present, copy <b><code>-wal</code> and <code>-shm</code> alongside the <code>.db</code></b> &mdash; copying the <code>.db</code> alone <b>silently loses the most recent panels.</b></div>
+    </div>
+    <div class="stack">
+      <div class="card"><div class="kicker">(b)</div><h3>"Move it to Postgres"</h3><p class="small">Do <strong>not</strong> think of it as "port a database". The 15 tables are not equally precious &mdash; classify first.</p></div>
+      <div class="tw"><table>
+      <tr><th>Class</th><th>What to do</th></tr>
+      <tr><td><strong>Cache</strong> <span class="pill dim">5 tables</span></td><td><strong>Leave in SQLite indefinitely.</strong> Most of the write volume, and it <em>wants</em> to be node-local</td></tr>
+      <tr><td><strong>Config</strong> <span class="pill or">8 tables</span></td><td>The only data that genuinely must move. Small, low write rate</td></tr>
+      <tr><td><strong>Session</strong></td><td><strong>Do not migrate.</strong> It evaporates when Traceability adopts the platform JWT</td></tr>
+      <tr><td><strong><code>ai_usage</code></strong></td><td>Already duplicated in master. Append-only &mdash; <strong>the safest first migration, and it proves the pipe</strong></td></tr>
+      <tr><td><strong><code>accounts</code></strong></td><td>Must be <strong>reconciled</strong>, not copied &mdash; the two-tenant-id problem</td></tr>
+      </table></div>
+      <div class="card bad"><h3>The honest cost</h3><p class="small"><code>db.py</code> is <strong>~1,800 lines of raw <code>sqlite3</code></strong> &mdash; no ORM, SQLite-specific SQL throughout. A wholesale port is a large, risky, <strong>zero-feature</strong> change.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ PART 4 ============ -->
+<section class="slide part" data-part="4" data-title="Part 4 — What it costs">
+<div class="pad">
+  <div class="part-n">PART FOUR</div>
+  <h1>What it costs.</h1>
+  <div class="part-rule"></div>
+  <p class="sub">How every AI call is recorded, what we deliberately do not bill, the costs that actually surprise us, and how the LLMs are routed and paid for.</p>
+  <div class="part-list">
+    <span class="pill">The ledger rule</span><span class="pill">What is not billed</span>
+    <span class="pill or">The costs that surprise us</span><span class="pill">LLM routing</span>
+    <span class="pill">Which model to use</span><span class="pill">The central cost service</span>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="4" data-title="The cost rule" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Cost</div>
+  <h2>One rule, seven consequences.</h2>
+  <div class="note" style="font-size:19px;line-height:1.5"><strong>Every Claude API call the app makes writes one ledger row, keyed on the tenant, with the price frozen at write time.</strong></div>
+  <div class="tw"><table>
+  <tr><th style="width:44%">Rule</th><th>Why</th></tr>
+  <tr><td>One row per call &mdash; <code>ai_generate</code>, <code>dup_check</code>, <code>panel_describe</code>, <code>knowledge_build</code></td><td>Complete coverage; no path is unmetered</td></tr>
+  <tr><td><strong>Recorded by the API endpoint, not the engine</strong></td><td>The engines stay pure. The endpoint is the single choke point &mdash; and it also covers background jobs</td></tr>
+  <tr><td><strong><code>record()</code> never raises</strong></td><td>A bookkeeping failure must never break an AI feature or 500 a request</td></tr>
+  <tr><td>Failed calls <strong>are</strong> recorded, with <code>ok=0</code></td><td>A failing account stays visible. A call that never ran records nothing</td></tr>
+  <tr><td><strong>The key is the tenant</strong> (<code>Virtual_dir</code>), never <code>user_id</code> alone</td><td><code>user_id</code> is unique only <em>within</em> a tenant. Background jobs, which only know the URL, key identically</td></tr>
+  <tr><td><strong><code>cost_usd</code> computed at write time</strong> and stored on the row</td><td>Historical spend never shifts when prices change or we change the model</td></tr>
+  <tr><td>Unknown model → Sonnet-tier fallback, flagged <code>known_model:false</code>. Intro discounts <strong>not</strong> applied</td><td>Never crash, and <strong>never under-count</strong></td></tr>
+  </table></div>
+</div>
+</section>
+
+<section class="slide" data-part="4" data-title="What we don't bill, and where to look" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Cost</div>
+  <h2>What is deliberately not billed &mdash; and where to check.</h2>
+  <div class="g2">
+    <div class="stack">
+      <div class="card ok"><h3>Ask Paul answers</h3><p class="small">That is Orcanos AI &mdash; <strong>the tenant pays Orcanos, not us</strong>. No Anthropic tokens are involved from our side.</p></div>
+      <div class="card ok"><h3>Bedrock gateway calls from Traceability</h3><p class="small">The gateway is Orcanos'. Product-owner decision. <strong>The gateway does return token counts</strong>, so turning billing on later is a small change.</p></div>
+      <div class="trap"><span class="tag">⚠ An inconsistency worth a decision</span><b>Ask Paul's own <code>bedrock_claude</code> engine <em>is</em> priced</b> &mdash; the same as <code>claude_sonnet</code>, $3/$15 per million tokens. That is the <b>opposite</b> of how Traceability treats the same gateway. Deliberate today, but it should be a decision rather than an accident.</div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Where to look</h3>
+        <div class="tw" style="margin-top:6px"><table>
+        <tr><th>Question</th><th>Where</th></tr>
+        <tr><td>What is one account spending?</td><td>Account Management → usage, or Traceability <code>/admin</code></td></tr>
+        <tr><td>Which accounts are spending?</td><td><code>GET /api/admin/accounts</code> &mdash; <code>ai_cost_usd</code>, <code>ai_calls</code></td></tr>
+        <tr><td>Which engine is an account on?</td><td><code>GET /api/admin/engine</code></td></tr>
+        <tr><td>Platform-wide history</td><td>master <code>account_usage_logs</code></td></tr>
+        </table></div>
+      </div>
+      <div class="card"><h3>Our own development spend</h3><p class="small">Lives in the Anthropic console: <code>console.anthropic.com/settings/</code> → <strong>usage</strong> (tokens per model per day), <strong>billing</strong> (plan, invoices, <strong>spend limits</strong>), <strong>keys</strong>. Check it during long agentic sessions.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="4" data-title="⚠ The costs that surprise us" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Cost</div>
+  <h2>The non-LLM costs are the ones that surprise us.</h2>
+  <div class="tw"><table>
+  <tr><th style="width:34%">Cost</th><th>How it appears</th></tr>
+  <tr><td><strong>A provisioned Supabase project per Ask Paul tenant</strong></td><td>Billable from the moment it is created. <strong>Deleting the account does not de-provision it.</strong> The warning is shown on screen &mdash; read it</td></tr>
+  <tr><td><strong>Orphaned projects from failed provisioning</strong></td><td>A job that dies mid-run leaves a real, billable project with <strong>no account row</strong>. The finder query is at the bottom of <code>sql/001_account_provisioning.sql</code></td></tr>
+  <tr><td>Fly machine</td><td>Always-on by design (<code>min_machines_running = 1</code>), 1&nbsp;GB volume</td></tr>
+  <tr><td>Cloud Run</td><td>Per request, plus Artifact Registry storage</td></tr>
+  <tr><td>Vercel · GitBook · domains</td><td>Per project · fixed</td></tr>
+  </table></div>
+  <div class="trap"><span class="tag">⚠ It has already happened</span>The first real provisioning run left an orphan: project <code>klrgfaddrnnawvagomxr</code> (<code>qms-pcure</code>) was created and <b>billable</b>, then the job died one step later. <b>Retrying makes it worse</b> &mdash; the second attempt fails at creation with <em>"Project with name … already exists"</em>, so you end up with an orphan <b>and</b> no account. <b>Run the orphan-finder query after any failed run.</b></div>
+</div>
+</section>
+
+<section class="slide" data-part="4" data-title="LLM routing" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Managing the LLMs</div>
+  <h2>One routing layer, resolved per account.</h2>
+  <div class="flow">
+    <div class="fbox"><b>create_json() / create_text()</b></div><div class="arrow">→</div>
+    <div class="fbox or"><b>ai_config for this tenant?</b><span>account row → '*' global row → env</span></div>
+  </div>
+  <div class="flow">
+    <div class="fbox"><b>provider: anthropic</b><span>api.anthropic.com</span></div>
+    <div class="arrow">·</div>
+    <div class="fbox"><b>provider: bedrock</b><span>br.orcanos.com/ext/chat</span></div>
+    <div class="arrow">→</div>
+    <div class="fbox db"><b>AWS Bedrock InvokeModel</b><span>Orcanos-owned gateway</span></div>
+  </div>
+  <div class="g2">
+    <div class="card ok"><h3>No configuration = no change</h3><p class="small"><strong><code>cfg=None</code> ⇒ the env Anthropic path, byte for byte.</strong> An unconfigured tenant is never touched by this system.</p></div>
+    <div class="card or"><h3>The <code>'*'</code> global row</h3><p class="small">Resolution is <strong>account row → the reserved <code>'*'</code> row → the environment default</strong>, so an admin can point <em>every</em> unconfigured tenant at a different engine in one place. <code>'*'</code> can never collide with a real tenant, because a tenant name is a URL path segment.</p></div>
+  </div>
+  <div class="trap"><span class="tag">⚠ Never do these two things</span><b>1 &mdash; Never reintroduce a direct LLM client inside an engine.</b> It bypasses per-account routing and per-account billing at a stroke. <b>2 &mdash; On a provider error we hard-fail</b> with a clear message; no silent fallback to the other provider. A misconfigured account gets fixed, not masked.</div>
+</div>
+</section>
+
+<section class="slide" data-part="4" data-title="The Bedrock gateway, and keys" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Managing the LLMs</div>
+  <h2>The gateway serves Claude <em>and</em> OpenAI. Only the model id differs.</h2>
+  <div class="g46">
+    <div class="stack">
+      <div class="card"><h3>Verified model ids</h3><p class="small"><code>eu.anthropic.claude-sonnet-4-6</code><br><code>eu.anthropic.claude-opus-4-8</code><br><code>eu.anthropic.claude-haiku-4-5-20251001-v1:0</code><br><code>openai.gpt-oss-120b-1:0</code> · <code>openai.gpt-oss-20b-1:0</code></p></div>
+      <div class="trap"><span class="tag">⚠ Three traps</span><b>No region prefix on the OpenAI ids</b> &mdash; <code>eu.</code>/<code>us.</code> are rejected. <b><code>gpt-4o</code> and <code>o3</code> are not on Bedrock at all.</b> And <b>the gpt-oss models emit their reasoning as <code>&lt;reasoning&gt;…&lt;/reasoning&gt;</code> before the answer</b> &mdash; strip it, or both the JSON parse and the free-text output are corrupted.</div>
+      <p class="small">On Bedrock the JSON schema is only <strong>prompt-instructed</strong>, not enforced &mdash; so parsing there is defensive. On the Anthropic path it is <strong>enum-forced</strong> at the tool layer, so a hallucinated value is rejected before it reaches our code.</p>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Keys</h3><p class="small">A per-account key overrides; otherwise the provider's global env key (<code>ANTHROPIC_API_KEY</code> / <code>BEDROCK_API_KEY</code> &mdash; one shared gateway key today).</p><p class="small">Keys are <strong>write-only from the admin API</strong> &mdash; listing shows <code>has_key</code>, never the value. <code>''</code> clears it; <code>None</code> leaves it alone.</p></div>
+      <div class="card bad"><h3>⚠ Never in <code>fly.toml</code></h3><p class="small">Store <code>BEDROCK_API_KEY</code> in <code>fly secrets</code> or the environment. <code>fly.toml</code> is in git.</p></div>
+      <div class="card ok"><h3>Verify before save</h3><p class="small">The admin <em>Test key</em> button makes a tiny live call, and <strong>Save auto-verifies first</strong>.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="4" data-title="Which model a developer should use" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Managing the LLMs</div>
+  <h2>The model <em>you</em> run Claude Code with.</h2>
+  <p class="sub">A different decision from the product's routing &mdash; made in <code>~/.claude/settings.json</code> or with <code>/model</code>. Rates are per million tokens.</p>
+  <div class="tw"><table>
+  <tr><th>Model</th><th>Model ID</th><th style="text-align:right">Context</th><th style="text-align:right">Input</th><th style="text-align:right">Output</th><th style="width:34%">Use for</th></tr>
+  <tr><td><strong>Claude Opus 5</strong></td><td><code>claude-opus-5</code></td><td class="num">1M</td><td class="num">$5</td><td class="num">$25</td><td>Major rewrites, architecture, critical production decisions</td></tr>
+  <tr><td><strong>Claude Sonnet 5</strong></td><td><code>claude-sonnet-5</code></td><td class="num">1M</td><td class="num">$2</td><td class="num">$10</td><td>New features, multi-file refactors, debugging, tests</td></tr>
+  <tr><td><strong>Claude Haiku 4.5</strong></td><td><code>claude-haiku-4-5</code></td><td class="num">200K</td><td class="num">$1</td><td class="num">$5</td><td>Routine edits, Q&amp;A, boilerplate &mdash; anything done 10× a day</td></tr>
+  <tr><td>Claude Sonnet 4.6</td><td><code>claude-sonnet-4-6</code></td><td class="num">1M</td><td class="num">$3</td><td class="num">$15</td><td>Superseded by Sonnet 5, which is cheaper</td></tr>
+  <tr><td>Claude Fable 5.1</td><td><code>claude-fable-5-1</code></td><td class="num">1M</td><td class="num">$10</td><td class="num">$50</td><td>Most capable; the demanding long-horizon work</td></tr>
+  </table></div>
+  <div class="g2">
+    <div class="card"><h3>Switching</h3><pre><span class="c"># default, ~/.claude/settings.json</span>
+<span class="s">"model"</span>: <span class="s">"claude-haiku-4-5"</span>
+<span class="c"># per session</span>
+claude --model claude-sonnet-5
+<span class="c"># mid-session</span>
+/model claude-opus-5</pre></div>
+    <div class="trap"><span class="tag">⚠ Two stale tables to fix</span>The <b>team deck</b> documents Haiku 4.5 / Sonnet 4.6 / Opus 4.7 and does not mention the Claude 5 family at all &mdash; and <b>Sonnet 5 is cheaper than the Sonnet 4.6 it recommends</b>. Separately, the <b>cost-reporter skill's price table</b> lists <code>claude-opus-4-6</code> at $15/$75 and <code>claude-haiku-4-5</code> at $0.80/$4 &mdash; neither is right. Fix both together, and state where the live source is (<code>anthropic.com/pricing</code>) rather than only the numbers.</div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="4" data-title="The central cost service — designed, not built" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Cost · the proposal</div>
+  <h2>One service every app reports into.</h2>
+  <div class="flow">
+    <div class="fbox"><b>Ask Paul</b></div>
+    <div class="fbox"><b>Traceability</b></div>
+    <div class="fbox"><b>any new addon</b></div>
+    <div class="arrow">→</div>
+    <div class="fbox or"><b>POST /log</b><span>X-API-Key: oai_…</span></div>
+    <div class="arrow">→</div>
+    <div class="fbox db"><b>usage_logs · user_api_keys</b><span>master Supabase</span></div>
+  </div>
+  <div class="g2">
+    <div class="card"><h3>The shape of it</h3><p class="small"><strong>One <code>POST /log</code> per AI event</strong>: <code>application_name</code>, <code>user_email</code>, <code>model</code>, <code>tokens</code>, <code>cost_usd</code>, plus optional input/output tokens, action, conversation name, metadata.<br><br><strong>Per-user API keys</strong> (<code>oai_&lt;32 hex&gt;</code>, one per user, regenerable) &mdash; shown masked except once, on regeneration.<br><br><strong>The same auth stack and Supabase project as Ask Paul</strong>, so there is no second login system.<br><br><strong>A <code>cost-reporter</code> skill</strong> that reports automatically from any project's <code>CLAUDE.md</code> &mdash; silently, never blocking, <code>console.warn</code> on failure, <strong>never</strong> retrying.</p></div>
+    <div class="stack">
+      <div class="card bad"><h3>⚠ It overlaps what exists</h3><p class="small"><code>ai_usage</code> and <code>account_usage_logs</code> already record this, keyed on the <strong>tenant</strong>. The new design keys on <strong>application + user email</strong> &mdash; a different question ("what does <em>our own</em> AI use cost across apps?") than the live ledgers answer ("what does <em>this customer</em> cost?").<br><br><strong>Both are legitimate. Decide whether it is one service with both keys, or two ledgers with an explicit boundary &mdash; before writing code.</strong></p></div>
+      <div class="card bad"><h3>⚠ And its price table is stale</h3><p class="small">A wrong price table <strong>silently produces a wrong ledger</strong> &mdash; the exact failure the live implementation avoids by freezing the price at write time. Fix the table before the first row is written.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ PART 5 ============ -->
+<section class="slide part" data-part="5" data-title="Part 5 — Keeping it safe">
+<div class="pad">
+  <div class="part-n">PART FIVE</div>
+  <h1>Keeping it safe.</h1>
+  <div class="part-rule"></div>
+  <p class="sub">The standing rules, the skills that audit them, how a finding gets handled, and where we stand against ISO 27001.</p>
+  <div class="part-list">
+    <span class="pill">Standing rules</span><span class="pill">The security skills</span>
+    <span class="pill">Handling a finding</span><span class="pill">ISO 27001: what we have</span>
+    <span class="pill or">ISO 27001: the gaps</span>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="5" data-title="Security — the standing rules" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Security</div>
+  <h2>Nine rules that hold everywhere.</h2>
+  <div class="tw"><table>
+  <tr><th style="width:32%">Rule</th><th>Detail</th></tr>
+  <tr><td><strong>Secrets are server-side only</strong></td><td>Nothing privileged behind <code>NEXT_PUBLIC_</code>. No module touching <code>node:crypto</code> or a service key may be imported by a <code>'use client'</code> component</td></tr>
+  <tr><td><strong>No ciphertext to the browser</strong></td><td><code>GET /api/accounts/:id</code> returns an explicit column allow-list with <strong>zero <code>*_encrypted</code> columns</strong>. There is nothing to attack offline</td></tr>
+  <tr><td><strong>Admin routes answer 404</strong></td><td>A non-staff caller cannot tell they exist</td></tr>
+  <tr><td><strong><code>role</code>/<code>email</code> re-read every request</strong></td><td>Revocation is instant, not at token expiry</td></tr>
+  <tr><td><strong>Every new route starts with the gate</strong></td><td><code>requirePlatformStaff()</code> is the first line, always</td></tr>
+  <tr><td><strong>Secrets at rest are AES-256-GCM</strong></td><td>Five <code>*_encrypted</code> columns on <code>accounts</code></td></tr>
+  <tr><td><strong>SSRF guard on outbound calls</strong></td><td><code>isSafeExternalUrl</code> blocks loopback, private ranges and cloud metadata endpoints</td></tr>
+  <tr><td><strong>Host allowlist on sign-in URLs</strong></td><td><code>ORCANOS_LOGIN_HOST_ALLOWLIST</code>, default <code>orcanos.com</code>. <strong>⚠ Setting it to <code>*</code> is a pre-auth takeover of the console</strong></td></tr>
+  <tr><td><strong>Audit everything security-relevant</strong></td><td><code>security_audit_log</code>, shared by all apps. Writes are non-blocking, but a non-2xx write is logged, not silently dropped</td></tr>
+  </table></div>
+  <div class="trap"><span class="tag">⚠ A disabled input is not a boundary</span>The login screen's Orcanos URL box is <b>disabled</b> in 0.3.4 &mdash; and <b>still sends its value</b>. Client-supplied is client-supplied, whatever the UI does with it.</div>
+</div>
+</section>
+
+<section class="slide" data-part="5" data-title="The security skills" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Security</div>
+  <h2>Five skills, and why we trust the scan.</h2>
+  <div class="tw"><table>
+  <tr><th style="width:22%">Skill</th><th style="width:38%">Scope</th><th>Use it</th></tr>
+  <tr><td><code>/security-review</code></td><td>The pending changes on the current branch</td><td>Before every merge of anything security-relevant</td></tr>
+  <tr><td><code>/security-scan</code></td><td>Full backend + frontend audit, fan-out by surface, tracked in <code>SECURITY_AUDIT.md</code></td><td>Periodic full audits; <code>diff</code> for one branch</td></tr>
+  <tr><td><code>/compliance-audit</code></td><td>ISO 27001:2022 controls across code, Supabase, Fly, Vercel + a static pentest pass</td><td>Getting a tool audit-ready</td></tr>
+  <tr><td><code>/multitenant-audit</code></td><td>Every query is account-scoped</td><td>After touching any query in the shared SQLite</td></tr>
+  <tr><td><code>/code-review</code></td><td>Correctness, regressions, security in changed code</td><td>Every PR</td></tr>
+  </table></div>
+  <div class="g2">
+    <div class="card or"><h3>How <code>/security-scan</code> works &mdash; verification-first</h3><p class="small"><strong>1.</strong> A grep hit is a <strong>lead</strong>, not a finding. Read the sink <em>and</em> trace the source.<br><strong>2.</strong> Separate <strong>CONFIRMED</strong> (unsanitised sink + reachable untrusted source, both seen) from <strong>PLAUSIBLE</strong> (depends on something unread).<br><strong>3.</strong> <strong>Exploitability sets severity, not the pattern</strong> &mdash; an IDOR on a <code>uuid4</code> is weaker than on a sequential integer.<br><strong>4.</strong> <strong>Never fix during the scan.</strong> Report first.<br><strong>5.</strong> Findings go into a <strong>status ledger updated in place</strong>, not a fresh wall of text each run.</p></div>
+    <div class="card"><h3>Handling a finding</h3><p class="small"><strong>1.</strong> Reproduce it, or downgrade it to PLAUSIBLE honestly.<br><strong>2.</strong> Record it with severity and status. <strong>Never delete a row &mdash; change its status.</strong> That is the audit evidence.<br><strong>3.</strong> Fix, bump the version, write the release note &mdash; <strong>never naming a customer</strong>.<br><strong>4.</strong> Re-run the scan on the diff.</p></div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="5" data-title="Known open risks" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Security</div>
+  <h2>Four risks we know about and have not closed.</h2>
+  <div class="g2">
+    <div class="card bad"><h3>SQL Server reachability from Vercel</h3><p class="small">Connection tests use <code>mssql</code>/tedious because Vercel has no ODBC driver. <strong>A customer SQL Server firewalled to the Cloud Run egress IPs will refuse Vercel.</strong> Confirm against a real customer account before retiring the old panel.</p></div>
+    <div class="card bad"><h3>Provisioning cannot run its DDL step from Vercel</h3><p class="small">The IPv6-only direct hostname. Until the pooler fix lands, anything needing a provisioned project is unsafe to run.</p></div>
+    <div class="card bad"><h3>An empty Traceability allowlist means the gate is OFF</h3><p class="small">Not "nobody may in" &mdash; <strong>everybody</strong>. Deliberate, but it needs writing down as an accepted risk with a compensating control.</p></div>
+    <div class="card bad"><h3>The audit log started empty on 2026-08-29</h3><p class="small">Nothing before that date was ever recorded, and <strong>nothing is recoverable</strong>. Expect the account filter to show both old and new spellings of renamed accounts &mdash; audit rows deliberately keep the label the event actually carried.</p></div>
+  </div>
+  <div class="note">A module licence also <strong>fails open for old rows</strong>: a pre-3.23.0 <code>account_access</code> row has no <code>allow_ask_paul</code> column and therefore reads as <em>licensed</em>. That is deliberate &mdash; blocking those saves would lock the dialog for most tenants &mdash; but it is a fail-open and belongs on the accepted-risk list too.</div>
+</div>
+</section>
+
+<section class="slide" data-part="5" data-title="ISO 27001 — what we already have" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">ISO 27001:2022</div>
+  <h2>We sell to regulated customers. Our own tooling has to stand up to it.</h2>
+  <div class="tw"><table>
+  <tr><th style="width:30%">Annex A theme</th><th>What exists today</th></tr>
+  <tr><td><strong>A.5 / A.8 &mdash; Access control</strong></td><td>Platform staff gate; roles read live from the database; per-account allowlists; module licences; Orcanos permission letters gate write actions per type and per project</td></tr>
+  <tr><td><strong>A.8.24 &mdash; Cryptography</strong></td><td>AES-256-GCM at rest for all customer secrets; HTTPS everywhere; <code>force_https</code> on Fly</td></tr>
+  <tr><td><strong>A.8.15 &mdash; Logging</strong></td><td><code>security_audit_log</code> shared across apps; every sign-in records method, tenant and outcome reason</td></tr>
+  <tr><td><strong>A.8.16 &mdash; Monitoring</strong></td><td><code>/admin</code> dashboards, deploy verification scripts</td></tr>
+  <tr><td><strong>A.8.32 &mdash; Change management</strong></td><td>Version bump + release note + changelog for every shippable change; a deploy gate requiring explicit approval</td></tr>
+  <tr><td><strong>A.5.23 &mdash; Cloud services</strong></td><td>Documented per-environment configuration; secrets in Secret Manager / Fly secrets / Vercel env</td></tr>
+  <tr><td><strong>A.8.13 &mdash; Backup</strong></td><td>Litestream continuous replication for SQLite; Supabase managed backups</td></tr>
+  <tr><td><strong>A.8.8 &mdash; Vulnerabilities</strong></td><td><code>/security-scan</code> + <code>/security-review</code> + tracked ledgers</td></tr>
+  </table></div>
+  <div class="note"><code>/compliance-audit</code> is built for exactly this. Each audited repo gets a <code>compliance/scope.yaml</code> naming its frameworks, which connectors apply, and <strong>environment variable names only &mdash; never values</strong>. It produces a ledger plus a report, and the ledger is updated in place run over run.</div>
+</div>
+</section>
+
+<section class="slide" data-part="5" data-title="ISO 27001 — the seven gaps" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">ISO 27001:2022</div>
+  <h2>Seven gaps to close before an audit.</h2>
+  <div class="g2">
+    <div class="stack">
+      <div class="card or"><div class="kicker">1</div><h3>Backup restore has never been rehearsed</h3><p class="small"><strong>Litestream replicating is not the same as a proven restore.</strong> Do one, and write down how long it took.</p></div>
+      <div class="card or"><div class="kicker">2</div><h3>No documented retention policy</h3><p class="small">For <code>security_audit_log</code>, <code>ai_usage</code>, or exports.</p></div>
+      <div class="card or"><div class="kicker">3</div><h3>Key rotation is documented but unexercised</h3><p class="small"><code>ENCRYPTION_KEY</code> rotation must cover every app and run <em>before</em> the variable changes.</p></div>
+      <div class="card or"><div class="kicker">4</div><h3>Access reviews are not scheduled</h3><p class="small">Who has Vercel, Fly, GCP, Supabase, GitHub and Anthropic access &mdash; reviewed quarterly, with evidence.</p></div>
+    </div>
+    <div class="stack">
+      <div class="card or"><div class="kicker">5</div><h3>No sub-processor list</h3><p class="small">Anthropic, OpenAI, Google, AWS (via the gateway), Supabase, Vercel, Fly, GitBook, GitHub. Customers on ISO 27001 will ask for it &mdash; and for whether customer data reaches each one.</p></div>
+      <div class="card or"><div class="kicker">6</div><h3>Data residency is unstated</h3><p class="small">Supabase tenant projects default to <code>us-east-1</code>; the Bedrock gateway uses <code>eu.</code> models. <strong>An EU customer will ask.</strong></p></div>
+      <div class="card or"><div class="kicker">7</div><h3>Two fail-opens are undocumented</h3><p class="small">The empty-allowlist gate and the module-licence default for old rows are both deliberate &mdash; but they need writing down as accepted risks, with compensating controls.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ PART 6 ============ -->
+<section class="slide part" data-part="6" data-title="Part 6 — How we build">
+<div class="pad">
+  <div class="part-n">PART SIX</div>
+  <h1>How we build.</h1>
+  <div class="part-rule"></div>
+  <p class="sub">Everything here was built with Claude Code. This is the standard practice &mdash; the modes, the lifecycle, the session loop, the skills, the release ritual, and the deploy scripts we treat as best practice.</p>
+  <div class="part-list">
+    <span class="pill">Two modes</span><span class="pill">The lifecycle</span><span class="pill">The session loop</span>
+    <span class="pill">Prompting</span><span class="pill">Skills</span><span class="pill">CLAUDE.md</span>
+    <span class="pill">CI/CD</span><span class="pill">IIS</span><span class="pill">Admin manual</span>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="Two modes, not two products" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Working with Claude Code</div>
+  <h2>Two modes. Not two products.</h2>
+  <p class="sub">Every Claude tool has a chat mode and an agentic mode. This is the distinction that matters most &mdash; once you have it, "where do I start" answers itself.</p>
+  <div class="g2">
+    <div class="card"><div class="kicker">💬 Chat mode</div><h3>Thinking. Nothing changes.</h3><p class="small">A conversation. Claude replies with text, plans or snippets. <strong>Your files are untouched.</strong></p><p class="small"><strong>For:</strong> architecture, data models, reviewing a plan, debugging ideas.</p><pre>"What is the cleanest way to structure
+ this feature before we start building?"</pre></div>
+    <div class="card or"><div class="kicker">⚡ Agentic mode</div><h3>Building. Files actually change.</h3><p class="small">Claude reads your real files, edits them, runs commands, commits. <strong>Your codebase is actively modified</strong> &mdash; you review and approve each step.</p><p class="small"><strong>For:</strong> features, bug fixes, migrations, committing.</p><pre>"In src/pages/Dashboard.jsx, add a filter
+ dropdown that fetches from /api/filters."</pre></div>
+  </div>
+  <div class="note" style="font-size:18px"><strong>Always plan in chat first. Only switch to agentic when the design is settled.</strong> This single habit prevents most wasted time.</div>
+  <div class="note"><strong>The principle everything else is a variation of: better input, better output.</strong> Your input is the ceiling. Brief Claude the way you would brief a smart new colleague who is new to the project but learns fast.</div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="The project lifecycle" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Working with Claude Code</div>
+  <h2>From idea to running code.</h2>
+  <div class="flow">
+    <div class="fbox"><b>1 · Design in Google Docs</b><span>the detailed description</span></div><div class="arrow">→</div>
+    <div class="fbox"><b>2 · Claude.ai project</b><span>refine → generate instructions</span></div><div class="arrow">→</div>
+    <div class="fbox or"><b>3 · Build locally</b><span>Claude Code + the template</span></div><div class="arrow">→</div>
+    <div class="fbox"><b>4 · Test at localhost</b></div><div class="arrow">→</div>
+    <div class="fbox ok"><b>5 · Deploy</b></div>
+  </div>
+  <div class="g3">
+    <div class="card"><h3>1 &mdash; Design in Google Docs</h3><p class="small">What it does, who uses it, what integrations it needs, what the screens look like. <strong>The more detail, the better Claude builds.</strong> This doc is the source of truth.</p></div>
+    <div class="card"><h3>2 &mdash; A project on Claude.ai</h3><p class="small">Upload the design doc and reference files. Chat to refine, then ask it to <strong>"create instructions for Claude Code"</strong> &mdash; it produces a set of files to download.</p></div>
+    <div class="card"><h3>3 &mdash; Build locally</h3><p class="small">Put those files in <code>Design/</code>, copy the template, create the repo, then: <em>"Read all files in the Design folder and build the project as described."</em></p></div>
+  </div>
+  <div class="note"><strong>Naming rule:</strong> always <code>orcanos-[addon]-[name]</code> &mdash; lowercase letters and hyphens only. <strong>The GitHub repo, the local folder and the Claude project all share the same name.</strong></div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="Bootstrapping a project" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Working with Claude Code</div>
+  <h2>Six steps, once per project.</h2>
+  <div class="g46">
+    <div class="tw"><table>
+    <tr><th style="width:8%">#</th><th>Step</th></tr>
+    <tr><td class="num">1</td><td><strong>Create the folder</strong>, named exactly like the project</td></tr>
+    <tr><td class="num">2</td><td><strong>Copy the project template</strong> &mdash; <code>github.com/zoharp/new-project</code>. It ships <code>CLAUDE.md</code>, <code>SYSTEM.md</code>, the folder skeleton, <code>run_claude.bat</code> / <code>run.bat</code> / <code>deploy.bat</code>, <code>.env.example</code>, <code>.gitignore</code></td></tr>
+    <tr><td class="num">3</td><td><strong>Put the generated design files in <code>Design/</code></strong></td></tr>
+    <tr><td class="num">4</td><td><strong>Create the GitHub repo</strong>, same name, push the template</td></tr>
+    <tr><td class="num">5</td><td><strong>Copy the skills library</strong> &mdash; clone <code>github.com/zoharp/claude-skills</code>, copy what you need into <code>%USERPROFILE%\.claude\skills\</code></td></tr>
+    <tr><td class="num">6</td><td><strong>Open VS Code and start Claude Code</strong> in the project folder</td></tr>
+    </table></div>
+    <div class="stack">
+      <div class="card"><h3>Installing Claude Code</h3><pre><span class="c"># macOS / Linux</span>
+curl -fsSL https://claude.ai/install.sh | bash
+<span class="c"># Windows (PowerShell)</span>
+irm https://claude.ai/install.ps1 | iex</pre></div>
+      <div class="card"><h3>The tools, one line each</h3><p class="small"><strong>Claude.ai</strong> &mdash; strategy and the design phase. <strong>Claude Code</strong> &mdash; terminal, the main build tool. <strong>VS Code extension</strong> &mdash; both modes without leaving your files. <strong>Claude Desktop</strong> &mdash; quick questions outside a project. <strong>Cowork</strong> &mdash; recurring background automation.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="The session loop" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Working with Claude Code</div>
+  <h2>One step at a time. Every session.</h2>
+  <div class="g46">
+    <div class="tw"><table>
+    <tr><th style="width:8%">#</th><th>Step</th></tr>
+    <tr><td class="num">1</td><td><strong>Open Claude in the project folder</strong></td></tr>
+    <tr><td class="num">2</td><td><strong>Read the context files first</strong> &mdash; <em>"Read CLAUDE.md and SYSTEM.md so you understand the project."</em> One line, full project awareness</td></tr>
+    <tr><td class="num">3</td><td><strong>One specific task.</strong> Name the file. Describe the <strong>outcome</strong>, not the steps</td></tr>
+    <tr><td class="num">4</td><td><strong>Review the proposal before approving.</strong> Right file? Makes sense? <strong>Never approve changes to files you did not ask about</strong></td></tr>
+    <tr><td class="num">5</td><td><strong>Test, commit, move on.</strong> Verify in the browser. <strong>Never chain unverified steps</strong></td></tr>
+    </table></div>
+    <div class="stack">
+      <div class="card bad"><h3>When Claude is stuck in a loop</h3><p class="small">The signs: the same error after two or more attempted fixes · Claude editing files you did not ask about · you have typed <em>yes</em> more than three times on the same problem.</p></div>
+      <div class="card or"><h3>The reset sequence</h3><p class="small"><strong>1.</strong> <em>"Stop. Let us step back."</em> &mdash; interrupt the plan entirely.<br><strong>2.</strong> <em>"Explain the problem before fixing it."</em> &mdash; force diagnosis first. <strong>This is what exposes the wrong assumption causing the loop.</strong><br><strong>3.</strong> Give a tighter instruction. Still stuck? <code>git checkout</code> and try a different approach.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="Prompting, and building locally" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Working with Claude Code</div>
+  <h2>Describe the outcome, not the steps.</h2>
+  <div class="g2">
+    <div class="card bad"><div class="kicker">Weak</div><p class="small">"Add a useState hook and a useEffect that fetches from /api/users when the component mounts."</p><p class="small"><strong>You are doing all the thinking; Claude is just typing.</strong> You get exactly what you described &mdash; even if it is the wrong approach for this codebase.</p></div>
+    <div class="card ok"><div class="kicker">Strong</div><p class="small">"When the Users page loads, fetch the user list from the Orcanos API and show it in a table. If the fetch fails, show a retry button. Match the style of the existing tables in the app."</p><p class="small"><strong>Claude knows the outcome</strong>, handles edge cases, matches existing patterns.</p></div>
+  </div>
+  <div class="g4">
+    <div class="card"><h3>Which file</h3><p class="small">Name it explicitly, every time.</p></div>
+    <div class="card"><h3>The outcome</h3><p class="small">What should happen, not how.</p></div>
+    <div class="card"><h3>A reference</h3><p class="small">"Match the existing card style."</p></div>
+    <div class="card"><h3>Edge cases</h3><p class="small">Loading, error, empty.</p></div>
+  </div>
+  <div class="g2">
+    <div class="card"><h3>Build locally, push only when it works</h3><p class="small"><strong>Never build and test on the live environment.</strong> Run the full stack on your machine: start locally → one step → verify at localhost → commit → push only when every step has passed.</p></div>
+    <div class="card"><h3>Three git commands that make it safe</h3><pre>git diff                     <span class="c"># what changed</span>
+git checkout src/MyFile.jsx  <span class="c"># undo one file</span>
+git reset HEAD~1             <span class="c"># undo last commit</span></pre><p class="small"><strong>Nothing Claude does is permanent.</strong> Let it try things freely.</p></div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="Commands and context files" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Working with Claude Code</div>
+  <h2>The commands worth knowing, and the two files that survive a session.</h2>
+  <div class="g2">
+    <div class="tw"><table>
+    <tr><th style="width:26%">Command</th><th>What it does</th></tr>
+    <tr><td><code>/init</code></td><td>Analyses the project and creates a <code>CLAUDE.md</code></td></tr>
+    <tr><td><code>/plan</code></td><td>Researches and writes a plan <strong>without touching any files</strong></td></tr>
+    <tr><td><code>/context</code></td><td>What is in the context window and what each part costs &mdash; <strong>system prompt</strong>, <strong>system tools</strong>, <strong>memory files</strong> (<code>CLAUDE.md</code>, <code>~/.claude/</code>), <strong>conversation</strong>. Use it to diagnose "why is Claude forgetting things"</td></tr>
+    <tr><td><code>/compact</code></td><td>Summarises history into a tight digest. <strong>Run at 15&ndash;20 % usage, not when nearly full</strong> &mdash; compacting when full loses more detail</td></tr>
+    <tr><td><code>/clear</code></td><td>Clears history. Use when switching tasks</td></tr>
+    <tr><td><code>/model</code></td><td>Switch model mid-session</td></tr>
+    <tr><td><code>claude -c</code></td><td>Resume the last session &mdash; context continues</td></tr>
+    <tr><td><code>Ctrl+C</code> · <code>exit</code></td><td>Stop immediately · close the session</td></tr>
+    </table></div>
+    <div class="stack">
+      <div class="card"><div class="kicker">how it is built</div><h3><code>CLAUDE.md</code></h3><p class="small">Tech stack, platform choice, key file paths, the reference to <code>~/.claude/skills</code>, the Orcanos API base URL and auth pattern, how to run the dev server.</p></div>
+      <div class="card"><div class="kicker">what it does</div><h3><code>SYSTEM.md</code></h3><p class="small">What each page or feature does, how data flows, the Orcanos integrations and their purpose, business logic and access rules.</p></div>
+      <div class="card"><h3>Claude.ai — projects &amp; memory</h3><p class="small">One project per addon, design doc pinned at the top. Dev team: add <code>CLAUDE.md</code> and <code>SYSTEM.md</code> as project context. Review what memory has stored and delete what is outdated.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="⚠ Two different things are called &quot;skills&quot;" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Skills</div>
+  <h2>Do not confuse the two.</h2>
+  <div class="tw"><table>
+  <tr><th style="width:16%"></th><th style="width:42%">Claude Code skills</th><th>Ask Paul persona skills</th></tr>
+  <tr><td><strong>What</strong></td><td>Instructions that teach Claude how we work</td><td><strong>A product feature</strong> &mdash; the expert persona Ask Paul answers as</td></tr>
+  <tr><td><strong>Format</strong></td><td>A folder with a <code>SKILL.md</code> (YAML frontmatter + Markdown)</td><td>A <code>.json</code> file</td></tr>
+  <tr><td><strong>Where</strong></td><td><code>~/.claude/skills/</code>, or a repo's <code>.claude/skills/</code></td><td><code>Orcanos QMS/skills/*.json</code></td></tr>
+  <tr><td><strong>Examples</strong></td><td><code>orcanos-api</code>, <code>ui-ux</code>, <code>release-management</code></td><td><code>iso-13485-internal-auditor</code>, <code>risk-management-expert</code>, <code>iec-62304-software-engineer</code></td></tr>
+  <tr><td><strong>Audience</strong></td><td>Developers</td><td><strong>Customers</strong></td></tr>
+  </table></div>
+  <div class="g2">
+    <div class="card"><h3>Where the developer skills live</h3><p class="small"><strong><code>~/.claude/skills/</code></strong> &mdash; global, 24 skills: the <code>orcanos-*</code> family, <code>supabase-patterns</code>, <code>ui-ux</code>, <code>gcp-deployment</code>, <code>deploy</code>, <code>fastapi-streaming</code>, <code>release-management</code>, the <code>req-*</code> family, <code>code-review</code>, <code>spec-review</code>, <code>implementation-plan-review</code>, <code>compliance-audit</code>, <code>sqlserver-dba</code>, <code>new-project</code>, <code>markdown-to-docx</code>.<br><br><strong><code>traceability-matrix/.claude/skills/</code></strong> &mdash; <code>gitbook</code>, <code>landing-page</code>, <code>tutorial-video</code>, <code>security-scan</code>, <code>multitenant-audit</code>.<br><br><strong><code>Orcanos QMS/.claude/skills/</code></strong> &mdash; <code>gitbook</code>, <code>document</code>.<br><br><strong><code>c:\AI Projects\Claude-skills\</code></strong> &mdash; the source repo, with <code>install.bat</code> / <code>install.sh</code>.</p></div>
+    <div class="stack">
+      <div class="card"><h3>Adding or changing one</h3><pre><span class="c">1</span> create Claude-skills/skills/my-skill/SKILL.md
+<span class="c">2</span> frontmatter: name, description, revision
+  <span class="c">description IS the auto-invoke trigger</span>
+<span class="c">3</span> install.bat            <span class="c"># all</span>
+  install.bat my-skill   <span class="c"># one</span>
+<span class="c">4</span> /reload-plugins
+<span class="c">5</span> commit + push</pre><p class="small">Project-specific knowledge belongs in the <strong>project's</strong> <code>.claude/skills/</code>. Only what is true everywhere goes global.</p></div>
+      <div class="card or"><h3>The Orcanos API skills</h3><p class="small"><code>orcanos-api</code> is the <strong>router</strong> &mdash; start there; it points at one skill per endpoint. Then: <strong><code>Orcanos-infra</code> for <em>what</em></strong> an Orcanos object is, <strong><code>orcanos-api</code> for <em>how</em></strong> to call it, <strong><code>orcanos-processes</code> for <em>when and by whom</em></strong>. <code>orcanos-form-builder</code> builds a real Add/Edit screen from a live response.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="CLAUDE.md and our MD files" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Documentation</div>
+  <h2>CLAUDE.md is loaded into every session. That makes it precious.</h2>
+  <div class="g2">
+    <div class="stack">
+      <div class="card bad"><h3>Two real numbers</h3><p class="small">Traceability's <code>CLAUDE.md</code> was <strong>145 KB</strong> &mdash; the trap notes alone were 99 KB. Split out to <code>docs/notes/</code>, it is now <strong>~21 KB</strong>.<br><br>Before that, the changelog inside it was <strong>313,000 characters &mdash; 76 % of the file</strong>, about 100k tokens loaded into every session whether relevant or not.</p></div>
+      <div class="tw"><table>
+      <tr><th>Put in CLAUDE.md</th><th>Put one link away</th></tr>
+      <tr><td>Current version numbers</td><td>Release history / changelog</td></tr>
+      <tr><td>A docs map &mdash; what to read when</td><td>The deep documents themselves</td></tr>
+      <tr><td><strong>The traps: things that fail silently</strong></td><td>Long explanations of each trap</td></tr>
+      <tr><td>Conventions and hard rules</td><td>API listings, file inventories</td></tr>
+      <tr><td>What NOT to do</td><td>User manuals, design specs</td></tr>
+      </table></div>
+      <div class="note"><strong>The test for a <code>CLAUDE.md</code> line:</strong> would getting this wrong produce a <em>clean, plausible, wrong</em> result? If yes, it belongs there. If it is history or reference, link to it.</div>
+    </div>
+    <div class="stack">
+      <div class="tw"><table>
+      <tr><th style="width:36%">File</th><th>Purpose</th></tr>
+      <tr><td><code>CLAUDE.md</code></td><td>Always loaded. The brief</td></tr>
+      <tr><td><code>README.md</code></td><td>Human-facing: what it is, how to set it up</td></tr>
+      <tr><td><code>ARCHITECTURE.md</code></td><td>The design in depth, and <em>why</em> each decision</td></tr>
+      <tr><td><code>SCHEMA.md</code></td><td>Every table and column, DDL and ownership</td></tr>
+      <tr><td><code>SECURITY*.md</code></td><td>The contract, and the findings ledger</td></tr>
+      <tr><td><code>DEPLOYMENT.md</code> · <code>INSTALL.md</code></td><td>How we deploy · how a customer installs</td></tr>
+      <tr><td><code>TESTING.md</code></td><td>The plan, and <strong>what has genuinely been verified</strong></td></tr>
+      <tr><td><code>docs/notes/</code></td><td>Numbered traps, <strong>globally and stably numbered</strong></td></tr>
+      <tr><td><code>design/</code></td><td>Intent written <em>before</em> the build. <strong>Never updated after &mdash; it drifts</strong></td></tr>
+      </table></div>
+      <div class="card or"><h3>Two habits worth copying</h3><p class="small"><strong>Stable numbering.</strong> <code>See Critical Note #19</code> resolves through an index, so notes can move between files without breaking a single reference in the code.<br><br><strong>Say what is verified and what is not.</strong> An explicit ✅/⬜ table. <strong>"Untested" written down is worth more than a confident paragraph.</strong></p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="GitHub and the deployment gate" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">CI/CD</div>
+  <h2>The gate, and the release ritual.</h2>
+  <div class="trap" style="font-size:17px"><span class="tag">⚠ The deployment gate</span><b>Commit locally. Do not <code>git push</code>, deploy, or trigger Cloud Build without explicit approval.</b> On Vercel-backed repos <b>a push to <code>main</code> is a production deploy</b>. This gate is not overridden by the "don't ask permission on routine work" rule.</div>
+  <div class="g46">
+    <div class="stack">
+      <div class="card"><h3>The repos</h3><p class="small">All private, all under <code>zoharp/</code>, all on <code>main</code>, all cloned under <code>c:\AI Projects\</code>: <code>orcanos_qms_AI</code>, <code>traceability-matrix</code>, <code>account-management</code>, <code>covaris_bom</code>, <code>quiz-management</code>, <code>ai-portal</code>, <code>Claude-skills</code>.</p></div>
+      <div class="card"><h3>The dev scripts</h3><p class="small">Traceability uses ports <strong>8010 / 3010</strong>, deliberately not 8000/3000, which Ask Paul and quiz-management use. It kills <strong>only what holds those ports</strong> &mdash; a blanket <code>taskkill /IM python.exe</code> would kill the Ask Paul backend too &mdash; and then <strong>verifies the port actually freed</strong>.</p></div>
+      <div class="trap"><span class="tag">⚠ Critical Note #32 — applies everywhere</span><b>"My code change had no effect" is usually a STALE PROCESS holding the port</b>, not a code problem. <code>taskkill</code> cannot kill a process from another session but reports success-ish; the old backend keeps serving. Cost hours on 2026-08-29.</div>
+    </div>
+    <div class="stack">
+      <div class="card or"><h3>The release ritual &mdash; every shippable change</h3><p class="small"><strong>1.</strong> Bump the version &mdash; <code>package.json</code> <em>and</em> the block at the top of <code>CLAUDE.md</code>.<br><strong>2.</strong> Prepend to <code>release_notes.json</code>. <strong>⚠ Never put customer data or account names in it &mdash; it ships to the browser verbatim.</strong><br><strong>3.</strong> Prepend the long form to the changelog, add its row to the changelog index.<br><strong>4.</strong> Sync GitBook &mdash; <code>/gitbook releases</code>.<br><strong>5.</strong> Requirements traceability (Ask Paul) &mdash; <code>/req-trace</code> on modified files, <code>/req-create</code> for new behaviour. Skip pure style/config changes.</p><p class="small">The <code>/release-management</code> skill does steps 1&ndash;3.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="The deploy scripts — our best practice" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">CI/CD</div>
+  <h2>Six gated steps. Any failure stops everything.</h2>
+  <p class="sub">Traceability's <code>deploy.bat</code> is the model to copy &mdash; nothing half-deploys.</p>
+  <div class="tw"><table>
+  <tr><th style="width:6%">#</th><th style="width:38%">What</th><th>Why it is a gate</th></tr>
+  <tr><td class="num">1</td><td>Mirror <code>release_notes.json</code> into <code>src/frontend/public/</code>, then <strong>binary-compare the copy</strong></td><td>The app reads the <strong>copy</strong> at runtime. Skip this and the footer shows the previous version through any number of clean deploys, with nothing failing. <strong>⚠ This has drifted twice</strong></td></tr>
+  <tr><td class="num">2</td><td>Rebuild the landing page</td><td>The public page ships the newest version number</td></tr>
+  <tr><td class="num">3</td><td><code>git add -A</code>, show status, prompt for a message, commit, push</td><td>One place, one confirmation</td></tr>
+  <tr><td class="num">4</td><td><code>flyctl deploy</code></td><td>The actual deploy</td></tr>
+  <tr><td class="num">5</td><td>Build the IIS zip</td><td>The on-premises package never drifts from the cloud one</td></tr>
+  <tr><td class="num">6</td><td><code>curl</code> the live landing page, print HTTP status + byte size</td><td><strong>Proof it is actually live</strong> &mdash; expect 200 and ~700,000+ bytes</td></tr>
+  </table></div>
+  <div class="g2">
+    <div class="card"><h3>Ask Paul &mdash; same idea, for Cloud Build</h3><p class="small">commit → push → then <code>git_scripts/verify_deploy.py</code>, <strong>because a push alone does not mean deployed</strong>. If the build fails you are told that production is still running old code.</p></div>
+    <div class="card"><h3>Account Management</h3><p class="small">typecheck → <code>next build</code> → commit prompt → push. <strong>The build gate runs before the commit prompt</strong>, so a broken build never reaches a red Vercel deploy. Pushing requires typing <code>DEPLOY</code>.</p></div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="The documentation pipeline" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Documentation</div>
+  <h2>Release notes, GitBook, the landing page, the help video.</h2>
+  <div class="flow">
+    <div class="fbox"><b>Code change</b></div><div class="arrow">→</div>
+    <div class="fbox or"><b>/release-management</b><span>version + notes + changelog</span></div><div class="arrow">→</div>
+    <div class="fbox"><b>/gitbook releases</b><span>→ published Release Notes page</span></div>
+    <div class="arrow">·</div>
+    <div class="fbox"><b>landing.py build</b><span>→ public landing page</span></div>
+  </div>
+  <div class="g2">
+    <div class="stack">
+      <div class="card"><h3>GitBook</h3><p class="small">One page per <code>##</code> section of <code>USER_MANUAL.md</code>, plus an auto-generated Release Notes page placed last.<br><br>Spaces: Traceability <code>DX08MS01eLeTOrEp4kod</code> · Ask Paul <code>Ywj8Iox1ZDfgLDr6wn6r</code> · org <code>1DKN3pu6aPQvXpFb3qPY</code>.<br><br>Pages are matched <strong>by title</strong>, so existing pages are <em>updated</em> and keep their URL and history. Content hashes are cached, so unchanged pages are skipped. <strong>The token is never in source control.</strong> Always <code>--validate-only</code> first.</p></div>
+      <div class="trap"><span class="tag">⚠ Renaming an H2</span><b>It looks like delete + create</b> to the sync script, and that page's GitBook history is lost. Rename in the GitBook UI first, then in the markdown.</div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Landing page</h3><p class="small"><code>landing/landing.py build</code> renders a template + config + screenshots into <strong>one self-contained HTML file</strong> &mdash; fonts and images inlined, which is why it is ~700 KB and why step 6 of the deploy verifies exactly that.</p></div>
+      <div class="card"><h3>Help video</h3><p class="small"><code>tutorial-video/</code> &mdash; a storyboard JSON plus <code>render.py</code> produces narrated MP4s, catalogued in <code>CATALOG.json</code>. Skill: <code>/tutorial-video</code>.</p></div>
+      <div class="card"><h3>The help URL is repointable</h3><p class="small">The app's <code>?</code> icon reads <code>helpUrl</code> from <code>public/app-settings.json</code> &mdash; change it <strong>without a rebuild</strong>. Empty string hides the icon.</p></div>
+      <div class="card bad"><h3>⚠ Keep the two pipelines apart</h3><p class="small">Ask Paul's <code>generate_docs.py</code> produces <strong>IEC 62304 compliance evidence</strong>. That is not the GitBook user manual &mdash; never point them at the same space.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="Installing Traceability on IIS" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">On-premises</div>
+  <h2>Nine steps on the customer's Windows Server.</h2>
+  <div class="flow">
+    <div class="fbox"><b>Browser</b></div><div class="arrow">→</div>
+    <div class="fbox or"><b>IIS Default Web Site</b><span>static SPA + ARR proxy</span></div><div class="arrow">→</div>
+    <div class="fbox"><b>FastAPI on localhost:8000</b></div><div class="arrow">→</div>
+    <div class="fbox db"><b>traceability.db</b><span>SQLite · WAL</span></div>
+  </div>
+  <div class="g46">
+    <div class="tw"><table>
+    <tr><th style="width:6%">#</th><th>Step</th></tr>
+    <tr><td class="num">1</td><td><strong>Enable IIS</strong> (include Application Development Features), check <code>http://localhost</code></td></tr>
+    <tr><td class="num">2</td><td>Install <strong>URL Rewrite</strong></td></tr>
+    <tr><td class="num">3</td><td>Install <strong>ARR</strong> (Application Request Routing)</td></tr>
+    <tr><td class="num">4</td><td><strong>Enable the reverse proxy</strong> &mdash; IIS Manager → server node → ARR Cache → Server Proxy Settings → tick <em>Enable proxy</em></td></tr>
+    <tr><td class="num">5</td><td>Extract the zip into <code>C:\inetpub\wwwroot\traceability-matrix\</code></td></tr>
+    <tr><td class="num">6</td><td>Copy <code>wwwroot_web.config</code> to <code>C:\inetpub\wwwroot\web.config</code> &mdash; this is what proxies <code>/api/*</code></td></tr>
+    <tr><td class="num">7</td><td>Configure <code>.env</code> &mdash; base URL, tenant, DB path, secret, timeout, <code>ADMIN_PASSWORD</code></td></tr>
+    <tr><td class="num">8</td><td>Run the backend on <code>localhost:8000</code>, manually or as a Windows Service</td></tr>
+    <tr><td class="num">9</td><td>Open <code>http://&lt;server&gt;/traceability-matrix/</code></td></tr>
+    </table></div>
+    <div class="stack">
+      <div class="trap"><span class="tag">⚠ Upgrading an existing install</span>The customer's saved panels live in <code>backend\traceability.db</code>. <b>Stop the backend first</b> &mdash; WAL means the newest writes may still be in a <code>-wal</code> sidecar; a clean shutdown folds them in. If the process was killed and a <code>-wal</code> file exists, copy <b><code>-wal</code> and <code>-shm</code> with the <code>.db</code></b>.<br><br><b>Critical Note #9: never ship the database inside a deploy package.</b> That is a data-loss bug &mdash; and it is why the zip no longer contains one.</div>
+      <div class="card"><h3><code>/admin</code> on IIS</h3><p class="small"><code>GET /admin</code> is a FastAPI route, so on Fly it just works. On a reverse-proxied IIS install <strong>IIS forwards only <code>/api/*</code></strong> and the SPA has no <code>/admin</code> route &mdash; so reach it <strong>on the server itself at <code>http://localhost:8000/admin</code></strong>. <code>ADMIN_PASSWORD</code> is read <strong>at process start</strong>: change it without restarting and the old one stays live while the login answers 401.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="Admin manual — accounts and licences" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">User manual · Account Management</div>
+  <h2>Signing in, the list, creating and editing.</h2>
+  <div class="g2">
+    <div class="stack">
+      <div class="card"><h3>Signing in</h3><p class="small">To get in at all you need <strong>both</strong>: <code>role = 'admin'</code> on your master <code>users</code> row, <strong>and</strong> an <code>@orcanos.com</code> email. Everyone else gets a <strong>404</strong> on every route, by design.<br><br>For Orcanos email sign-in you also need <code>orcanos_user_name</code> set on your row &mdash; set by an admin, directly in the database; there is no self-service screen yet. The first field accepts that username <em>or</em> your email, and <strong><code>QW_Login</code> is always called with the stored username, never with what you typed.</strong></p></div>
+      <div class="card"><h3>The accounts list</h3><p class="small">Every tenant, one row: name, status, database, module licences, spend. Module columns come <strong>live from the Traceability instance</strong> &mdash; a <strong>dash means "no answer from that source"</strong>, which is not the same as "off".</p></div>
+    </div>
+    <div class="stack">
+      <div class="card"><h3>Creating an account</h3><p class="small">The <strong>Orcanos tenant is parsed out of the API URL</strong>, and the form shows you which one it decided on. With no URL there is no tenant, and the licence pills stay disabled.<br><br>Since 0.3.3 <strong>every creation writes the Traceability <code>account_access</code> row</strong>, even with nothing ticked &mdash; without that row the tenant cannot sign in to Traceability at all. A database is optional since 0.3.0, and <strong>an account created without one is created inactive</strong>.</p></div>
+      <div class="trap"><span class="tag">⚠ Four editing rules</span><b>A blank password field means "keep the stored secret"</b> &mdash; an empty string would wipe a working credential. <b>A new vector key cannot be saved until it tests green</b>, and editing any vector field clears the previous result. <b><code>{success: null}</code> is a third state</b> &mdash; "nothing configured to test", not a failure. <b>The Status switch writes <code>is_active</code></b> and is therefore an Ask Paul control despite its label.</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="Admin manual — provisioning, deleting, audit" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">User manual · Account Management</div>
+  <h2>Provisioning is a resumable job. Read this before running it.</h2>
+  <div class="flow">
+    <div class="fbox"><b>creating_project</b></div><div class="arrow">→</div>
+    <div class="fbox"><b>waiting_healthy</b></div><div class="arrow">→</div>
+    <div class="fbox"><b>fetching_keys</b></div><div class="arrow">→</div>
+    <div class="fbox bad" style="background:rgba(255,107,107,.10);border-color:rgba(255,107,107,.4)"><b>running_schema</b><span>⚠ cannot work from Vercel</span></div><div class="arrow">→</div>
+    <div class="fbox"><b>saving_account</b></div><div class="arrow">→</div>
+    <div class="fbox ok"><b>done</b></div>
+  </div>
+  <p class="small">The browser polls every 4 seconds, so a timeout, a redeploy or a closed browser costs <strong>one step, not the job</strong>. Secrets on the job row are encrypted and nulled at <code>done</code>.</p>
+  <div class="g2">
+    <div class="trap"><span class="tag">⚠ Before the first real run</span><b>Ask Paul cannot be licensed at creation time today.</b> It is the only module with a per-tenant vector store, so it cannot be turned on without a database &mdash; and <code>running_schema</code> cannot run from Vercel. <b>Create the account, add the database under Edit → Vector DB, then use the pill.</b> Turning it <em>off</em> is never blocked.</div>
+    <div class="stack">
+      <div class="card bad"><h3>Deleting an account</h3><p class="small"><strong>Delete does not de-provision the tenant's Supabase project.</strong> That project keeps costing money until someone removes it by hand. The warning is shown on screen &mdash; read it.</p></div>
+      <div class="card"><h3>The Audit page</h3><p class="small">Every security-relevant event from <strong>both</strong> apps: sign-ins with method, tenant and reason; account changes; licence changes. <strong>It starts on 2026-08-29</strong>, and the account filter shows both old and new spellings of renamed accounts.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<!-- ============ PART 7 ============ -->
+<section class="slide part" data-part="7" data-title="Part 7 — Where it goes">
+<div class="pad">
+  <div class="part-n">PART SEVEN</div>
+  <h1>Where it goes.</h1>
+  <div class="part-rule"></div>
+  <p class="sub">Stay on Vercel and Fly, or move everything to Orcanos AWS? The honest case for each, a recommendation, and the seventeen next steps ranked by value per unit of risk.</p>
+  <div class="part-list">
+    <span class="pill">The guiding position</span><span class="pill">Stay vs move</span>
+    <span class="pill">The recommendation</span><span class="pill or">Ask Paul → AWS RDS</span>
+    <span class="pill">Next steps</span><span class="pill">Open decisions</span>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="7" data-title="Domain buys SSO. Host buys tidiness." data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">The future · the guiding position</div>
+  <h2>Hosting is the axis that matters least.</h2>
+  <div class="note" style="font-size:18px"><strong>Three hosts is untidy, but it is not what blocks a single login</strong> &mdash; and unifying them is weeks of work with no customer-visible benefit. Consolidating hosting should come <strong>last</strong>.</div>
+  <p class="sub">What <em>is</em> load-bearing is the <strong>domain</strong>, not the host. An httpOnly session cookie spans any set of hosts that share a registrable parent domain.</p>
+  <div class="flow">
+    <div class="fbox"><b>portal.orcanos.…</b><span>Vercel</span></div>
+    <div class="fbox"><b>qms.orcanos.…</b><span>Cloud Run</span></div>
+    <div class="fbox"><b>trace.orcanos.…</b><span>Fly</span></div>
+    <div class="fbox"><b>bom.orcanos.…</b><span>Vercel</span></div>
+    <div class="arrow">→</div>
+    <div class="fbox or"><b>one session cookie</b><span>scoped to the parent domain</span></div>
+  </div>
+  <div class="note" style="font-size:18px"><strong>Domain unification buys SSO. Host unification buys tidiness. Do the first; defer the second.</strong></div>
+  <div class="g2">
+    <div class="card"><h3>If the subdomain route is rejected</h3><p class="small"><strong>One origin, path-routed</strong> (<code>/qms</code>, <code>/trace</code>) &mdash; best cookie story, but needs a router in front and a base-path migration per frontend.</p></div>
+    <div class="card"><h3>Or</h3><p class="small"><strong>Separate origins + token handoff</strong> &mdash; most flexible, most moving parts, and it re-introduces the per-module session state the platform JWT was meant to remove.</p></div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="7" data-title="Stay, or move to Orcanos AWS?" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">The future · the two options</div>
+  <h2>The honest case for each.</h2>
+  <div class="g2">
+    <div class="card"><div class="kicker">Option A</div><h3>Stay where we are</h3>
+      <div class="tw" style="margin-top:6px"><table>
+      <tr><th>Pros</th><th>Cons</th></tr>
+      <tr><td>Zero migration risk; customers see nothing</td><td>Three consoles, three secret stores, three deploy models</td></tr>
+      <tr><td>Each host is genuinely good at its job</td><td>Three bills, and no single view of cost</td></tr>
+      <tr><td>Push-to-deploy already works everywhere</td><td>Skills and knowledge split three ways</td></tr>
+      <tr><td>Managed SSL, CDN, backups included</td><td><strong>Data with three vendors</strong> &mdash; more sub-processor questions in an ISO 27001 review</td></tr>
+      </table></div>
+    </div>
+    <div class="card or"><div class="kicker">Option B</div><h3>Move everything to Orcanos AWS</h3>
+      <div class="tw" style="margin-top:6px"><table>
+      <tr><th>Pros</th><th>Cons</th></tr>
+      <tr><td><strong>One vendor, one bill, one security boundary</strong></td><td>We rebuild what we get free: CI, SSL, CDN, backups, preview deploys</td></tr>
+      <tr><td>Much easier ISO 27001 / residency story</td><td>We become responsible for patching and uptime</td></tr>
+      <tr><td><strong>The Bedrock gateway is already on Orcanos AWS</strong> &mdash; LLM traffic stops leaving</td><td>pgvector on RDS must be set up and tuned by us</td></tr>
+      <tr><td>Customer data never leaves Orcanos infrastructure</td><td>Weeks of work, <strong>zero new features</strong></td></tr>
+      <tr><td>Simpler network path to customer SQL Servers</td><td>New failure modes we have no experience with</td></tr>
+      </table></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="7" data-title="The recommendation" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">The future · recommendation</div>
+  <h2>A hybrid, in this order.</h2>
+  <div class="g4">
+    <div class="card ok"><div class="hero-num">1</div><h3>Now &mdash; one parent domain</h3><p class="small">Cheap, low risk, unlocks SSO. <strong>Do it regardless of everything else.</strong></p></div>
+    <div class="card ok"><div class="hero-num">2</div><h3>Now &mdash; LLM traffic to the Orcanos gateway</h3><p class="small">It already works, it is already AWS, and it removes a sub-processor from the conversation.</p></div>
+    <div class="card"><div class="hero-num">3</div><h3>Later &mdash; one container host</h3><p class="small">Fly <strong>or</strong> Cloud Run, not both. Neither is better on merit; decide by where CI and secrets already live.</p></div>
+    <div class="card"><div class="hero-num">4</div><h3>Only if demanded &mdash; move the data</h3><p class="small">That is the expensive half. A customer requirement or an audit finding is the trigger.</p></div>
+  </div>
+  <div class="trap"><span class="tag">⚠ Whatever we move, preserve this</span>Fly's <b><code>min_machines_running = 1</code></b> exists for a real reason: Traceability runs multi-minute builds on background threads <b>with no HTTP request holding the machine up</b>, and Litestream only replicates from a running process. A host that scales to zero loses builds and leaves the last writes unreplicated.</div>
+  <div class="note"><strong>Keep Vercel for the Next.js control plane and the static frontends either way.</strong> There is no scenario where hand-rolling that on AWS is a good use of our time.</div>
+</div>
+</section>
+
+<section class="slide" data-part="7" data-title="Moving Ask Paul to AWS RDS" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">The future · Ask Paul specifically</div>
+  <h2>AWS RDS Postgres + pgvector, instead of a Supabase project per tenant.</h2>
+  <div class="g2">
+    <div class="stack">
+      <div class="tw"><table>
+      <tr><th style="width:44%">Supabase gives us</th><th>On RDS we would build</th></tr>
+      <tr><td><strong>Create a project by API</strong> &mdash; the whole one-click provisioning flow</td><td>A schema or database per tenant, created by our own migration runner. <strong>Simpler, actually</strong> &mdash; no external project lifecycle</td></tr>
+      <tr><td><strong>PostgREST</strong> &mdash; a REST API over the tables for free</td><td>The backend already queries through one layer; it would talk SQL instead. Real work, but bounded</td></tr>
+      <tr><td>Managed backups, PITR, dashboard</td><td>RDS gives all of this natively</td></tr>
+      <tr><td>A service-role key per project as the isolation boundary</td><td>A Postgres role per tenant, or RLS &mdash; a <strong>stronger</strong> boundary, but one we own</td></tr>
+      </table></div>
+    </div>
+    <div class="stack">
+      <div class="card ok"><h3>What gets better</h3><p class="small"><strong>No per-tenant project bill, and no orphaned-project problem</strong> &mdash; that whole class of cost disappears.<br><br><strong>The provisioning state machine gets much simpler</strong> &mdash; no waiting for <code>ACTIVE_HEALTHY</code>, no guessing at API response shapes.<br><br><strong>The IPv4/IPv6 problem disappears.</strong> RDS is reachable normally.<br><br>One engine to tune, one pool, one backup policy.</p></div>
+      <div class="card or"><h3>Two decisions to make first</h3><p class="small"><strong>1 &mdash; Schema-per-tenant, database-per-tenant, or one database with RLS?</strong> Schema-per-tenant is closest to today's isolation model and the easiest migration. RLS is cheapest to run and easiest to get subtly wrong.<br><br><strong>2 &mdash; Do the embeddings survive the move, or are they regenerated?</strong> Copying pgvector data between instances is straightforward; regenerating costs real money at per-tenant scale. <strong>Copy them.</strong></p></div>
+      <div class="note"><strong>Sequence:</strong> stand up RDS with pgvector → move <strong>one small tenant</strong> → run both in parallel and compare answers → move the rest → decommission. The master database moves <strong>last, or not at all</strong>.</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="7" data-title="Next steps — ranked" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">The future · next steps</div>
+  <h2>Seventeen steps, ranked by value per unit of risk.</h2>
+  <div class="tw"><table>
+  <tr><th style="width:5%">#</th><th style="width:40%">Step</th><th style="width:37%">Why now</th><th>Risk</th></tr>
+  <tr><td class="num">1</td><td><strong>Fix the orphaned Supabase project</strong> <code>qms-pcure</code> and run the orphan-finder query</td><td>It is billing us today</td><td><span class="pill ok">none</span></td></tr>
+  <tr><td class="num">2</td><td><strong>Fix provisioning to use the Supabase pooler host</strong>, and create the <code>accounts</code> row <em>before</em> the project</td><td>The DDL step cannot work from Vercel; failures are unrecoverable</td><td><span class="pill ok">low</span></td></tr>
+  <tr><td class="num">3</td><td><strong>Test everything in Account Management that writes</strong></td><td>We are one save away from finding out the hard way</td><td><span class="pill ok">low</span></td></tr>
+  <tr><td class="num">4</td><td><strong>Rehearse a restore</strong> and write down how long it took</td><td>ISO 27001 evidence, and peace of mind</td><td><span class="pill ok">none</span></td></tr>
+  <tr><td class="num">5</td><td><strong><code>user_accounts</code> membership table in master</strong></td><td>Every consolidation step needs it; nothing reads it at first</td><td><span class="pill ok">low</span></td></tr>
+  <tr><td class="num">6</td><td><strong>One parent domain</strong>, session cookie scoped to it</td><td>Unlocks SSO with no app moving anywhere</td><td><span class="pill ok">low</span></td></tr>
+  <tr><td class="num">7</td><td><strong>Portal shell + module registry</strong>; single-module tenants skip the launcher</td><td>Proves one login without absorbing any app</td><td><span class="pill ok">low</span></td></tr>
+  <tr><td class="num">8</td><td><strong>One shared Orcanos API client</strong> instead of three</td><td>Highest-value de-duplication we have</td><td><span class="pill or">medium</span></td></tr>
+  <tr><td class="num">9</td><td><strong>Orcanos as a fourth auth method</strong>, shipped disabled</td><td>Lets Traceability and covaris-bom join without users learning anything</td><td><span class="pill or">medium</span></td></tr>
+  <tr><td class="num">10</td><td><strong>Migrate <code>ai_usage</code> → <code>account_usage_logs</code></strong></td><td>Append-only, already duplicated: the safest first migration, and it proves the pipe</td><td><span class="pill ok">low</span></td></tr>
+  <tr><td class="num">11</td><td><strong>Traceability onto the platform session</strong>, behind a flag with rollback</td><td>First genuinely customer-visible change</td><td><span class="pill bad">high</span></td></tr>
+  <tr><td class="num">12&ndash;13</td><td>Config tables to Postgres · hosting consolidation if still wanted</td><td>Only now is the shape known · optional, possibly never worth it</td><td><span class="pill or">medium</span></td></tr>
+  <tr><td class="num">14&ndash;15</td><td><code>accounts.orcanos_tenant</code> column · retention policy, access reviews, sub-processor list</td><td>Removes a class of guessing · the remaining ISO 27001 gaps</td><td><span class="pill ok">low</span></td></tr>
+  <tr><td class="num">16&ndash;17</td><td>Update the team deck and its model table · <strong>decide the cost-ledger boundary</strong>, then fix the stale price table</td><td>It is what new people are onboarded with · a wrong table writes a wrong ledger silently</td><td><span class="pill ok">low</span></td></tr>
+  </table></div>
+</div>
+</section>
+
+<section class="slide" data-part="7" data-title="The open decisions" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">The future · unsettled</div>
+  <h2>Five decisions, blocking step 9.</h2>
+  <div class="g2">
+    <div class="stack">
+      <div class="card or"><div class="kicker">D1</div><h3>The join key</h3><p class="small">What links an Orcanos user to a master <code>users</code> row? <code>QW_Login</code> returns a <code>User_name</code> that is <strong>unique per tenant, not globally</strong>. Today: <code>orcanos_user_name</code> + <code>orcanos_account</code>, unique on the pair &mdash; the honest option. Also: <strong>do we JIT-provision a user on first <code>QW_Login</code>?</strong></p></div>
+      <div class="card or"><div class="kicker">D2</div><h3>Who do we call Orcanos as?</h3><p class="small">Traceability calls <strong>as the end user</strong> (per-session Basic header); Ask Paul uses <strong>one account-level credential</strong>. These are different authorisation models, and switching <strong>changes what Orcanos records in its own audit trail</strong> &mdash; which matters for a regulated QMS. A stateless JWT has nowhere safe to hold a per-user Basic header, so "per user" means keeping a server-side session row.</p></div>
+    </div>
+    <div class="stack">
+      <div class="card or"><div class="kicker">D3</div><h3>Is a module licence per tenant or per user?</h3><p class="small">Recommendation: <strong>tenant-level with optional per-user narrowing.</strong></p></div>
+      <div class="card or"><div class="kicker">D4</div><h3>Does covaris-bom join at all?</h3><p class="small">Cheapest to absorb, gains the least &mdash; but the lowest-stakes way to prove the portal end to end.</p></div>
+      <div class="card or"><div class="kicker">D5</div><h3>CSRF</h3><p class="small">Account Management relies on <code>SameSite=Lax</code>; Traceability issues an explicit <code>X-CSRF-Token</code>. <strong>Pick one, apply it everywhere.</strong></p></div>
+      <div class="note"><strong>Order of consolidation: identity → domain → data → hosting.</strong> Deliberately the reverse of the intuitive order &mdash; hosting is the most visible mess and the least valuable to fix.</div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="7" data-title="What this does not cover" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Honesty</div>
+  <h2>Eight things this deck does <em>not</em> cover.</h2>
+  <p class="sub">So nobody assumes coverage we do not have.</p>
+  <div class="g4">
+    <div class="card bad"><h3>Monitoring &amp; alerting</h3><p class="small">We have dashboards. We do not have alerts. <strong>Nobody is paged</strong> if Fly stops or Cloud Run starts erroring.</p></div>
+    <div class="card bad"><h3>Incident response</h3><p class="small">Who is called, in what order, and what we tell customers.</p></div>
+    <div class="card bad"><h3>A real cost dashboard</h3><p class="small">LLM spend is well tracked. Fly, Vercel, Cloud Run, Supabase and Anthropic bills are <strong>not tracked together anywhere</strong>.</p></div>
+    <div class="card bad"><h3>DR / RTO / RPO</h3><p class="small">We have replication, no stated targets, and no rehearsed restore.</p></div>
+    <div class="card bad"><h3>On/off-boarding a person</h3><p class="small">Across GitHub, GCP, Vercel, Fly, Supabase, Anthropic and GitBook.</p></div>
+    <div class="card bad"><h3>The customer SQL Server integration</h3><p class="small">Read-only, but it deserves its own section.</p></div>
+    <div class="card bad"><h3>Load and capacity</h3><p class="small">One Fly machine, one SQLite writer. <strong>We do not know where it breaks.</strong></p></div>
+    <div class="card bad"><h3>Test evidence for the control plane</h3><p class="small">Only sign-in and the list are verified. That is honest &mdash; and it is a gap.</p></div>
+  </div>
+</div>
+</section>
+
+<section class="slide part" data-part="7" data-title="Close">
+<div class="pad">
+  <div class="part-n">THE WHOLE DECK IN TWO LINES</div>
+  <h1>Nothing here crashes.<br>That is the problem.</h1>
+  <div class="part-rule"></div>
+  <p class="sub">Almost every trap in this infrastructure produces a clean, plausible, wrong result. The version that never updates. The button that appears but cannot work. The count that only a deletion changes. The gate that is off because the table is empty. <strong>Write them down, number them, and never delete a row from a ledger &mdash; change its status.</strong></p>
+  <div class="g3">
+    <div class="card"><div class="kicker">Read next</div><h3>The handbook</h3><p class="small"><code>account-management/docs/platform/ORCANOS_AI_INFRASTRUCTURE.md</code> &mdash; the long form of this deck, with every link.</p></div>
+    <div class="card"><div class="kicker">Read first, always</div><h3>The repo's own CLAUDE.md</h3><p class="small">It is the source of truth for that codebase. If it disagrees with this deck, <strong>it wins &mdash; and this deck needs fixing.</strong></p></div>
+    <div class="card"><div class="kicker">Before consolidating anything</div><h3><code>ai-portal/CLAUDE.md</code></h3><p class="small">It already records the decisions taken and the recommended order.</p></div>
+  </div>
+</div>
+</section>
+
+</div>
+
+<div id="menu" role="dialog" aria-label="Slide index" aria-modal="true"></div>
+
+<div id="bar">
+  <button id="btnMenu" type="button">☰&nbsp; Index</button>
+  <span id="here"></span>
+  <span id="hint">← → to move</span>
+  <span id="count">01 / 73</span>
+  <div id="nav">
+    <button id="prev" type="button" aria-label="Previous slide">◀&nbsp; Prev</button>
+    <button id="next" type="button" aria-label="Next slide">Next&nbsp; ▶</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  var slides=[].slice.call(document.querySelectorAll('.slide'));
+  var cur=0;
+  var PARTS=['Opening','What we run','Where it runs','How it works','What it costs','Keeping it safe','How we build','Where it goes'];
+
+  function render(){
+    slides.forEach(function(s,i){s.classList.toggle('on',i===cur);});
+    document.getElementById('count').textContent=String(cur+1).padStart(2,'0')+' / '+String(slides.length).padStart(2,'0');
+    document.getElementById('here').textContent=slides[cur].dataset.title.replace(/^Part \d+ — /,'');
+    document.getElementById('prev').disabled=(cur===0);
+    document.getElementById('next').disabled=(cur===slides.length-1);
+    var p=+slides[cur].dataset.part;
+    [].forEach.call(document.querySelectorAll('.sp'),function(b){b.classList.toggle('act',+b.dataset.p===p);});
+    [].forEach.call(document.querySelectorAll('.mitem'),function(b){b.classList.toggle('here',+b.dataset.i===cur);});
+    slides[cur].scrollTop=0;
+    if(location.hash!=='#'+(cur+1)) history.replaceState(null,'','#'+(cur+1));
+  }
+  function go(n){cur=Math.max(0,Math.min(slides.length-1,n));render();}
+
+  // spine
+  var spine=document.getElementById('spine');
+  var seen={};
+  slides.forEach(function(s){seen[s.dataset.part]=true;});
+  var lab=document.createElement('div'); lab.className='sp-lab'; lab.textContent='PARTS'; spine.appendChild(lab);
+  Object.keys(seen).sort(function(a,b){return a-b;}).forEach(function(p){
+    var b=document.createElement('button'); b.className='sp'; b.dataset.p=p;
+    b.title=PARTS[p]||('Part '+p); b.setAttribute('aria-label',PARTS[p]||('Part '+p));
+    b.onclick=function(){for(var i=0;i<slides.length;i++){if(slides[i].dataset.part===p){go(i);break;}}};
+    spine.appendChild(b);
+  });
+
+  // menu
+  var menu=document.getElementById('menu');
+  function buildMenu(){
+    var h='<h2>Index</h2><p class="sub">'+slides.length+' slides. Click any one. The colour on the left is how important it is.</p>'+
+      '<div class="mlegend">'+
+      '<span><i style="background:var(--or)"></i>⚠ Must know</span>'+
+      '<span><i style="background:var(--purl)"></i>★ Core</span>'+
+      '<span><i style="background:rgba(123,82,200,.3)"></i>○ Reference</span></div>';
+    var last=null,open=false;
+    slides.forEach(function(s,i){
+      if(s.dataset.part!==last){
+        if(open) h+='</div>';
+        h+='<div class="mpart">'+(PARTS[+s.dataset.part]||('Part '+s.dataset.part))+'</div><div class="mgrid">';
+        last=s.dataset.part; open=true;
+      }
+      h+='<button class="mitem" type="button" data-i="'+i+'" data-imp="'+(s.dataset.imp||'')+'"><i>'+String(i+1).padStart(2,'0')+'</i><span>'+s.dataset.title+'</span></button>';
+    });
+    if(open) h+='</div>';
+    menu.innerHTML=h;
+    [].forEach.call(menu.querySelectorAll('.mitem'),function(b){
+      b.onclick=function(){go(+b.dataset.i);menu.classList.remove('on');};
+    });
+  }
+  buildMenu();
+  function toggleMenu(){menu.classList.toggle('on');}
+  document.getElementById('btnMenu').onclick=toggleMenu;
+  document.getElementById('prev').onclick=function(){go(cur-1);};
+  document.getElementById('next').onclick=function(){go(cur+1);};
+
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Escape'){menu.classList.remove('on');return;}
+    if(menu.classList.contains('on')&&e.key!=='m'&&e.key!=='M')return;
+    switch(e.key){
+      case 'ArrowRight': case 'PageDown': case ' ': go(cur+1); e.preventDefault(); break;
+      case 'ArrowLeft': case 'PageUp': go(cur-1); e.preventDefault(); break;
+      case 'Home': go(0); e.preventDefault(); break;
+      case 'End': go(slides.length-1); e.preventDefault(); break;
+      case 'm': case 'M': toggleMenu(); break;
+    }
+  });
+
+  var start=parseInt((location.hash||'').slice(1),10);
+  if(start>0&&start<=slides.length) cur=start-1;
+  render();
+})();
+</script>

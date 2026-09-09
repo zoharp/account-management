@@ -1,6 +1,6 @@
 # `docs/platform/` — wider than this app
 
-Three documents that are **not about `account-management` specifically**. They describe the
+Four documents that are **not about `account-management` specifically**. They describe the
 platform the four Orcanos projects are being consolidated into, and they live here because this
 repo is the consolidation's first landing point — and because the folder above it is not a git
 repo, so anything left there was tracked by nothing.
@@ -10,6 +10,7 @@ used to read `../PLATFORM_AUTH.md` now read `docs/platform/PLATFORM_AUTH.md`.
 
 | Document | What it is | Read it |
 |---|---|---|
+| [`ORCANOS_AI_INFRASTRUCTURE.md`](ORCANOS_AI_INFRASTRUCTURE.md) | **The handbook.** The whole Orcanos AI setup in one place, written for IT and for new people: the three apps, every environment (Vercel / Fly / Cloud Run / Supabase / IIS) and what each gives us, single- vs multi-tenant, the Orcanos API, auth and the silent SSO into Ask Paul, Ask Paul's RAG architecture end to end, caching, databases and the SQLite→Postgres question, cost, LLM routing, security, ISO 27001, how we work with Claude Code, skills, `CLAUDE.md` conventions, CI/CD, the IIS install, an admin manual for this app, and the stay-on-Vercel vs move-to-AWS decision | Onboarding; answering "how does Orcanos AI actually work?"; before any infrastructure decision |
 | [`PLATFORM_AUTH.md`](PLATFORM_AUTH.md) | **As-built.** How authentication actually works across all five projects — the master `users` table, the shared HS256 JWT, where `QW_Login` is and isn't used — plus the proposal to add tenant membership and fold Orcanos login into one session model. §5 carries the decisions taken 2026-08-28 | Before touching `lib/session.ts`, `lib/login.ts` or anything under `api/auth/` |
 | [`PLATFORM_MODULES_PROPOSAL.md`](PLATFORM_MODULES_PROPOSAL.md) | **Proposal — nothing implemented.** The module portal: per-module licensing, and adding Training Management to traceability-matrix as a module rather than a panel type. §3.3 and D4 depend on `PLATFORM_AUTH.md`. Its intended destination is the `traceability-matrix` repo, not this one | Consolidation and licensing questions |
 | [`SOURCE_PROJECTS.md`](SOURCE_PROJECTS.md) | **Reference snapshot.** What each of the four source projects is, how it is built, what they have in common, and the consolidation questions still open. Was the workspace `CLAUDE.md` | Getting oriented across the four projects |
