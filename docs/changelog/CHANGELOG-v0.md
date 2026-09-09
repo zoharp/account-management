@@ -9,6 +9,30 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.3.4** (2026-09-02) — **the login screen's Orcanos URL box is displayed, disabled.** It was
+free text from 0.2.7, which is what made the first successful Orcanos sign-in possible at all: the
+platform account is `orcanosdemo` while the admin signing in belongs to tenant `orcanos`, and the
+server's fallback order (request → the platform account's stored `orcanos_api_url` →
+`ORCANOS_LOGIN_URL`) would otherwise have picked the wrong tenant. Nothing about that changes —
+the value still comes from `/api/auth/config` (`ORCANOS_LOGIN_URL`) and is **still sent on the
+request**, so the login runs against the server shown on screen. Only the typing is gone.
+
+Two consequences worth recording:
+
+- **`localStorage['orcanos_login_url']` is no longer read or written.** It used to win over the
+  server default so a non-default tenant did not have to be retyped. With nothing to edit, a
+  remembered value would pin a stale server on that browser permanently — the read had to go with
+  the edit. The key is simply abandoned; nothing clears it.
+- **The route is unchanged.** `orcanosUrl` is still client-supplied as far as
+  `api/auth/local/login` is concerned, so `ORCANOS_LOGIN_HOST_ALLOWLIST` still applies to it and
+  is still what carries the boundary the tenant pin used to (SECURITY.md §9.2). A disabled input
+  is a UI fact, not a security one — anyone can still POST any URL.
+
+The hint under the box was rewritten to match: it no longer offers "leave blank to use this
+deployment's configured server", because that is now the only thing it can be.
+
+---
+
 **0.3.3** (2026-08-31) — **an account could exist in master and nowhere else, and this console had
 no way to fix it.** Found on a live account (Traceability and Training both showing a dash, both
 unclickable, no route back).

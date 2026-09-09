@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.3.3`
+- **App:** `0.3.4`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v0.md`](docs/changelog/CHANGELOG-v0.md) (long form) and
@@ -68,6 +68,10 @@ that table first; the screen cannot tell you anything.
    records `client_supplied_url: true` and `virtual_dir: "orcanos"` — i.e. **the free-text URL box
    added in 0.2.7 is what made this sign-in possible at all**, and the host allowlist added in
    0.2.8 is what keeps that safe. Worth knowing before anyone proposes re-pinning the tenant.
+   ⚠️ **0.3.4 disabled that box, but it still sends its value** (`ORCANOS_LOGIN_URL` via
+   `/api/auth/config`). Stop sending it and the route falls through to the platform account's own
+   `orcanos_api_url` — `orcanosdemo` — and this sign-in breaks again. The URL is still
+   client-supplied to the route; a disabled input is not a boundary.
 
 **No migrations are outstanding.** All three were applied on 2026-08-29. None can go through
 PostgREST, so the route used was the Management API:

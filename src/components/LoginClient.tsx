@@ -17,9 +17,6 @@ import OrcanosLogo from './OrcanosLogo';
  * sessionStorage and verified on return. Without it the callback would accept
  * an authorization code from anywhere, which is the classic OAuth CSRF.
  */
-/** Remembers the last Orcanos server used on this browser. Not a credential. */
-const ORCANOS_URL_KEY = 'orcanos_login_url';
-
 export default function LoginClient() {
   const router = useRouter();
   const [methods, setMethods] = useState<AuthMethodOption[]>([]);
@@ -29,11 +26,14 @@ export default function LoginClient() {
 
   const [identifier, setIdentifier] = useState('');
   const [password, setPassword] = useState('');
-  // The Orcanos server the password is checked against. Free text (0.2.7), but
-  // the server only accepts hosts on `ORCANOS_LOGIN_HOST_ALLOWLIST` —
-  // `orcanos.com` and its subdomains by default since 0.2.8. The hint below
-  // says so; the route is what enforces it. See SECURITY.md §9.2.
-  // Pre-filled from `/api/auth/config`, then from whatever was used last here.
+  // The Orcanos server the password is checked against. Shown, but no longer
+  // editable: it is whatever `/api/auth/config` reports as this deployment's
+  // configured server, and the box is disabled. It is still sent on the
+  // request, so the tenant the login runs against stays the one on screen
+  // rather than the platform account's own stored URL — those differ today
+  // (`orcanos` vs `orcanosdemo`), and the server's fallback order would pick
+  // the wrong one. The route still applies `ORCANOS_LOGIN_HOST_ALLOWLIST` to
+  // anything client-supplied; see SECURITY.md §9.2.
   const [orcanosUrl, setOrcanosUrl] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -50,16 +50,10 @@ export default function LoginClient() {
         };
         if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
         setMethods(data.methods ?? []);
-        // localStorage wins so someone who signs in against a non-default
-        // tenant does not retype it every time; the server default is the
-        // fallback, and an empty box just means "use the server's".
-        let remembered = '';
-        try {
-          remembered = localStorage.getItem(ORCANOS_URL_KEY) ?? '';
-        } catch {
-          // Private mode / blocked storage — fall through to the default.
-        }
-        setOrcanosUrl(remembered || data.default_orcanos_url || '');
+        // The one source now the box is read-only. A remembered value used to
+        // win here; with nothing to edit that would pin a stale server on this
+        // browser forever, so it is gone.
+        setOrcanosUrl(data.default_orcanos_url || '');
         // One method and it is local? Skip the pointless menu.
         if (data.methods?.length === 1 && data.methods[0].type === 'local') setMode('local');
       } catch (e) {
@@ -113,11 +107,6 @@ export default function LoginClient() {
       });
       const data = (await res.json().catch(() => ({}))) as { detail?: string };
       if (!res.ok) throw new Error(data.detail || 'Sign-in failed');
-      try {
-        localStorage.setItem(ORCANOS_URL_KEY, orcanosUrl.trim());
-      } catch {
-        // Nothing to do — remembering the server is a convenience, not state.
-      }
       router.replace('/accounts');
       router.refresh();
     } catch (e) {
@@ -169,23 +158,25 @@ export default function LoginClient() {
           <form onSubmit={signInLocal}>
             <div className="login-field">
               <label htmlFor="orcanos-url">Orcanos URL</label>
-              {/* The scheme and the /api/v2/Json suffix are added server-side by
-                  normalizeOrcanosUrl, so `app.orcanos.com/orcanos` is enough —
-                  but the tenant path is not optional. */}
+              {/* Fixed by the deployment (`ORCANOS_LOGIN_URL`, via /api/auth/config)
+                  and shown only so the person knows which server their password
+                  is about to be checked against. The scheme and the /api/v2/Json
+                  suffix are added server-side by normalizeOrcanosUrl, so
+                  `app.orcanos.com/orcanos` is the whole value — tenant path
+                  included, which is not optional. */}
               <input
                 id="orcanos-url"
                 type="text"
                 autoComplete="url"
                 autoCapitalize="none"
                 spellCheck={false}
-                placeholder="app.orcanos.com/orcanos"
                 value={orcanosUrl}
-                onChange={(e) => setOrcanosUrl(e.target.value)}
+                disabled
+                readOnly
               />
               <p className="login-hint">
-                The Orcanos server your credentials are checked against — an{' '}
-                <strong>orcanos.com</strong> address, including the tenant path. Leave blank
-                to use this deployment&rsquo;s configured server.
+                The Orcanos server your credentials are checked against. Set by this
+                deployment and not changeable here.
               </p>
             </div>
             <div className="login-field">

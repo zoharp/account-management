@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.3.4",
+    "date": "2026-09-02",
+    "changes": [
+      "🔄 **The Orcanos URL on the sign-in screen is now fixed, not typed** — the box shows the server this deployment checks passwords against and is disabled. It was free text so that a tenant other than the configured one could be reached; nobody needs to choose it here, and a value remembered from a previous sign-in could quietly pin the wrong server on that browser with no way to clear it."
+    ]
+  },
+  {
     "version": "0.3.3",
     "date": "2026-08-31",
     "changes": [

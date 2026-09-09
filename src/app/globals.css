@@ -1238,6 +1238,16 @@ button {
   border-color: var(--accent-primary);
 }
 
+/* Only the Orcanos URL box is disabled — it is displayed, not asked for. Muted
+   rather than greyed out to unreadability: the value is the point. */
+.login-field input:disabled {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  cursor: not-allowed;
+  -webkit-text-fill-color: var(--text-secondary); /* Safari ignores color here */
+  opacity: 1; /* …and dims it on top of that */
+}
+
 /* Sub-label under a field. Only the Orcanos URL box uses it — that box needs a
    sentence, the email and password boxes do not. */
 .login-hint {
