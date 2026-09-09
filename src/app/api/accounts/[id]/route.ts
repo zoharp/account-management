@@ -109,6 +109,29 @@ export async function PATCH(req: Request, ctx: Ctx) {
   const { id } = await ctx.params;
   const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
 
+  // ── Region is immutable ─────────────────────────────────────────────────
+  //
+  // `region` is not in PATCHABLE, so it would otherwise be dropped silently and
+  // the caller would believe the account had been moved. It is refused loudly
+  // instead, because the belief is the dangerous part: changing this value moves
+  // no data. Supabase cannot relocate a project and a Fly volume is pinned to
+  // one region, so a rewritten value only points every reader at a region that
+  // does not hold the tenant — while the console then asserts a residency
+  // guarantee that is false. Moving a tenant is a create → migrate → verify →
+  // delete, and that process writes the new value at the end. See lib/regions.ts.
+  if ('region' in body) {
+    return Response.json(
+      {
+        detail:
+          'An account\'s data region cannot be changed here. Changing it would move no data — ' +
+          'it would only record the account as living somewhere it does not. Moving a tenant ' +
+          'between regions means provisioning it in the new region, migrating its data, ' +
+          'verifying it, and then removing the old copy.',
+      },
+      { status: 400 },
+    );
+  }
+
   const patch: Record<string, unknown> = {};
   for (const field of PATCHABLE) {
     if (field in body) patch[field] = body[field];

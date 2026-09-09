@@ -36,6 +36,7 @@ One row per customer. The column groups matter more than the individual names:
 | Group | Columns | Purpose |
 |---|---|---|
 | Identity | `id` (uuid), `account_name`, `is_active`, `created_at`, `updated_at` | `account_name` is matched **case-insensitively** everywhere — `accountCiFilter()` in `lib/supabase.ts`, a PostgREST `ilike` with `%`, `_` and `\` escaped. |
+| **Residency** | `region` | `'us'` or `'eu'`, `not null default 'us'`, CHECK-constrained. **Owned by this app** — `sql/003_account_region.sql`. See below. |
 | Legacy DB pair | `db_type`, `db_host`, `db_name`, `db_user`, `db_password_encrypted`, `connection_string` | Still read on some QMS paths. Kept in sync with the vector pair. **Four of these are NOT NULL — see below.** |
 | Vector DB | `vector_db_type`, `vector_db_host`, `vector_db_name`, `vector_db_user`, `vector_db_password_encrypted`, `vector_connection_string` | The account's own provisioned Supabase project. `vector_db_password_encrypted` holds its `service_role` key. |
 | Orcanos SQL Server | `orcanos_db_type`, `orcanos_db_host`, `orcanos_db_name`, `orcanos_db_user`, `orcanos_db_password_encrypted`, `orcanos_connection_string` | The customer's own Orcanos database, read-only. |
@@ -67,6 +68,36 @@ Three rules that are easy to break:
 
 `GET /api/accounts/:id` returns an explicit column allow-list containing **zero**
 `*_encrypted` columns. Check any column you add against that list.
+
+### ⚠️ `region` is immutable, and every way it goes wrong is silent
+
+`region` is GDPR data residency, and it is one decision that **three stores with nothing joining
+them** must obey:
+
+| # | Store | Follows `region` via |
+|---|---|---|
+| 1 | The tenant's own Supabase project (Ask Paul's vector DB) | `supabaseRegionFor()` in `lib/regions.ts`, used by `lib/provisioning.ts` |
+| 2 | The traceability instance's SQLite — **one Fly app per region**, own volume, own Litestream bucket | `traceApiUrlFor()`; `TRACE_API_URL` = us, `TRACE_API_URL_EU` = eu |
+| 3 | LLM calls made for that tenant | *not yet implemented* — see the 0.4.0 changelog entry |
+
+**It cannot be changed after provisioning.** Supabase cannot relocate a project and a Fly volume is
+pinned to one region, so rewriting the value moves no data — it only points every reader at a region
+that does not hold the tenant, while the console asserts a residency guarantee that is false. That is
+worse than the original mistake. `PATCH /api/accounts/:id` therefore **refuses `region` with a 400**
+rather than dropping it from `PATCHABLE` silently — the same treatment `account_name` gets, and for
+the same reason. Moving a tenant is a create → migrate → verify → delete, and that process writes the
+new value at the end.
+
+Why the guard rails are what they are: a tenant provisioned in the wrong region works perfectly, a
+tenant looked up in the wrong traceability instance simply appears not to exist, and a US LLM call
+for an EU tenant returns a normal answer. **No error path surfaces a residency mistake.** Hence: no
+fallback between regions anywhere in `lib/trace.ts`; a present-but-unknown value is a 400 rather than
+being coerced to `us` (`parseRegion` vs `coerceRegion`); and `upsertTraceModules` refuses outright
+when a tenant's existing instance disagrees with the region master records.
+
+Every pre-existing row is `us`, which is a statement of fact rather than a default: provisioning has
+always used `SUPABASE_PROJECT_REGION` (default `us-east-1`) and the only traceability instance runs
+in Fly `iad`.
 
 ### ⚠️ Five columns are NOT NULL with no default
 

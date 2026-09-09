@@ -32,7 +32,8 @@
  */
 
 import { requirePlatformStaff } from '@/lib/session';
-import { pgPatch } from '@/lib/supabase';
+import { pgGet, pgPatch } from '@/lib/supabase';
+import { coerceRegion, DEFAULT_REGION } from '@/lib/regions';
 import { logSecurityEvent } from '@/lib/audit';
 import { askPaulDatabaseExists, ASK_PAUL_NEEDS_DB } from '@/lib/modules';
 import {
@@ -44,10 +45,28 @@ import {
   traceConfigured,
   TraceApiError,
 } from '@/lib/trace';
-import type { ModuleKey } from '@/lib/types';
+import type { DataRegion, ModuleKey } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
+
+/**
+ * Which region a NEW `account_access` row belongs in.
+ *
+ * Master is the authority, so an account with a master row is created in the
+ * region that row records. A **trace-only tenant has no master row and therefore
+ * no residency decision on file** — it falls back to US, which is where the only
+ * instance that could have been holding it is. That is a statement about the
+ * present, not a guess about the customer: an EU tenant must be created through
+ * the create form, which is the one place a region can actually be chosen.
+ */
+async function regionForNewRow(accountId: string | null | undefined): Promise<DataRegion> {
+  if (!accountId) return DEFAULT_REGION;
+  const rows = await pgGet<Array<{ region?: string | null }>>(
+    `accounts?id=eq.${encodeURIComponent(accountId)}&select=region`,
+  );
+  return coerceRegion(rows[0]?.region);
+}
 
 const MODULE_KEYS: ModuleKey[] = ['ask_paul', 'trace', 'training'];
 
@@ -236,7 +255,7 @@ export async function PUT(req: Request) {
     // flag changes; every other column travels back as it arrived, so a column
     // added on the trace side (as `ask_paul_account` was in 3.27.0) is preserved
     // without a change here.
-    const base = current ?? newTraceAccountRow(tenant);
+    const base = current ?? newTraceAccountRow(tenant, await regionForNewRow(body.account_id));
     const changes = { [MODULE_COLUMN[module]]: enabled ? 1 : 0 };
     const next = { ...base, ...changes };
 

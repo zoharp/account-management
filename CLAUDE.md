@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.3.4`
+- **App:** `0.4.0`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v0.md`](docs/changelog/CHANGELOG-v0.md) (long form) and
@@ -384,6 +384,34 @@ so a failure is recoverable.
 running it.** If the per-account schema changes, it changes here.
 
 ---
+
+## ⚠️ Data residency (`accounts.region`) — nothing here fails loudly
+
+`region` is `'us'` or `'eu'` and it is **one decision three unrelated stores must obey**: the
+tenant's own Supabase project, which of the **two traceability Fly apps** holds its
+`account_access` row (`TRACE_API_URL` = us, `TRACE_API_URL_EU` = eu), and eventually which LLM
+endpoint its AI calls may reach. Full account: [SCHEMA.md](SCHEMA.md) → *`region` is immutable*,
+and the header comment in [`src/lib/regions.ts`](src/lib/regions.ts).
+
+The part to internalise before touching any of it: **a wrong region produces no error anywhere.**
+A tenant provisioned in the wrong region works perfectly. A tenant looked up in the wrong
+instance simply appears not to exist. A US LLM call for an EU tenant returns a normal answer. So
+the invariants are enforced structurally, and each one will look like pointless strictness until
+it saves you:
+
+- **No fallback between regions, ever.** `traceApiUrlFor()` returns `null` rather than the other
+  region's URL, and `lib/trace.ts` throws. A fallback here writes EU data to the US.
+- **`parseRegion` (refuse) vs `coerceRegion` (default to `us`)** are different functions on
+  purpose. User input gets the first; a row written before the migration gets the second.
+- **A write follows the row it was read from.** `listTraceAccounts()` tags every row with its
+  region and `saveTraceAccount()` routes on that tag — callers never pass a region, so they
+  cannot pass the wrong one. A row with no tag is refused.
+- **The value is immutable.** `PATCH /api/accounts/:id` answers 400. Changing it moves no data; it
+  only records the account as living somewhere it does not, which is worse than the original error.
+
+Still outstanding before an EU customer can be onboarded: the EU Fly app itself (own volume, own
+**EU-only** Litestream bucket — Tigris replicates globally by default) and region-routing for AI
+calls. Until `TRACE_API_URL_EU` is set, `POST /api/accounts` refuses `region: 'eu'`.
 
 ## Non-obvious behaviour worth preserving
 

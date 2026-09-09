@@ -12,7 +12,7 @@
 
 import { requirePlatformStaff } from '@/lib/session';
 import { logSecurityEvent } from '@/lib/audit';
-import { saveTraceAiConfig, traceConfigured, TraceApiError } from '@/lib/trace';
+import { saveTraceAiConfig, traceConfigured, traceRegionOf, TraceApiError } from '@/lib/trace';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -43,11 +43,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ tenant: string
   const apiKey = body.api_key === undefined ? null : body.api_key;
 
   try {
-    await saveTraceAiConfig(name, {
-      provider,
-      model: provider ? (body.model ?? '') : '',
-      api_key: provider ? apiKey : null,
-    });
+    // The AI config belongs to whichever regional instance actually runs this
+    // tenant's AI. Resolved from the instances themselves rather than assumed —
+    // writing an EU tenant's provider key into the US SQLite would succeed.
+    await saveTraceAiConfig(
+      name,
+      {
+        provider,
+        model: provider ? (body.model ?? '') : '',
+        api_key: provider ? apiKey : null,
+      },
+      await traceRegionOf(name),
+    );
     await logSecurityEvent('trace_ai_config_changed', {
       user,
       accountName: name,

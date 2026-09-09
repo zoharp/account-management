@@ -32,11 +32,12 @@
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { decryptSecret, encryptSecret, generateDbPassword } from './crypto';
-import { projectRegion, supabaseOrgAccessToken, supabaseOrgId } from './env';
+import { supabaseOrgAccessToken, supabaseOrgId } from './env';
 import { traceTenantForAccount } from './orcanos-url';
+import { coerceRegion, supabaseRegionFor } from './regions';
 import { pgGet, pgPatch, pgPost } from './supabase';
 import { upsertTraceModules } from './trace';
-import type { ModuleKey, ProvisionState } from './types';
+import type { DataRegion, ModuleKey, ProvisionState } from './types';
 
 const MANAGEMENT_API = 'https://api.supabase.com/v1';
 const HEALTHY_STATUSES = new Set(['ACTIVE_HEALTHY']);
@@ -142,16 +143,22 @@ export async function startProvisioning(
   accountName: string,
   payload: Record<string, unknown>,
   requestedByEmail: string | null,
+  region: DataRegion,
 ): Promise<JobRow> {
   const dbPassword = generateDbPassword();
   const projectName = slugify(accountName);
 
+  // The region rides along INSIDE the persisted payload, not just in this
+  // function's arguments. `tickSavingAccount` runs in a different request — a
+  // later tick, possibly after a redeploy — and writes the `accounts` row from
+  // `job.payload` alone. A region held only in memory here would create the
+  // project in Frankfurt and then record the account as living in the US.
   const created = await pgPost<JobRow[]>('account_provisioning', {
     account_name: accountName,
     state: 'creating_project' satisfies ProvisionState,
-    message: `Creating Supabase project for '${accountName}'`,
+    message: `Creating Supabase project for '${accountName}' in ${supabaseRegionFor(region)}`,
     db_password_encrypted: encryptSecret(dbPassword),
-    payload,
+    payload: { ...payload, region },
     requested_by_email: requestedByEmail,
   });
   const job = created[0];
@@ -165,7 +172,7 @@ export async function startProvisioning(
         name: projectName,
         organization_id: supabaseOrgId(),
         db_pass: dbPassword,
-        region: projectRegion(),
+        region: supabaseRegionFor(region),
       }),
       signal: AbortSignal.timeout(30000),
       cache: 'no-store',
@@ -381,6 +388,10 @@ async function tickSavingAccount(job: JobRow): Promise<JobRow> {
   const row: Record<string, unknown> = {
     account_name: job.account_name,
     is_active: true,
+    // Where the project the earlier steps created actually is. Recorded from the
+    // job's own payload so the row cannot disagree with the project, and written
+    // here rather than being editable later — see lib/regions.ts.
+    region: coerceRegion(body.region),
     db_type: 'supabase',
     db_host: vectorHost,
     db_name: 'postgres',
@@ -429,7 +440,9 @@ async function tickSavingAccount(job: JobRow): Promise<JobRow> {
     accountName: job.account_name,
   });
   try {
-    await upsertTraceModules(tenant, modules);
+    // Same region the Supabase project was created in and the `accounts` row
+    // records, read from the job's own payload so all three cannot disagree.
+    await upsertTraceModules(tenant, modules, coerceRegion(body.region));
   } catch (e) {
     licenceNote =
       ` — but its traceability allowlist entry was not written (tenant '${tenant}': ` +

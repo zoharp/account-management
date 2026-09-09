@@ -16,10 +16,22 @@ export interface PlatformUser {
 }
 
 /** The non-secret columns of `accounts` — no `*_encrypted` column ever leaves the server. */
+/**
+ * GDPR data residency. Decides three things at once for a tenant: which
+ * Supabase region its own project is created in, which traceability Fly app
+ * holds its row, and which LLM endpoint its AI calls may use.
+ *
+ * **Immutable after provisioning** — see `sql/003_account_region.sql` and
+ * `lib/regions.ts`.
+ */
+export type DataRegion = 'us' | 'eu';
+
 export interface AccountRow {
   id: string;
   account_name: string;
   is_active: boolean;
+  /** Absent on a row written before 003_account_region.sql — read as 'us'. */
+  region?: DataRegion | null;
   created_at?: string | null;
   updated_at?: string | null;
 

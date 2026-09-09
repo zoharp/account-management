@@ -12,7 +12,7 @@
  */
 
 import { requirePlatformStaff } from '@/lib/session';
-import { listTraceUsage, traceConfigured, TraceApiError } from '@/lib/trace';
+import { listTraceUsage, traceConfigured, traceRegionOf, TraceApiError } from '@/lib/trace';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -31,7 +31,8 @@ export async function GET(req: Request, ctx: { params: Promise<{ tenant: string 
   const limit = Math.min(Number(new URL(req.url).searchParams.get('limit') ?? 200) || 200, 2000);
 
   try {
-    return Response.json(await listTraceUsage(tenant.toLowerCase(), limit));
+    const name = tenant.toLowerCase();
+    return Response.json(await listTraceUsage(name, await traceRegionOf(name), limit));
   } catch (e) {
     const status = e instanceof TraceApiError ? e.status : 500;
     return Response.json(

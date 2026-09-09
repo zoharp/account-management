@@ -9,6 +9,50 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.4.0** (2026-09-09) — **an account has a data region, and it is chosen once.**
+
+GDPR residency means an EU customer's personal data must not rest in the US, and this platform
+holds some of it in three places that share nothing: the tenant's own Supabase project, the
+traceability instance's SQLite, and whatever endpoint its AI calls reach. `accounts.region`
+(`sql/003_account_region.sql`, values `us` | `eu`, default `us`) is the single decision all three
+follow.
+
+What changed:
+
+- **Create form** — a *Data Region* section above Modules, defaulting to United States. It is sent
+  as `region` and validated strictly at the route: a present-but-unknown value is a 400, never
+  coerced.
+- **Provisioning** — the tenant's Supabase project is created in `supabaseRegionFor(region)` rather
+  than the global `SUPABASE_PROJECT_REGION`. The region is persisted **inside the job payload**,
+  because `tickSavingAccount` runs in a later request and writes the `accounts` row from the payload
+  alone; a region held only in the starting function's arguments would have created the project in
+  Frankfurt and recorded the account as US.
+- **`lib/trace.ts` is now multi-instance** — `TRACE_API_URL` is the US app, `TRACE_API_URL_EU` the
+  EU one. `listTraceAccounts()` fans out across configured regions and tags each row with where it
+  came from; every write routes on that tag, so a save follows the row it was read from. The admin
+  token cache is keyed by region. There is no fallback between regions anywhere, deliberately.
+- **`PATCH /api/accounts/:id` refuses `region`** with a 400 instead of dropping it from the
+  `PATCHABLE` allowlist silently.
+- **An EU account cannot be created while `TRACE_API_URL_EU` is unset** — the allowlist row would
+  have gone into the US SQLite while master recorded the account as EU.
+
+Two things this release deliberately does **not** do, both still required before an EU customer can
+actually be onboarded:
+
+1. The EU Fly app does not exist yet — a second app in `fra` with its own volume and its own
+   **EU-only** Litestream bucket. Tigris distributes objects globally by default, which would leak
+   the WAL of an otherwise-compliant EU database.
+2. AI calls are not yet region-routed. An EU tenant whose data rests in Frankfurt but whose
+   panel-describe and quiz-generation calls reach the US Anthropic API is not compliant, and nothing
+   in the UI shows the difference.
+
+⚠️ **Every way this feature goes wrong is silent.** A tenant provisioned in the wrong region works
+perfectly; one looked up in the wrong instance simply appears not to exist; a US LLM call for an EU
+tenant returns a normal answer. That is why the region is immutable, why nothing falls back, and why
+the mismatch check in `upsertTraceModules` refuses rather than picking a winner.
+
+---
+
 **0.3.4** (2026-09-02) — **the login screen's Orcanos URL box is displayed, disabled.** It was
 free text from 0.2.7, which is what made the first successful Orcanos sign-in possible at all: the
 platform account is `orcanosdemo` while the admin signing in belongs to tenant `orcanos`, and the

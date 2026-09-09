@@ -32,6 +32,7 @@ import {
   saveTraceAccount,
   supportsModules,
   traceConfigured,
+  traceRegionOf,
   TraceApiError,
   type TraceAccountRow,
 } from '@/lib/trace';
@@ -70,9 +71,14 @@ export async function GET(_req: Request, ctx: { params: Promise<{ tenant: string
     // The catalog is what makes the provider/model pickers real rather than a
     // hardcoded guess that drifts from ai_provider.py. A failure is not fatal —
     // the flags half of the screen is still usable without it.
+    // Asked of the instance that holds this tenant — the two regions are
+    // separate deployments and can be on different versions, so a catalog from
+    // the wrong one would offer models the tenant's own instance cannot run.
+    // Skipped entirely when no instance has the tenant; there is nothing to
+    // configure yet, and the flags half of the screen still renders.
     let engine = null;
     try {
-      engine = await getTraceEngine();
+      if (row?.region) engine = await getTraceEngine(row.region);
     } catch (e) {
       console.error(`[GET /api/accounts/trace/${name}] engine catalog failed:`, e);
     }
@@ -227,7 +233,11 @@ export async function DELETE(_req: Request, ctx: { params: Promise<{ tenant: str
   const name = tenant.toLowerCase();
 
   try {
-    await deleteTraceAccount(name);
+    // Deleted from the instance that actually holds it. `traceRegionOf` 404s
+    // when no region does, which is the right answer for a delete: there is
+    // nothing to remove, and issuing the call against a default region would
+    // report success for a row that was never there.
+    await deleteTraceAccount(name, await traceRegionOf(name));
     await logSecurityEvent('trace_account_deleted', { user, accountName: name });
     return Response.json({
       ok: true,

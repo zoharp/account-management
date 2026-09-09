@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `0.4.0` | 2026-09-09 | GDPR data residency: an account is created in a US or EU region, which decides where its Supabase project is provisioned and which of the two traceability instances holds it. Immutable after creation, and EU is refused until the EU instance exists. |
 | `0.3.4` | 2026-09-02 | The sign-in screen's Orcanos URL is shown disabled instead of typed; the remembered-server value is no longer read, so it cannot pin a stale server. |
 | `0.3.3` | 2026-08-31 | A tenant with no traceability entry is no longer a dead end — the module pill creates one, and every new account gets one; the tenant a licence is keyed on is shown, and the guess flagged. |
 | `0.3.2` | 2026-08-31 | Duplicate account names caught while typing; Ask Paul cannot be activated without a database on any of its four controls, and a database-less account starts inactive; modules ticked at creation no longer dropped by the provisioning path. |

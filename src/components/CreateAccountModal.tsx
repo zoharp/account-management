@@ -3,7 +3,13 @@
 import { useEffect, useRef, useState } from 'react';
 import TestResult from './TestResult';
 import { normalizeOrcanosUrl, traceTenantForAccount } from '@/lib/orcanos-url';
-import type { AccountListRow, ConnectionTestResult, ProvisionState } from '@/lib/types';
+import { DATA_REGIONS, DEFAULT_REGION, REGION_LABELS } from '@/lib/regions';
+import type {
+  AccountListRow,
+  ConnectionTestResult,
+  DataRegion,
+  ProvisionState,
+} from '@/lib/types';
 
 /**
  * Port of CreateAccountModal.jsx.
@@ -49,6 +55,13 @@ export default function CreateAccountModal({
   onClose: () => void;
 }) {
   const [accountName, setAccountName] = useState('');
+  /**
+   * Data residency, and the one field on this form that cannot be corrected
+   * later — see `lib/regions.ts`. Defaults to US because that is where every
+   * existing account is; EU is a deliberate choice made for a customer who
+   * contracts for it.
+   */
+  const [region, setRegion] = useState<DataRegion>(DEFAULT_REGION);
 
   const [orcanosHost, setOrcanosHost] = useState('');
   const [orcanosDb, setOrcanosDb] = useState('');
@@ -202,6 +215,7 @@ export default function CreateAccountModal({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           ...body,
+          region,
           provision: provisionDb,
           modules: { trace: modTrace, training: modTraining, ask_paul: modAskPaul },
         }),
@@ -318,6 +332,41 @@ export default function CreateAccountModal({
                 account instead.
               </p>
             )}
+          </div>
+
+          {/*
+            Data residency. Deliberately the second thing on the form, above
+            Modules: it decides where the account's database is created, so it
+            cannot be an afterthought further down — and unlike every other field
+            here it cannot be corrected afterwards.
+          */}
+          <div className="acl-section">
+            <h3 className="acl-section-title">Data Region</h3>
+            <div className="acl-field-row">
+              <label className="acl-label" htmlFor="acl-region">
+                Where this account&apos;s data lives *
+              </label>
+              <select
+                id="acl-region"
+                className="acl-input"
+                value={region}
+                onChange={(e) => setRegion(e.target.value as DataRegion)}
+                disabled={creating || done}
+              >
+                {DATA_REGIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {REGION_LABELS[r].label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <p className="acl-hint">{REGION_LABELS[region].hint}</p>
+            <p className="acl-hint acl-hint--warn">
+              <strong>This cannot be changed later.</strong> It decides which region the
+              account&apos;s own database is created in and which traceability instance holds its
+              data — neither of which can be moved afterwards. Getting it wrong means creating the
+              account again in the right region.
+            </p>
           </div>
 
           <div className="acl-section">

@@ -14,6 +14,7 @@ import { traceTenantForAccount } from '@/lib/orcanos-url';
 import { startProvisioning, toJobView } from '@/lib/provisioning';
 import { logSecurityEvent } from '@/lib/audit';
 import { mergeAccounts } from '@/lib/modules';
+import { DEFAULT_REGION, parseRegion, traceApiUrlFor } from '@/lib/regions';
 import {
   listTraceAccounts,
   supportsAskPaul,
@@ -42,7 +43,7 @@ export async function GET() {
   // have a database at all" — `mergeAccounts` reduces them to `has_database` and
   // neither host reaches the browser. Both are non-secret regardless.
   const accounts = await pgGet<AccountListRow[]>(
-    'accounts?select=id,account_name,db_type,db_host,vector_db_host,is_active,created_at,orcanos_api_url' +
+    'accounts?select=id,account_name,region,db_type,db_host,vector_db_host,is_active,created_at,orcanos_api_url' +
       '&order=account_name.asc',
   );
 
@@ -125,6 +126,38 @@ export async function POST(req: Request) {
     return Response.json({ detail: `Account '${accountName}' already exists` }, { status: 409 });
   }
 
+  // ── Data residency ──────────────────────────────────────────────────────
+  //
+  // Absent means 'us', matching the column default and where every account
+  // created before residency existed actually lives. A PRESENT value is checked
+  // strictly: a typo must be refused, never coerced, because the whole point of
+  // this field is that nothing downstream can tell a wrong region from a right
+  // one (see lib/regions.ts).
+  const region = raw.region === undefined ? DEFAULT_REGION : parseRegion(raw.region);
+  if (!region) {
+    return Response.json(
+      { detail: `Unknown region '${String(raw.region)}'. Expected 'us' or 'eu'.` },
+      { status: 400 },
+    );
+  }
+
+  // Creating an EU account with no EU traceability instance configured would
+  // write its `account_access` row into the US SQLite — an EU tenant's data in
+  // the US, recorded in master as living in the EU, with nothing anywhere
+  // reporting the contradiction. That is the precise failure this whole feature
+  // exists to prevent, so it is refused rather than half-done.
+  if (region === 'eu' && !traceApiUrlFor('eu')) {
+    return Response.json(
+      {
+        detail:
+          'The EU region is not available yet: TRACE_API_URL_EU is not configured, so there ' +
+          'is no EU traceability instance to hold this tenant. Creating the account now would ' +
+          'put its data in the US while recording it as EU. Deploy the EU Fly app first.',
+      },
+      { status: 400 },
+    );
+  }
+
   // Any secret typed into the create form is encrypted before it is persisted
   // on the job row, so plaintext never rests anywhere.
   const payload: Record<string, string> = {
@@ -185,6 +218,7 @@ export async function POST(req: Request) {
     // Making the columns nullable is the cleaner fix and needs QMS to agree.
     const row: Record<string, unknown> = {
       account_name: accountName,
+      region,
       // NOT active. `is_active` is Ask Paul's kill switch and nothing else reads
       // it (lib/modules.ts), so creating a database-less account active would
       // switch on half of the very licence this route refuses above. It flips
@@ -221,7 +255,14 @@ export async function POST(req: Request) {
     await logSecurityEvent('account_created', {
       user,
       accountName,
-      detail: { account_id: created?.id, provisioned: false, modules, tenant, tenant_from: from },
+      detail: {
+        account_id: created?.id,
+        provisioned: false,
+        region,
+        modules,
+        tenant,
+        tenant_from: from,
+      },
     });
 
     // The allowlist row is written even when no module was ticked, and this is
@@ -238,7 +279,7 @@ export async function POST(req: Request) {
     // here is reported as a partial success naming which half landed — the same
     // contract as the module pills (see INTERNAL_TRACE_MERGE.md §4.4).
     try {
-      await upsertTraceModules(tenant, modules);
+      await upsertTraceModules(tenant, modules, region);
     } catch (e) {
       return Response.json(
         {
@@ -262,11 +303,11 @@ export async function POST(req: Request) {
     // tenant whose provisioning may still fail — and Ask Paul, the only module
     // that can be ticked on this path, is exactly the one that would then point
     // at a database that was never created.
-    const job = await startProvisioning(accountName, { ...payload, modules }, user.email);
+    const job = await startProvisioning(accountName, { ...payload, modules }, user.email, region);
     await logSecurityEvent('account_provisioning_started', {
       user,
       accountName,
-      detail: { job_id: job.id, project_ref: job.project_ref },
+      detail: { job_id: job.id, project_ref: job.project_ref, region },
     });
     return Response.json({ job: toJobView(job) }, { status: 202 });
   } catch (e) {

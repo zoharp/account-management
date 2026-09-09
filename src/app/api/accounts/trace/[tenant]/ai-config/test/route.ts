@@ -13,7 +13,7 @@
 
 import { requirePlatformStaff } from '@/lib/session';
 import { logSecurityEvent } from '@/lib/audit';
-import { testTraceAiConfig, traceConfigured, TraceApiError } from '@/lib/trace';
+import { testTraceAiConfig, traceConfigured, traceRegionOf, TraceApiError } from '@/lib/trace';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -42,12 +42,18 @@ export async function POST(req: Request, ctx: { params: Promise<{ tenant: string
   const usedStoredKey = !body.api_key;
 
   try {
-    const result = await testTraceAiConfig({
-      provider,
-      model: body.model ?? '',
-      api_key: body.api_key === undefined ? null : body.api_key,
-      account: tenant.toLowerCase(),
-    });
+    // The test call must be made BY the instance that will hold the key — a
+    // different region may run a different provider version, and an EU tenant's
+    // key must not be exercised from a US machine.
+    const result = await testTraceAiConfig(
+      {
+        provider,
+        model: body.model ?? '',
+        api_key: body.api_key === undefined ? null : body.api_key,
+        account: tenant.toLowerCase(),
+      },
+      await traceRegionOf(tenant.toLowerCase()),
+    );
     await logSecurityEvent('trace_ai_key_tested', {
       user,
       accountName: tenant.toLowerCase(),

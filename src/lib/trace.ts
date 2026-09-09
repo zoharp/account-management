@@ -12,24 +12,47 @@
  * Note #17 and its fly.toml warning about `fly scale count 2`). So the trace
  * process stays the only writer and we go through its API.
  *
- * Which instance we talk to is purely `TRACE_API_URL`:
- *   local dev  → http://127.0.0.1:8010        (run_dev.bat, its own SQLite)
- *   Vercel     → https://traceability-matrix.fly.dev
- * Same code either way — point local at Fly whenever you want real data, but
- * remember that every module toggle then writes to production.
+ * ## There is one instance PER DATA REGION
+ *
+ * GDPR residency means an EU tenant's SQLite row must never be written into the
+ * US database, so there are two independent Fly apps with two independent
+ * volumes and nothing syncing them:
+ *
+ *   `TRACE_API_URL`     → us  (Fly `iad`, or http://127.0.0.1:8010 in dev)
+ *   `TRACE_API_URL_EU`  → eu  (Fly `fra`)
+ *
+ * Every function here therefore names the region it acts on. **There is no
+ * default and no fallback** — see `traceApiUrlFor()` in `lib/regions.ts` for
+ * why a fallback would be the bug rather than the safety net.
+ *
+ * `listTraceAccounts()` is the one that fans OUT: the console is global, so it
+ * reads every configured region and tags each row with the region it came from.
+ * That tag is what every subsequent write routes on, which means a write follows
+ * the row it was read from and cannot be sent to the wrong instance by a caller
+ * that forgot.
  *
  * Auth model (theirs, not ours): POST the password to /login and get back a
  * stateless HMAC token to send as `X-Admin-Token`. The token is derived from
  * the password, so it survives restarts — which is why caching it is safe and
- * why a password change invalidates every issued token at once.
+ * why a password change invalidates every issued token at once. The cache is
+ * keyed by region: the two apps may hold different admin passwords, and a token
+ * minted by one is meaningless to the other.
  */
 
-import { traceAdminPassword, traceApiUrl } from './env';
-import type { ModuleKey } from './types';
+import { traceAdminPassword } from './env';
+import { DATA_REGIONS, traceApiUrlFor } from './regions';
+import type { DataRegion, ModuleKey } from './types';
 
 /** One row of the trace app's `account_access` table, as its admin API returns it. */
 export interface TraceAccountRow {
   account: string;
+  /**
+   * Which regional instance this row was read from. **Not a column** — it is
+   * stamped by `listTraceAccounts()` and stripped again by `saveTraceAccount()`,
+   * so a write goes back to the instance the row came from. Absent only on a row
+   * this app constructed itself (`newTraceAccountRow`).
+   */
+  region?: DataRegion;
   allow_access: number;
   allow_ai: number;
   allow_add?: number;
@@ -98,14 +121,34 @@ export class TraceApiError extends Error {
 }
 
 /**
+ * The base URL of one region's instance, or a thrown error naming the missing
+ * variable. Never falls back to the other region — a write that lands in the
+ * wrong region is invisible, and a thrown error is not.
+ */
+function baseUrl(region: DataRegion): string {
+  const url = traceApiUrlFor(region);
+  if (!url) {
+    throw new TraceApiError(
+      `No traceability instance is configured for the ${region.toUpperCase()} region ` +
+        `(set ${region === 'eu' ? 'TRACE_API_URL_EU' : 'TRACE_API_URL'}).`,
+      0,
+    );
+  }
+  return url;
+}
+
+/**
  * The token is a pure function of the password, so one login per warm function
  * instance is enough. Cleared on a 401 so a rotated password self-heals on the
  * next call instead of needing a redeploy.
+ *
+ * Keyed by region — the two instances are separate deployments and a token
+ * minted against one proves nothing to the other.
  */
-let cachedToken: string | null = null;
+const cachedTokens = new Map<DataRegion, string>();
 
-async function login(): Promise<string> {
-  const res = await fetch(`${traceApiUrl()}/api/admin/login`, {
+async function login(region: DataRegion): Promise<string> {
+  const res = await fetch(`${baseUrl(region)}/api/admin/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ password: traceAdminPassword() }),
@@ -114,8 +157,8 @@ async function login(): Promise<string> {
   if (!res.ok) {
     throw new TraceApiError(
       res.status === 401
-        ? 'TRACE_ADMIN_PASSWORD was rejected by the traceability API.'
-        : `Traceability admin login failed (HTTP ${res.status}).`,
+        ? `TRACE_ADMIN_PASSWORD was rejected by the ${region.toUpperCase()} traceability API.`
+        : `Traceability admin login failed for ${region.toUpperCase()} (HTTP ${res.status}).`,
       res.status,
     );
   }
@@ -124,14 +167,23 @@ async function login(): Promise<string> {
   return data.token;
 }
 
-async function call<T>(path: string, init: RequestInit = {}, retry = true): Promise<T> {
-  cachedToken ??= await login();
+async function call<T>(
+  region: DataRegion,
+  path: string,
+  init: RequestInit = {},
+  retry = true,
+): Promise<T> {
+  let token = cachedTokens.get(region);
+  if (!token) {
+    token = await login(region);
+    cachedTokens.set(region, token);
+  }
 
-  const res = await fetch(`${traceApiUrl()}${path}`, {
+  const res = await fetch(`${baseUrl(region)}${path}`, {
     ...init,
     headers: {
       'Content-Type': 'application/json',
-      'X-Admin-Token': cachedToken,
+      'X-Admin-Token': token,
       ...(init.headers ?? {}),
     },
     cache: 'no-store',
@@ -139,24 +191,79 @@ async function call<T>(path: string, init: RequestInit = {}, retry = true): Prom
 
   // A 401 here means the password changed under us. Drop the token and try once.
   if (res.status === 401 && retry) {
-    cachedToken = null;
-    return call<T>(path, init, false);
+    cachedTokens.delete(region);
+    return call<T>(region, path, init, false);
   }
   if (!res.ok) {
     const body = await res.text().catch(() => '');
     throw new TraceApiError(
-      `Traceability API ${init.method ?? 'GET'} ${path} failed (HTTP ${res.status})${
-        body ? `: ${body.slice(0, 200)}` : ''
-      }`,
+      `Traceability API ${init.method ?? 'GET'} ${path} failed on ${region.toUpperCase()} ` +
+        `(HTTP ${res.status})${body ? `: ${body.slice(0, 200)}` : ''}`,
       res.status,
     );
   }
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
+/** The regions that actually have an instance behind them right now. */
+export function traceRegions(): DataRegion[] {
+  return DATA_REGIONS.filter((r) => traceApiUrlFor(r) && process.env.TRACE_ADMIN_PASSWORD);
+}
+
+/**
+ * Every tenant from every configured region, each row tagged with the region it
+ * came from.
+ *
+ * **A region that fails throws.** It would be easy to return the regions that
+ * answered, but that turns "the EU instance is unreachable" into "these EU
+ * tenants do not exist" — and the callers render that as a fact, with unticked
+ * module boxes and an offer to create a row that already exists elsewhere. The
+ * existing callers all catch this and degrade the list with the message, which
+ * is the honest outcome. Same reasoning as `moduleFlag()`: unknown is not off.
+ */
 export async function listTraceAccounts(): Promise<TraceAccountRow[]> {
-  const data = await call<{ accounts?: TraceAccountRow[] }>('/api/admin/accounts');
-  return data.accounts ?? [];
+  const regions = traceRegions();
+  const perRegion = await Promise.all(
+    regions.map(async (region) => {
+      const data = await call<{ accounts?: TraceAccountRow[] }>(region, '/api/admin/accounts');
+      return (data.accounts ?? []).map((row) => ({ ...row, region }));
+    }),
+  );
+  return perRegion.flat();
+}
+
+/**
+ * Find one tenant across every region, with the region it lives in.
+ *
+ * The tenant-scoped routes are addressed by name only (`/api/accounts/trace/
+ * [tenant]/…`), so this is how they learn which instance to talk to. It costs a
+ * list call, which is the same call those routes already made to find the row.
+ *
+ * `null` means no region has this tenant — genuinely absent, as distinct from a
+ * region being unreachable, which throws out of `listTraceAccounts()`.
+ */
+export async function findTraceAccount(tenant: string): Promise<TraceAccountRow | null> {
+  const wanted = tenant.trim().toLowerCase();
+  if (!wanted) return null;
+  const rows = await listTraceAccounts();
+  return rows.find((r) => (r.account ?? '').trim().toLowerCase() === wanted) ?? null;
+}
+
+/**
+ * The region that holds this tenant, for the routes that only need to know
+ * where to send a call. Throws rather than guessing when nothing holds it — a
+ * default here would send an EU tenant's AI key to the US instance.
+ */
+export async function traceRegionOf(tenant: string): Promise<DataRegion> {
+  const row = await findTraceAccount(tenant);
+  if (!row?.region) {
+    throw new TraceApiError(
+      `Tenant '${tenant}' was not found in any configured traceability instance, so there is ` +
+        `no way to know which region owns it.`,
+      404,
+    );
+  }
+  return row.region;
 }
 
 /**
@@ -164,6 +271,10 @@ export async function listTraceAccounts(): Promise<TraceAccountRow[]> {
  * write model, so they are dropped before an upsert rather than echoed back.
  */
 const DERIVED_FIELDS = [
+  // Not a column — this app's own tag for which instance the row came from. The
+  // trace API's pydantic model would reject it, and it is the routing key, not
+  // data to be stored.
+  'region',
   'updated_at',
   'ai_cost_usd',
   'ai_calls',
@@ -187,14 +298,29 @@ const DERIVED_FIELDS = [
  * So the merge is over the row as it came back, not over a field list this file
  * maintains. A column added on the trace side survives a save here without any
  * change to this code — which is the only version of this that stays correct.
+ *
+ * The write goes back to the instance `current` was READ from (`current.region`),
+ * which is why that tag exists. A caller cannot pass the wrong region because it
+ * does not pass one at all — and a row with no tag is refused rather than being
+ * sent to a default, because the default would be the US instance and an EU
+ * tenant's row landing there is exactly the violation this design prevents.
  */
 export async function saveTraceAccount(
   current: TraceAccountRow,
   changes: Partial<TraceAccountRow> = {},
 ): Promise<void> {
+  const region = current.region;
+  if (!region) {
+    throw new TraceApiError(
+      `Cannot save '${current.account}': the row carries no region, so there is no way to ` +
+        `know which traceability instance owns it. Read it with listTraceAccounts(), or build ` +
+        `it with newTraceAccountRow(tenant, region).`,
+      0,
+    );
+  }
   const row: Record<string, unknown> = { ...current, ...changes };
   for (const f of DERIVED_FIELDS) delete row[f];
-  await call('/api/admin/accounts', { method: 'POST', body: JSON.stringify(row) });
+  await call(region, '/api/admin/accounts', { method: 'POST', body: JSON.stringify(row) });
 }
 
 /**
@@ -211,9 +337,10 @@ export async function saveTraceAccount(
  * Exported because two callers create rows — account creation and the module
  * pill — and they must agree on what a new tenant starts as.
  */
-export function newTraceAccountRow(tenant: string): TraceAccountRow {
+export function newTraceAccountRow(tenant: string, region: DataRegion): TraceAccountRow {
   return {
     account: tenant.trim(),
+    region,
     allow_access: 1,
     allow_ai: 1,
     allow_add: 1,
@@ -237,10 +364,17 @@ export function newTraceAccountRow(tenant: string): TraceAccountRow {
  * absent column reads as licensed (`moduleFlag()`), so writing 0 where the
  * operator said nothing would silently revoke a module. On a new row the
  * unstated columns are 0 — see `newTraceAccountRow()` for why the two differ.
+ *
+ * `region` is where the row belongs when it has to be CREATED — the account's
+ * `accounts.region`. When the row already exists its own region wins, and a
+ * mismatch between the two is refused: it means master and the instances
+ * disagree about where this tenant's data is, and licensing a module is not the
+ * moment to pick a winner silently.
  */
 export async function upsertTraceModules(
   tenant: string,
   modules: Partial<Record<ModuleKey, boolean>>,
+  region: DataRegion,
 ): Promise<{ created: boolean }> {
   const wanted = tenant.trim().toLowerCase();
   if (!wanted) throw new TraceApiError('No Orcanos tenant to key the licences on', 0);
@@ -248,7 +382,16 @@ export async function upsertTraceModules(
   const rows = await listTraceAccounts();
   const current = rows.find((r) => (r.account ?? '').trim().toLowerCase() === wanted);
 
-  const base: TraceAccountRow = current ?? newTraceAccountRow(tenant);
+  if (current && current.region && current.region !== region) {
+    throw new TraceApiError(
+      `Tenant '${tenant}' already exists in the ${current.region.toUpperCase()} traceability ` +
+        `instance, but master records this account's region as ${region.toUpperCase()}. Its data ` +
+        `is not where master says it is — resolve that before changing its licences.`,
+      409,
+    );
+  }
+
+  const base: TraceAccountRow = current ?? newTraceAccountRow(tenant, region);
 
   const changes: Partial<TraceAccountRow> = {};
   if (modules.ask_paul !== undefined) changes.allow_ask_paul = modules.ask_paul ? 1 : 0;
@@ -259,8 +402,8 @@ export async function upsertTraceModules(
   return { created: !current };
 }
 
-export async function deleteTraceAccount(account: string): Promise<void> {
-  await call(`/api/admin/accounts/${encodeURIComponent(account)}`, { method: 'DELETE' });
+export async function deleteTraceAccount(account: string, region: DataRegion): Promise<void> {
+  await call(region, `/api/admin/accounts/${encodeURIComponent(account)}`, { method: 'DELETE' });
 }
 
 /* ── AI engine ──────────────────────────────────────────────────────────────
@@ -284,8 +427,14 @@ export interface TraceEngineInfo {
   global_default: { provider: string; model: string; has_key: boolean };
 }
 
-export async function getTraceEngine(): Promise<TraceEngineInfo> {
-  return call<TraceEngineInfo>('/api/admin/engine');
+/**
+ * The provider catalog of ONE region's instance. The two are separate
+ * deployments that can be on different versions and hold different global
+ * defaults, so this is deliberately not merged — the editor for a tenant asks
+ * the instance that actually runs that tenant's AI.
+ */
+export async function getTraceEngine(region: DataRegion): Promise<TraceEngineInfo> {
+  return call<TraceEngineInfo>(region, '/api/admin/engine');
 }
 
 /**
@@ -300,21 +449,28 @@ export async function getTraceEngine(): Promise<TraceEngineInfo> {
 export async function saveTraceAiConfig(
   account: string,
   cfg: { provider: string; model: string; api_key: string | null },
+  region: DataRegion,
 ): Promise<void> {
-  await call(`/api/admin/accounts/${encodeURIComponent(account)}/ai-config`, {
+  await call(region, `/api/admin/accounts/${encodeURIComponent(account)}/ai-config`, {
     method: 'POST',
     body: JSON.stringify(cfg),
   });
 }
 
 /** Live-verify a provider/model/key against the real API before it is stored. */
-export async function testTraceAiConfig(body: {
-  provider: string;
-  model: string;
-  api_key: string | null;
-  account: string;
-}): Promise<{ ok: boolean; message?: string; model?: string }> {
-  return call('/api/admin/ai-config/test', { method: 'POST', body: JSON.stringify(body) });
+export async function testTraceAiConfig(
+  body: {
+    provider: string;
+    model: string;
+    api_key: string | null;
+    account: string;
+  },
+  region: DataRegion,
+): Promise<{ ok: boolean; message?: string; model?: string }> {
+  return call(region, '/api/admin/ai-config/test', {
+    method: 'POST',
+    body: JSON.stringify(body),
+  });
 }
 
 export interface TraceUsageRow {
@@ -334,14 +490,21 @@ export interface TraceUsageRow {
 
 export async function listTraceUsage(
   account: string,
+  region: DataRegion,
   limit = 200,
 ): Promise<{ total_cost_usd: number; total_calls: number; rows: TraceUsageRow[] }> {
   return call(
+    region,
     `/api/admin/accounts/${encodeURIComponent(account)}/usage?limit=${encodeURIComponent(limit)}`,
   );
 }
 
-/** Is the traceability side configured at all? Lets the list degrade instead of erroring. */
+/**
+ * Is the traceability side configured at all? Lets the list degrade instead of
+ * erroring. True when AT LEAST ONE region is reachable — the US instance alone
+ * is the normal state today, and the console must keep working while the EU one
+ * does not exist yet.
+ */
 export function traceConfigured(): boolean {
-  return Boolean(process.env.TRACE_API_URL && process.env.TRACE_ADMIN_PASSWORD);
+  return traceRegions().length > 0;
 }

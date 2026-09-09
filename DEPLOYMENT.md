@@ -21,7 +21,9 @@ Ten variables, **all server-side**. Nothing is `NEXT_PUBLIC_`, and adding a
 | `ENCRYPTION_KEY` | yes | QMS backend `.env` | **Byte-identical to QMS** or existing account secrets become undecryptable. base64, must decode to 32 bytes. |
 | `SUPABASE_ORG_ACCESS_TOKEN` | for provisioning | Supabase Dashboard → Account → Access Tokens | Org-wide project-creation rights. Treat as a top-tier secret. |
 | `SUPABASE_ORG_ID` | for provisioning | Supabase dashboard | Not sensitive. |
-| `SUPABASE_PROJECT_REGION` | no | — | Defaults to `us-east-1`. Region for newly provisioned tenant projects. |
+| `SUPABASE_PROJECT_REGION` | no | — | Defaults to `us-east-1`. Region for newly provisioned tenant projects **in the `us` data region**. It cannot affect an `eu` account — see the row below. |
+| `SUPABASE_PROJECT_REGION_EU` | no | — | Defaults to `eu-central-1`. Where an `eu` account's project is created. Deliberately a separate variable so that no US setting can move an EU project out of the EU. |
+| `TRACE_API_URL_EU` | for EU accounts | Fly | The traceability instance in `fra` that holds `eu` accounts. **While unset, creating an EU account is refused** — its allowlist row would otherwise land in the US SQLite while master recorded the account as EU. `TRACE_API_URL` (below) is the `us` instance. There is no fallback between the two in either direction. |
 | `PLATFORM_EMAIL_DOMAIN` | no | — | Defaults to `orcanos.com`. Half of the staff gate. |
 | `PLATFORM_ACCOUNT` | no | — | Defaults to `orcanos`. The account whose `auth_methods` row drives the login screen — **this must name an account that actually has one.** |
 | `ORCANOS_LOGIN_URL` | no | — | Defaults to `app.orcanos.com/orcanos`. Pre-fills the login screen's **Orcanos URL** box and is the fallback when neither the request nor the platform account's `orcanos_api_url` supplies one. Scheme and `/api/v2/Json` are added by `normalizeOrcanosUrl`. |
