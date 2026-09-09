@@ -25,6 +25,8 @@ export const dynamic = 'force-dynamic';
 const SAFE_COLUMNS = [
   'id',
   'account_name',
+  // Read-only everywhere. PATCH refuses it outright — see the guard in PATCH below.
+  'region',
   'db_type',
   'db_host',
   'db_name',

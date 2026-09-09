@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import TestResult from './TestResult';
 import { normalizeOrcanosUrl } from '@/lib/orcanos-url';
+import { coerceRegion, REGION_LABELS } from '@/lib/regions';
 import type { AccountRow, ConnectionTestResult, LlmKeyStatus } from '@/lib/types';
 
 /**
@@ -252,6 +253,26 @@ export default function AccountDetailModal({
                 <label className="acl-label">Account Name</label>
                 <input className="acl-input" value={account?.account_name ?? ''} disabled />
               </div>
+              {/*
+                Data region — shown, never editable. Not a `disabled` field for the usual
+                cosmetic reason: changing this value would move no data, it would only record
+                the account as living somewhere it does not, and the API refuses it outright.
+                A row written before the column existed reads as United States, which is where
+                it is. See lib/regions.ts.
+              */}
+              <div className="acl-field-row">
+                <label className="acl-label">Data Region</label>
+                <input
+                  className="acl-input"
+                  value={REGION_LABELS[coerceRegion(account?.region)].label}
+                  disabled
+                />
+              </div>
+              <p className="acl-hint">
+                Where this account&rsquo;s data is stored. Fixed when the account was created —
+                neither its database nor its traceability data can be moved between regions, so
+                changing this would only mislabel it.
+              </p>
               <div className="acl-field-row">
                 <label className="acl-label">Status</label>
                 <label

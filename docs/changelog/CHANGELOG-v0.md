@@ -9,6 +9,29 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.4.1** (2026-09-09) — **the residency signpost, written to every region.**
+
+Completes 0.4.0 against traceability-matrix 3.43.0, which added the `account_region` directory.
+
+Each traceability instance holds only its own region's tenants, so an EU tenant has no
+`account_access` row in the US database at all — and that instance told them *"contact us to open an
+account"*, which is false and a dead end. `upsertRegionDirectory()` now writes a
+`{account, region}` entry to **every** configured region on account creation (both the
+no-database and the provisioning path), so whichever address a customer opens can redirect them.
+
+- **The write is deliberately best-effort and never throws.** It is only sound because the directory
+  **grants nothing** on the trace side — `account_access` is still the sole gate and a missing entry
+  reads as "no idea", never as "here". So a region that missed the signpost costs that tenant a
+  worse error message, never access to the wrong region's data. The regions that failed come back to
+  the route, which reports them in a `warning` on an otherwise successful 201.
+- An instance older than the endpoint answers 404; that is logged and skipped rather than reported,
+  since it is version skew that resolves on the next deploy and the old behaviour is what it had.
+- **The account editor now shows Data Region, read-only** (`SAFE_COLUMNS` gained `region`). Not a
+  cosmetically-disabled field: `PATCH` refuses the value outright, so showing it as editable would
+  imply an action that cannot happen.
+
+---
+
 **0.4.0** (2026-09-09) — **an account has a data region, and it is chosen once.**
 
 GDPR residency means an EU customer's personal data must not rest in the US, and this platform

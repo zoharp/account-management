@@ -20,6 +20,7 @@ import {
   supportsAskPaul,
   supportsModules,
   traceConfigured,
+  upsertRegionDirectory,
   upsertTraceModules,
   type TraceAccountRow,
 } from '@/lib/trace';
@@ -294,7 +295,29 @@ export async function POST(req: Request) {
       );
     }
 
-    return Response.json({ account: created, tenant, tenant_from: from }, { status: 201 });
+    // The residency signpost, in every region. Deliberately after the licences
+    // and deliberately non-fatal: it grants nothing (see `upsertRegionDirectory`),
+    // so a region that missed it gives this tenant a worse error message if they
+    // ever land on the wrong address — it never affects whether they can sign in.
+    const { failed } = await upsertRegionDirectory(tenant, region);
+
+    return Response.json(
+      {
+        account: created,
+        tenant,
+        tenant_from: from,
+        ...(failed.length
+          ? {
+              warning:
+                `The account was created, but the data-region signpost could not be written ` +
+                `to: ${failed.join(', ')}. If this tenant opens the wrong region's address ` +
+                `they will be told the account does not exist instead of being redirected. ` +
+                `Re-save the account to retry.`,
+            }
+          : {}),
+      },
+      { status: 201 },
+    );
   }
 
   try {

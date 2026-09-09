@@ -402,6 +402,62 @@ export async function upsertTraceModules(
   return { created: !current };
 }
 
+/**
+ * Point EVERY configured region's directory at the region that owns this tenant.
+ *
+ * This is the one write that deliberately crosses regions, and it is safe to
+ * because of what it contains: a tenant name and a region string. No personal
+ * data, nothing an EU customer's DPA covers. Sessions, panels, snapshots and
+ * quizzes never cross.
+ *
+ * WHY EVERY REGION NEEDS IT. Each instance holds only its own region's tenants,
+ * so an EU tenant has no row at all in the US database. Without a directory
+ * entry, an EU user who opens the US address is told "contact us to open an
+ * account" — false, and a dead end. With one, that instance can send them to the
+ * right address *before* they type a password, which matters: credentials POSTed
+ * to the wrong region are a cross-border transfer in themselves.
+ *
+ * ⚠️ BEST EFFORT ON PURPOSE, and this is only sound because the directory
+ * **grants nothing** — the trace side never consults it in a gate, and treats a
+ * missing entry as "no idea", not as "here". So a region that fails to record the
+ * signpost produces a worse error message for that tenant, never access to the
+ * wrong region's data. Returns the regions that failed so the caller can say so;
+ * it does not throw, because a directory hint must never be the thing that fails
+ * an account creation.
+ */
+export async function upsertRegionDirectory(
+  tenant: string,
+  region: DataRegion,
+): Promise<{ failed: DataRegion[] }> {
+  const name = tenant.trim().toLowerCase();
+  if (!name) return { failed: [] };
+
+  const failed: DataRegion[] = [];
+  await Promise.all(
+    traceRegions().map(async (target) => {
+      try {
+        await call(target, '/api/admin/regions', {
+          method: 'POST',
+          body: JSON.stringify({ account: name, region }),
+        });
+      } catch (e) {
+        // An instance older than the directory endpoint answers 404. That is not
+        // a failure worth reporting to an operator — it is a version skew that
+        // resolves itself on the next deploy, and the old behaviour (an unhelpful
+        // unknown-account message) is exactly what it had before.
+        const status = e instanceof TraceApiError ? e.status : 0;
+        if (status === 404) {
+          console.warn(`[regions] ${target} predates the directory endpoint — skipped`);
+          return;
+        }
+        console.error(`[regions] could not write directory on ${target}:`, e);
+        failed.push(target);
+      }
+    }),
+  );
+  return { failed };
+}
+
 export async function deleteTraceAccount(account: string, region: DataRegion): Promise<void> {
   await call(region, `/api/admin/accounts/${encodeURIComponent(account)}`, { method: 'DELETE' });
 }

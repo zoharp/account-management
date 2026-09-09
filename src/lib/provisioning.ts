@@ -36,7 +36,7 @@ import { supabaseOrgAccessToken, supabaseOrgId } from './env';
 import { traceTenantForAccount } from './orcanos-url';
 import { coerceRegion, supabaseRegionFor } from './regions';
 import { pgGet, pgPatch, pgPost } from './supabase';
-import { upsertTraceModules } from './trace';
+import { upsertRegionDirectory, upsertTraceModules } from './trace';
 import type { DataRegion, ModuleKey, ProvisionState } from './types';
 
 const MANAGEMENT_API = 'https://api.supabase.com/v1';
@@ -447,6 +447,16 @@ async function tickSavingAccount(job: JobRow): Promise<JobRow> {
     licenceNote =
       ` — but its traceability allowlist entry was not written (tenant '${tenant}': ` +
       `${e instanceof Error ? e.message : String(e)}). Retry from the account's pills.`;
+  }
+
+  // The residency signpost, in every region. Never fatal and never throws — it
+  // grants nothing, so a region that missed it only costs this tenant a helpful
+  // redirect if they land on the wrong address. See `upsertRegionDirectory`.
+  const { failed } = await upsertRegionDirectory(tenant, coerceRegion(body.region));
+  if (failed.length) {
+    licenceNote +=
+      ` — and its data-region signpost was not written to: ${failed.join(', ')}. ` +
+      `Re-save the account to retry.`;
   }
 
   return updateJob(job.id, {

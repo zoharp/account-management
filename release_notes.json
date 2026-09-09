@@ -1,12 +1,14 @@
 [
   {
-    "version": "0.4.0",
+    "version": "0.4.1",
     "date": "2026-09-09",
     "changes": [
       "✨ **An account now has a data region, chosen when it is created** — United States or European Union. It decides which Supabase region the account's own database is created in and which traceability instance holds its data, so an EU customer's data can be kept in the EU for GDPR. Every existing account is recorded as United States, which is where it already is.",
       "⚠️ **The region cannot be changed after the account is created** — and the account editor refuses the change rather than accepting it quietly. Neither a Supabase project nor a traceability volume can be moved between regions, so rewriting the value would move no data; it would only record the account as living somewhere it does not. Moving a customer means creating them again in the right region and migrating their data.",
       "🔄 **The console now talks to one traceability instance per region** — the account list reads every configured region, and each licence change, AI setting, usage read and deletion is sent to the instance that actually holds that tenant. A region that cannot be reached makes the list say so, instead of showing its tenants as absent.",
-      "🔒 **Creating an EU account is refused while no EU traceability instance is configured** — it would have written the tenant's data to the United States while recording it as EU, and nothing anywhere would have reported the contradiction."
+      "🔒 **Creating an EU account is refused while no EU traceability instance is configured** — it would have written the tenant's data to the United States while recording it as EU, and nothing anywhere would have reported the contradiction.",
+      "✨ **A new account is signposted in every region** — so a customer who opens the wrong region's address is redirected to their own instead of being told the account does not exist. The signpost is a tenant name and a region, nothing more, and it grants no access; if a region cannot be reached the account is still created and the console says which one to retry.",
+      "✨ **The account editor shows the data region, read-only** — it is fixed when the account is created, so it is displayed as a fact rather than offered as a field."
     ]
   },
   {
