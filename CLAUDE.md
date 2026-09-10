@@ -425,9 +425,22 @@ it saves you:
 - **The value is immutable.** `PATCH /api/accounts/:id` answers 400. Changing it moves no data; it
   only records the account as living somewhere it does not, which is worse than the original error.
 
-Still outstanding before an EU customer can be onboarded: the EU Fly app itself (own volume, own
-**EU-only** Litestream bucket — Tigris replicates globally by default) and region-routing for AI
-calls. Until `TRACE_API_URL_EU` is set, `POST /api/accounts` refuses `region: 'eu'`.
+- **⚠️ A licence shown here is not a feature the customer can see.** This console reads
+  `account_access` on the regional instance, so it answers *"is this account licensed"* — never
+  *"is this deployment wired for it"*. The EU app has no `ASK_PAUL_APP_URL` /
+  `ASK_PAUL_SSO_SECRET` and no `ANTHROPIC_API_KEY`, and both of those fail **closed**: an EU
+  tenant with `allow_ask_paul = 1` sees no Ask Paul button at all. That combination — a green
+  licence here and a missing feature there — reads exactly like a botched region move, and is
+  not one. Check `fly secrets list -a traceability-matrix-eu` before changing a licence. Full
+  per-secret table in the traceability repo, Critical Note #57.
+- **⚠️ Do not resolve that by copying the US secrets.** `ASK_PAUL_APP_URL` points at a US-hosted
+  app backed by a US Supabase vector store, and `ANTHROPIC_API_KEY` is the US endpoint. Either one
+  set on the EU app sends EU personal data to the US through the deployment that exists to stop
+  exactly that — and it would look like the feature finally working.
+
+Still outstanding before an EU customer can be onboarded: the EU Fly app's **EU-only** Litestream
+bucket (Tigris replicates globally by default), region-routing for AI calls, and an EU Ask Paul
+deployment. Until `TRACE_API_URL_EU` is set, `POST /api/accounts` refuses `region: 'eu'`.
 
 ## Non-obvious behaviour worth preserving
 
