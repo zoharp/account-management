@@ -73,8 +73,16 @@ that table first; the screen cannot tell you anything.
    `orcanos_api_url` — `orcanosdemo` — and this sign-in breaks again. The URL is still
    client-supplied to the route; a disabled input is not a boundary.
 
-**No migrations are outstanding.** All three were applied on 2026-08-29. None can go through
+**No migrations are outstanding.** The first three were applied on 2026-08-29;
+`sql/003_account_region.sql` on **2026-09-10** — `accounts.region` is live, `text not null default
+'us'`, CHECK-constrained to `('us','eu')`, and all four existing accounts (`meesh`, `orca60`,
+`Orcanos`, `orcanosdemo`) read `us`, which is where their data actually is. None can go through
 PostgREST, so the route used was the Management API:
+
+⚠️ **Call it with `curl`, not Python `urllib`.** Cloudflare in front of `api.supabase.com` answers
+**403 `error code: 1010`** to urllib's default User-Agent. That is a bot rule, not a permissions
+problem — the same token works immediately from curl. It reads exactly like a revoked or
+insufficiently-scoped token, which is a wrong and expensive first diagnosis.
 
 ```
 POST https://api.supabase.com/v1/projects/jjiavhexvfahboiodomv/database/query
