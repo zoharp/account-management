@@ -215,9 +215,10 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
   <div class="part-n">ORCANOS&nbsp;AI · INFRASTRUCTURE HANDBOOK · 2026</div>
   <h1>Everything we run,<br>and why it runs<br>the way it does.</h1>
   <div class="part-rule"></div>
-  <p class="sub">Three applications, five hosting platforms, two tenancy models, one shared login token. This deck is the whole picture &mdash; for IT, for developers, for auditors, and for anyone joining this week.</p>
+  <p class="sub">Three applications, five hosting platforms, two tenancy models, <strong>two data regions</strong>, one shared login token. This deck is the whole picture &mdash; for IT, for developers, for auditors, and for anyone joining this week.</p>
   <div class="row">
-    <span class="pill or">7 parts</span><span class="pill">73 slides</span>
+    <span class="pill or">8 parts</span><span class="pill">82 slides</span>
+    <span class="pill or">Updated 2026-09-10 — Part 3 is new</span>
     <span class="pill dim">Next ▶ or → to move</span>
     <span class="pill dim">☰ Index for everything at once</span>
   </div>
@@ -234,16 +235,16 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
 <div class="pad">
   <div class="eyebrow">Start here</div>
   <h2>How to read this.</h2>
-  <p class="sub">Every slide stands on its own. The seven parts answer seven different questions, and you can jump straight to the one you came for.</p>
+  <p class="sub">Every slide stands on its own. The eight parts answer eight different questions, and you can jump straight to the one you came for.</p>
   <div class="g3">
     <div class="card"><div class="kicker">Parts 1&ndash;2</div><h3>The map</h3><p class="small">What the applications are, where each one runs, and why one customer means a whole database in one app and a single row in another.</p></div>
-    <div class="card"><div class="kicker">Parts 3&ndash;5</div><h3>How it works</h3><p class="small">The Orcanos API, sign-in, the RAG pipeline, caching, cost, the LLM routing, and how we handle security.</p></div>
-    <div class="card"><div class="kicker">Parts 6&ndash;7</div><h3>How we build &amp; where it goes</h3><p class="small">Working with Claude Code, skills, CI/CD, the IIS install &mdash; then the AWS question and the next steps.</p></div>
+    <div class="card or"><div class="kicker">Part 3 &mdash; new</div><h3>Data residency</h3><p class="small">EU and US. Two deployments that share nothing, the automatic hand-off at sign-in, moving a customer between regions &mdash; and, most importantly, <strong>what is not residency yet</strong>.</p></div>
+    <div class="card"><div class="kicker">Parts 4&ndash;6</div><h3>How it works</h3><p class="small">The Orcanos API, sign-in, the RAG pipeline, caching, cost, the LLM routing, and how we handle security.</p></div>
   </div>
   <div class="g3">
-    <div class="card or"><h3>⚠ Must know &mdash; 25 slides</h3><p class="small">A trap that <strong>fails silently</strong>. Nothing crashes; the screen looks right; the answer is wrong. Each one has already cost us a release. Read these before touching the thing they describe.</p></div>
-    <div class="card"><h3>★ Core &mdash; 20 slides</h3><p class="small">How the platform actually works. If you are new, read these in order and you will understand the shape of everything.</p></div>
-    <div class="card"><h3>○ Reference &mdash; 19 slides</h3><p class="small">Tables, addresses, step-by-step procedures. Look them up when you need them; do not try to memorise them.</p></div>
+    <div class="card"><div class="kicker">Parts 7&ndash;8</div><h3>How we build &amp; where it goes</h3><p class="small">Working with Claude Code, skills, CI/CD, the IIS install &mdash; then the AWS question and the next steps.</p></div>
+    <div class="card or"><h3>⚠ Must know &mdash; 33 slides</h3><p class="small">A trap that <strong>fails silently</strong>. Nothing crashes; the screen looks right; the answer is wrong. Each one has already cost us a release. Read these before touching the thing they describe.</p></div>
+    <div class="card"><h3>★ Core &mdash; 24 &nbsp;·&nbsp; ○ Reference &mdash; 21</h3><p class="small"><strong>Core</strong> is how the platform actually works &mdash; if you are new, read these in order. <strong>Reference</strong> is tables, addresses and procedures: look them up when you need them, do not memorise them.</p></div>
   </div>
   <div class="trap">
     <span class="tag">⚠ The recurring theme</span>
@@ -535,9 +536,140 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </section>
 
 <!-- ============ PART 3 ============ -->
-<section class="slide part" data-part="3" data-title="Part 3 — How it works">
+<section class="slide part" data-part="3" data-title="Part 3 — Data residency">
 <div class="pad">
   <div class="part-n">PART THREE</div>
+  <h1>Data residency.<br>EU and US.</h1>
+  <div class="part-rule"></div>
+  <p class="sub">Added 2026&#8209;09&#8209;10 &mdash; the largest change to the platform since this deck was written. One deployment per region, a signpost that grants nothing, an automatic hand&#8209;off before the password, and a migration that counts rows before it deletes anything.</p>
+  <div class="part-list">
+    <span class="pill or">What is protected</span><span class="pill">Two deployments</span>
+    <span class="pill">The signpost &amp; hand-off</span><span class="pill">Moving a tenant</span>
+    <span class="pill or">What is NOT residency yet</span><span class="pill or">The secret-parity trap</span>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="Why residency, and what is actually protected" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">The reason</div>
+  <h2>We hold our own copies of their personal data.</h2>
+  <p class="sub">Orcanos holds the requirements. But <em>our</em> databases hold copies &mdash; and that is what a residency guarantee is about. We are the <strong>processor</strong>; the tenant is the <strong>controller</strong>.</p>
+  <div class="tw"><table>
+  <tr><th style="width:38%">Where</th><th>What personal data is in it</th></tr>
+  <tr><td><code>matrix_cache</code> · <code>source_cache</code> · <code>funnel_cache</code></td><td>Trainee <strong>names, emails, roles, completion dates</strong> &mdash; training snapshots</td></tr>
+  <tr><td><code>quiz_attempts</code> · <code>quiz_answers</code></td><td>Somebody's <strong>exam record</strong> &mdash; the one thing Orcanos cannot rebuild</td></tr>
+  <tr><td><code>sessions.auth_header</code></td><td>The user's <strong>real Orcanos credential</strong>, encrypted</td></tr>
+  <tr><td>Ask Paul's per-customer Supabase</td><td>The customer's <strong>document text and its embeddings</strong></td></tr>
+  </table></div>
+  <div class="note"><strong>One value decides it all.</strong> <code>accounts.region</code> &mdash; <code>'us'</code> or <code>'eu'</code> &mdash; lives once on the master database and is read by all three apps. A customer has <strong>one</strong> region, not three settings that can drift apart. It is chosen at creation and <strong>cannot be changed by editing the field</strong>: rewriting it moves no data, it only records the customer as living somewhere they do not.</div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="Two deployments, sharing nothing" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">The shape</div>
+  <h2>There is no &ldquo;EU mode&rdquo;. There is an EU <em>deployment</em>.</h2>
+  <div class="g2">
+    <div class="card"><div class="kicker">US</div><h3><code>traceability-matrix</code></h3><p class="small"><code>fly.toml</code> &middot; region <code>iad</code> (Virginia) &middot; its own volume, SQLite file and Litestream bucket.</p><pre>fly deploy</pre></div>
+    <div class="card"><div class="kicker">EU</div><h3><code>traceability-matrix-eu</code></h3><p class="small"><code>fly.eu.toml</code> &middot; region <code>fra</code> (Frankfurt) &middot; its own volume, SQLite file and Litestream bucket.</p><pre>fly deploy -c fly.eu.toml</pre></div>
+  </div>
+  <div class="trap"><span class="tag">⚠ Why not one app, two machines</span><b>A Fly volume is pinned to one region and is never shared between machines.</b> <code>fly scale count 2</code> does not give you a region &mdash; it gives you <b>two divergent databases with nothing reporting the split</b>. Nothing replicates between the two apps. <b>That is the feature, not an omission.</b></div>
+  <div class="trap"><span class="tag">⚠ Half-shipped releases</span><b><code>deploy.bat</code> deploys the US app only.</b> A release is not shipped until both commands have run &mdash; and because both regions serve real customers off the same build, a version drift produces <b>no error anywhere</b>. Only a customer in one region seeing something the other cannot.</div>
+  <div class="note"><code>SELF_REGION</code> is the whole of an instance's identity. Two apps sharing one value is a deployment mistake nothing else would catch, so <code>GET /api/admin/regions</code> returns <code>self_region</code> and the console checks it.</div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="⚠ Two setup steps that void the whole thing" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Standing up a region</div>
+  <h2>Two steps that silently void residency.</h2>
+  <div class="stack">
+    <div class="trap"><span class="tag">⚠ The bucket</span><b>Tigris distributes objects globally by default.</b> An EU database's write-ahead log lands on US edges while every other part of the deployment looks correct. Restrict the bucket to EU regions, or point <code>LITESTREAM_BUCKET</code> at an EU-only S3/R2 bucket. <b>Nothing in the app can detect this</b>, and it is still unverified from the CLI today.</div>
+    <div class="trap"><span class="tag">⚠ The open door</span><b>A fresh region is open to everyone until its allowlist has one row.</b> An empty <code>account_access</code> fails open by design &mdash; right for a first install on a laptop, exactly wrong for a new public Fly app. <code>traceability-matrix-eu</code> answered <em>allowed</em> to <b>every</b> tenant for the minutes between its first deploy and its first row. The fix: write the denied sentinel row <code>zz-gate-closed</code> (<code>allow_access: 0</code>) <b>before announcing the URL</b>. It makes the count non-zero, so the gate turns on without granting anything.</div>
+  </div>
+  <div class="note">Both belong in a region-standup checklist, not in someone's memory. They are ranked <strong>R1</strong> and <strong>R2</strong> in the handbook's residency next-steps list.</div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="The signpost, and the automatic hand-off" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Getting the customer to the right place</div>
+  <h2>One address for everyone. The region is our problem.</h2>
+  <p class="sub">Each instance holds only its own region's tenants, so an EU tenant has <strong>no <code>account_access</code> row in the US database at all</strong> &mdash; and the old code told them <em>&ldquo;Access is not allowed. Please contact us to open an account.&rdquo;</em> False, and a dead end.</p>
+  <div class="g2">
+    <div class="card"><div class="kicker">The directory</div><h3><code>account_region</code></h3><p class="small">Two columns &mdash; tenant &rarr; region &mdash; held <strong>identically in every instance</strong>. A name and a region string. <strong>No personal data</strong>, so copying it across the border transfers nothing.</p></div>
+    <div class="card bad"><div class="kicker">Load-bearing</div><h3>It grants <em>nothing</em></h3><p class="small"><code>account_access</code> is still the only permission gate. <code>region_check()</code> treats a missing entry as <strong>&ldquo;no idea&rdquo;</strong>, never as &ldquo;here&rdquo;. That is what makes the console's cross-region write safe to do best-effort. <strong>Never consult it in a gate.</strong></p></div>
+  </div>
+  <div class="trap"><span class="tag">⚠ Before the password</span><b>Credentials POSTed to the wrong region are themselves a cross-border transfer</b> of personal data &mdash; even though that instance refuses them and stores nothing. So the check hangs off <code>POST /api/auth/check-account</code>, which already fired on URL blur, and <code>/login</code> answers <b>409 with the correct URL</b>, not 403: nothing is wrong with the account, the request arrived at the wrong deployment.</div>
+  <div class="trap"><span class="tag">⚠ <code>rr=1</code> is not theoretical</span><b>The two instances hold separate copies of the directory.</b> If they ever disagree &mdash; a half-finished move, a directory write that failed on one side &mdash; an automatic redirect bounces the browser between two servers <b>forever</b>, each certain the customer belongs to the other. The loop guard means &ldquo;you have been sent once already&rdquo;: fall back to a panel with a link and let a person decide.</div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="Moving a tenant between regions" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Migration</div>
+  <h2>&ldquo;Move to the EU&rdquo; is a physical migration, not a flag.</h2>
+  <pre>freeze → export → import → <span class="o">COMPARE ROW COUNTS</span> → restore access → update master + directory → purge</pre>
+  <p class="sub"><strong>Order is the safety.</strong> The purge is <strong>last</strong>, so a short import stops the move with the source fully intact. The import is <strong>one transaction</strong> &mdash; a half-landed import is the state that would make <em>&ldquo;may I delete the source?&rdquo;</em> unanswerable.</p>
+  <div class="tw"><table>
+  <tr><th style="width:34%">Decision</th><th>Why</th></tr>
+  <tr><td>The table list is <strong>discovered from the schema</strong></td><td>It grows every few releases. A hand-maintained list is correct the day it is written and silently short after &mdash; and short here means a customer's quiz attempts stay on the wrong continent <strong>while the move reports success</strong></td></tr>
+  <tr><td><strong>Two keys, both needed</strong></td><td>One tenant can own several <code>accounts.id</code> rows (unique on <code>(url, virtual_dir)</code>), and three tables key on the tenant <strong>name</strong></td></tr>
+  <tr><td><strong><code>sessions</code> never travels</strong></td><td>It holds the Orcanos credential under a key deliberately different per region, so a moved row would be undecryptable anyway. It <strong>is</strong> purged from the source &mdash; that is the point</td></tr>
+  <tr><td><strong>Caches DO travel</strong></td><td>They look disposable and are not: a training report renders the snapshot and never re-reads Orcanos, so dropping them discards the evidence behind records already signed off</td></tr>
+  <tr><td><strong>Ask Paul does not move</strong></td><td>Its vector database is a Supabase project, which cannot be relocated. The response says so rather than leaving it to be found later</td></tr>
+  </table></div>
+  <div class="note">Everyone signed in is signed out. The console requires the tenant name to be typed, and shows the <strong>seven steps ticked off with the row counts actually moved</strong> &mdash; the plan is readable before the move is authorised.</div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="⚠ What is NOT residency yet" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">The honest status</div>
+  <h2>An EU vector DB is not EU residency.</h2>
+  <p class="sub"><strong>Do not tell a customer or an auditor we have EU residency for Ask Paul.</strong> A US call for an EU tenant returns a perfectly normal answer, which is exactly the problem.</p>
+  <div class="tw"><table>
+  <tr><th style="width:34%">Part</th><th>State</th></tr>
+  <tr><td>Traceability app + database</td><td>✅ per-region deployment</td></tr>
+  <tr><td>Ask Paul vector DB region</td><td>✅ per-account, chosen at creation</td></tr>
+  <tr><td>Ask Paul FastAPI backend</td><td>❌ <strong>one Cloud Run service, <code>us-east4</code></strong> &mdash; every EU customer's questions and document text are processed in the US</td></tr>
+  <tr><td>Embeddings</td><td>❌ <strong>always OpenAI on the platform key</strong>, no per-account override</td></tr>
+  <tr><td>Chat LLM</td><td>⚠ per-account engine; only <code>bedrock_claude</code> uses an EU inference profile &mdash; the Anthropic / OpenAI / Gemini branches are US</td></tr>
+  <tr><td>Traceability's own AI calls</td><td>❌ <strong>not region-routed</strong> &mdash; panel-describe, trace-build and quiz-generation send requirement text and trainee names to the US Anthropic API</td></tr>
+  <tr><td>SSO into Ask Paul from the EU app</td><td>❌ deliberately unconfigured &mdash; next slide</td></tr>
+  <tr><td>EU Litestream bucket restriction</td><td>⚠ <strong>unverified from the CLI</strong></td></tr>
+  </table></div>
+  <div class="trap"><span class="tag">⚠ The invisible bug this replaced</span><code>provision_account()</code> declared <code>region="us-east-1"</code> and <b>its only caller never passed it</b>, so <b>every customer ever provisioned landed in Virginia</b>, whatever they had contracted for. A database in the wrong region works perfectly. The default was <b>removed rather than corrected</b> &mdash; a correct default is still a default, and refusing the request is the only failure visible at the moment the mistake is made.</div>
+</div>
+</section>
+
+<section class="slide" data-part="3" data-title="⚠ The secret-parity trap" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">The one that already cost us a support call</div>
+  <h2>A new region inherits the code &mdash; and none of the secrets.</h2>
+  <p class="sub"><code>fly deploy -c fly.eu.toml</code> ships the <strong>identical image</strong>. Secrets are per-app, write-only, with no &ldquo;copy from&rdquo;. So a second region runs the same build with a <strong>different set of features switched on</strong>, and nothing anywhere says so.</p>
+  <div class="trap"><span class="tag">⚠ What happened</span>A tenant was moved US → EU, signed in, and <b>Ask Paul was gone from the main screen.</b> The move was flawless &mdash; the licence row said <code>1</code>, verified in the EU database. The button was hidden because <code>ASK_PAUL_APP_URL</code> and <code>ASK_PAUL_SSO_SECRET</code> had never been set on the EU app. <b>The features that vanish are exactly the ones written to fail CLOSED</b> &mdash; correct behaviour that reads to the customer as a licence they paid for going missing.</div>
+  <pre><span class="c"># Diagnose in this order. Only the FIRST is visible in the console.</span>
+ask_paul_enabled = allow_ask_paul        <span class="c"># the ACCOUNT's licence</span>
+                 AND can_ask_paul        <span class="c"># the USER's Orcanos "O" letter — fail-open</span>
+                 AND ask_paul_configured <span class="c"># THIS DEPLOYMENT's two secrets — fail-CLOSED</span></pre>
+  <div class="tw"><table>
+  <tr><th style="width:34%">Secret</th><th style="width:9%">US</th><th style="width:11%">EU</th><th>The decision</th></tr>
+  <tr><td><code>ADMIN_PASSWORD</code>, <code>SECRET_KEY</code></td><td>set</td><td>set</td><td><strong>Different per region.</strong> One leak must not open both</td></tr>
+  <tr><td><code>SESSION_ENC_KEY</code></td><td>set</td><td>set</td><td><strong>Must differ</strong> &mdash; the databases never travel together</td></tr>
+  <tr><td><code>AWS_*</code>, <code>BUCKET_NAME</code></td><td>set</td><td>set</td><td><strong>Must differ</strong> &mdash; and the EU bucket must be EU-restricted</td></tr>
+  <tr><td><code>ASK_PAUL_APP_URL</code> / <code>_SSO_SECRET</code></td><td>set</td><td><strong>unset</strong></td><td>⚠ Needs an <strong>EU Ask Paul</strong> first. Do <strong>not</strong> point EU at the US app</td></tr>
+  <tr><td><code>ANTHROPIC_API_KEY</code></td><td>set</td><td><strong>unset</strong></td><td>⚠ Regional Bedrock endpoint &mdash; not the US key</td></tr>
+  </table></div>
+  <div class="trap"><span class="tag">⚠ Do not &ldquo;fix&rdquo; the blanks</span><b>The two unset rows are a residency decision, not an oversight.</b> An operator who finds them blank at 2 a.m. will fix them by copying, because copying is what parity means everywhere else. Wiring either in sends EU personal data to the US <b>through a deployment whose entire purpose is that it does not</b> &mdash; a breach that looks like a feature working. <b>Check <code>fly secrets list</code> before touching a licence.</b></div>
+</div>
+</section>
+
+<!-- ============ PART 4 ============ -->
+<section class="slide part" data-part="4" data-title="Part 4 — How it works">
+<div class="pad">
+  <div class="part-n">PART FOUR</div>
   <h1>How it works.</h1>
   <div class="part-rule"></div>
   <p class="sub">The Orcanos API underneath everything, the four ways in, the silent handoff into Ask Paul, the RAG pipeline end to end, caching, and the data.</p>
@@ -549,7 +681,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="Working with Orcanos web services" data-imp="crit">
+<section class="slide" data-part="4" data-title="Working with Orcanos web services" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">The layer underneath everything</div>
   <h2>Orcanos web services, and the quirks that cost releases.</h2>
@@ -580,7 +712,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="Three Orcanos clients" data-imp="ref">
+<section class="slide" data-part="4" data-title="Three Orcanos clients" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">Duplication</div>
   <h2>We have written the same client three times.</h2>
@@ -594,7 +726,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="Authentication — four doors" data-imp="key">
+<section class="slide" data-part="4" data-title="Authentication — four doors" data-imp="key">
 <div class="pad">
   <div class="eyebrow">Authentication</div>
   <h2>Four ways in. One token out.</h2>
@@ -620,7 +752,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="Google sign-in and the staff gate" data-imp="key">
+<section class="slide" data-part="4" data-title="Google sign-in and the staff gate" data-imp="key">
 <div class="pad">
   <div class="eyebrow">Authentication</div>
   <h2>Google sign-in, and the gate behind it.</h2>
@@ -638,7 +770,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="⚠ The login error says nothing" data-imp="crit">
+<section class="slide" data-part="4" data-title="⚠ The login error says nothing" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Diagnosing sign-in</div>
   <h2>The login error message is deliberately useless.</h2>
@@ -651,7 +783,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="Silent login to Ask Paul" data-imp="key">
+<section class="slide" data-part="4" data-title="Silent login to Ask Paul" data-imp="key">
 <div class="pad">
   <div class="eyebrow">Cross-app SSO</div>
   <h2>Silent login into Ask Paul.</h2>
@@ -672,7 +804,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="⚠ SSO needs three settings in two clouds" data-imp="crit">
+<section class="slide" data-part="4" data-title="⚠ SSO needs three settings in two clouds" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">The classic silent failure</div>
   <h2>Three settings, two clouds &mdash; and the missing half is invisible.</h2>
@@ -690,7 +822,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="Ask Paul's RAG — the two halves" data-imp="key">
+<section class="slide" data-part="4" data-title="Ask Paul's RAG — the two halves" data-imp="key">
 <div class="pad">
   <div class="eyebrow">Inside Ask Paul</div>
   <h2>Two halves, meeting at one table.</h2>
@@ -719,7 +851,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="RAG — importing data" data-imp="crit">
+<section class="slide" data-part="4" data-title="RAG — importing data" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">RAG · the ETL</div>
   <h2>Three ways in, one pipeline.</h2>
@@ -744,7 +876,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="RAG — chunking" data-imp="ref">
+<section class="slide" data-part="4" data-title="RAG — chunking" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">RAG · chunking</div>
   <h2>How a document becomes searchable.</h2>
@@ -764,7 +896,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="RAG — the two-stage router" data-imp="crit">
+<section class="slide" data-part="4" data-title="RAG — the two-stage router" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">RAG · routing</div>
   <h2>Most questions never reach the LLM.</h2>
@@ -789,7 +921,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="RAG — answering" data-imp="key">
+<section class="slide" data-part="4" data-title="RAG — answering" data-imp="key">
 <div class="pad">
   <div class="eyebrow">RAG · the streaming pipeline</div>
   <h2>Twelve steps, streamed as they happen.</h2>
@@ -820,7 +952,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="RAG — debuggability, and when it goes wrong" data-imp="crit">
+<section class="slide" data-part="4" data-title="RAG — debuggability, and when it goes wrong" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">RAG · operations</div>
   <h2>Debuggability is a designed feature.</h2>
@@ -836,7 +968,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="Caching — quick and slow" data-imp="key">
+<section class="slide" data-part="4" data-title="Caching — quick and slow" data-imp="key">
 <div class="pad">
   <div class="eyebrow">Caching</div>
   <h2>Almost nothing is built when you look at it.</h2>
@@ -862,7 +994,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="Caching — the rules that matter" data-imp="crit">
+<section class="slide" data-part="4" data-title="Caching — the rules that matter" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Caching</div>
   <h2>Five rules, and what to ask when "the data is wrong".</h2>
@@ -881,7 +1013,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="The databases we run" data-imp="crit">
+<section class="slide" data-part="4" data-title="The databases we run" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Data</div>
   <h2>Four stores, and how to change one safely.</h2>
@@ -904,7 +1036,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="3" data-title="Converting SQLite to SQL / Postgres" data-imp="crit">
+<section class="slide" data-part="4" data-title="Converting SQLite to SQL / Postgres" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Data</div>
   <h2>Two different questions people mean by "convert the database".</h2>
@@ -935,10 +1067,10 @@ sqlite3 -header -csv traceability.db \
 </div>
 </section>
 
-<!-- ============ PART 4 ============ -->
-<section class="slide part" data-part="4" data-title="Part 4 — What it costs">
+<!-- ============ PART 5 ============ -->
+<section class="slide part" data-part="5" data-title="Part 5 — What it costs">
 <div class="pad">
-  <div class="part-n">PART FOUR</div>
+  <div class="part-n">PART FIVE</div>
   <h1>What it costs.</h1>
   <div class="part-rule"></div>
   <p class="sub">How every AI call is recorded, what we deliberately do not bill, the costs that actually surprise us, and how the LLMs are routed and paid for.</p>
@@ -950,7 +1082,7 @@ sqlite3 -header -csv traceability.db \
 </div>
 </section>
 
-<section class="slide" data-part="4" data-title="The cost rule" data-imp="key">
+<section class="slide" data-part="5" data-title="The cost rule" data-imp="key">
 <div class="pad">
   <div class="eyebrow">Cost</div>
   <h2>One rule, seven consequences.</h2>
@@ -968,7 +1100,7 @@ sqlite3 -header -csv traceability.db \
 </div>
 </section>
 
-<section class="slide" data-part="4" data-title="What we don't bill, and where to look" data-imp="ref">
+<section class="slide" data-part="5" data-title="What we don't bill, and where to look" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">Cost</div>
   <h2>What is deliberately not billed &mdash; and where to check.</h2>
@@ -994,7 +1126,7 @@ sqlite3 -header -csv traceability.db \
 </div>
 </section>
 
-<section class="slide" data-part="4" data-title="⚠ The costs that surprise us" data-imp="crit">
+<section class="slide" data-part="5" data-title="⚠ The costs that surprise us" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Cost</div>
   <h2>The non-LLM costs are the ones that surprise us.</h2>
@@ -1010,7 +1142,7 @@ sqlite3 -header -csv traceability.db \
 </div>
 </section>
 
-<section class="slide" data-part="4" data-title="LLM routing" data-imp="crit">
+<section class="slide" data-part="5" data-title="LLM routing" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Managing the LLMs</div>
   <h2>One routing layer, resolved per account.</h2>
@@ -1033,7 +1165,7 @@ sqlite3 -header -csv traceability.db \
 </div>
 </section>
 
-<section class="slide" data-part="4" data-title="The Bedrock gateway, and keys" data-imp="crit">
+<section class="slide" data-part="5" data-title="The Bedrock gateway, and keys" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Managing the LLMs</div>
   <h2>The gateway serves Claude <em>and</em> OpenAI. Only the model id differs.</h2>
@@ -1052,7 +1184,7 @@ sqlite3 -header -csv traceability.db \
 </div>
 </section>
 
-<section class="slide" data-part="4" data-title="Which model a developer should use" data-imp="crit">
+<section class="slide" data-part="5" data-title="Which model a developer should use" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Managing the LLMs</div>
   <h2>The model <em>you</em> run Claude Code with.</h2>
@@ -1077,7 +1209,7 @@ claude --model claude-sonnet-5
 </div>
 </section>
 
-<section class="slide" data-part="4" data-title="The central cost service — designed, not built" data-imp="crit">
+<section class="slide" data-part="5" data-title="The central cost service — designed, not built" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Cost · the proposal</div>
   <h2>One service every app reports into.</h2>
@@ -1100,10 +1232,10 @@ claude --model claude-sonnet-5
 </div>
 </section>
 
-<!-- ============ PART 5 ============ -->
-<section class="slide part" data-part="5" data-title="Part 5 — Keeping it safe">
+<!-- ============ PART 6 ============ -->
+<section class="slide part" data-part="6" data-title="Part 6 — Keeping it safe">
 <div class="pad">
-  <div class="part-n">PART FIVE</div>
+  <div class="part-n">PART SIX</div>
   <h1>Keeping it safe.</h1>
   <div class="part-rule"></div>
   <p class="sub">The standing rules, the skills that audit them, how a finding gets handled, and where we stand against ISO 27001.</p>
@@ -1115,7 +1247,7 @@ claude --model claude-sonnet-5
 </div>
 </section>
 
-<section class="slide" data-part="5" data-title="Security — the standing rules" data-imp="crit">
+<section class="slide" data-part="6" data-title="Security — the standing rules" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Security</div>
   <h2>Nine rules that hold everywhere.</h2>
@@ -1135,7 +1267,7 @@ claude --model claude-sonnet-5
 </div>
 </section>
 
-<section class="slide" data-part="5" data-title="The security skills" data-imp="ref">
+<section class="slide" data-part="6" data-title="The security skills" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">Security</div>
   <h2>Five skills, and why we trust the scan.</h2>
@@ -1154,21 +1286,36 @@ claude --model claude-sonnet-5
 </div>
 </section>
 
-<section class="slide" data-part="5" data-title="Known open risks" data-imp="crit">
+<section class="slide" data-part="6" data-title="⚠ The Traceability /admin console, hardened" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Security · v3.44.0, 2026-09-10</div>
+  <h2>A password with a default is a password everybody has.</h2>
+  <p class="sub"><code>/admin</code> is a FastAPI route on the <strong>same public host as the app</strong>, registered before the SPA catch-all. Everything below follows from that one fact: <strong>the admin console is on the open internet</strong>, and one shared password stands in front of it.</p>
+  <div class="trap"><span class="tag">⚠ What we found</span><code>ADMIN_PASSWORD</code> used to <b>fall back to a literal written in the source</b>. Every deployment that had not set the secret was <b>fully administrable by anyone who had read the repository</b> &mdash; and a working login looked identical whether the password was configured or guessed. It now answers <b>503</b> when unset, on login <em>and</em> every authenticated route. <b>Set it on both regions before deploying</b>, or <code>/admin</code> 503s the moment it ships.</div>
+  <div class="g2">
+    <div class="card"><h3>A staged per-IP throttle</h3><p class="small"><strong>10</strong> failures → 5 minutes · <strong>15</strong> more → an hour · <strong>25</strong> more → <strong>permanent block</strong>. Checked <em>before</em> the password is compared, so a correct password during a pause is still refused &mdash; which also stops the lockout being a <strong>timing oracle</strong> for "this guess was right".<br><br>The temporary stages are process memory; the permanent block is a database row, because a permanent block a restart clears is not permanent.</p></div>
+    <div class="card"><h3>The escape hatch matters</h3><p class="small">A permanent block can lock out <strong>the only admin</strong>, and the Release button lives inside the console they can no longer reach. Starting the process once with <code>ADMIN_UNBLOCK_ALL=1</code> clears the table and logs loudly that it did.<br><br>Reading the blocked list <strong>fails open</strong>: a database hiccup must not be what locks an admin out.</p></div>
+  </div>
+  <div class="trap"><span class="tag">⚠ The read-only table browser</span>Off unless <code>ADMIN_DB_BROWSER=1</code> &mdash; its blast radius is <em>every row in production</em>. <b>Injection is prevented by membership, not escaping</b>: no WHERE, no ORDER BY, no query box, and the table name is checked against what <code>sqlite_master</code> actually returns <b>before</b> it is interpolated. The connection runs <code>PRAGMA query_only = ON</code>. <code>sessions.session_id</code> <b>is</b> the bearer cookie, so it and <code>auth_header</code>, <code>csrf_token</code> and <code>ai_config.api_key</code> are redacted by name &mdash; plus any column whose <em>name</em> looks like a secret. <b>A missed entry is not a visible bug; it is a silent disclosure on a page reachable from the internet.</b> Add the column to the redaction list in the same commit that adds the table &mdash; and never add a filter box.</div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="Known open risks" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Security</div>
-  <h2>Four risks we know about and have not closed.</h2>
+  <h2>Five risks we know about and have not closed.</h2>
   <div class="g2">
     <div class="card bad"><h3>SQL Server reachability from Vercel</h3><p class="small">Connection tests use <code>mssql</code>/tedious because Vercel has no ODBC driver. <strong>A customer SQL Server firewalled to the Cloud Run egress IPs will refuse Vercel.</strong> Confirm against a real customer account before retiring the old panel.</p></div>
     <div class="card bad"><h3>Provisioning cannot run its DDL step from Vercel</h3><p class="small">The IPv6-only direct hostname. Until the pooler fix lands, anything needing a provisioned project is unsafe to run.</p></div>
-    <div class="card bad"><h3>An empty Traceability allowlist means the gate is OFF</h3><p class="small">Not "nobody may in" &mdash; <strong>everybody</strong>. Deliberate, but it needs writing down as an accepted risk with a compensating control.</p></div>
+    <div class="card bad"><h3>An empty Traceability allowlist means the gate is OFF</h3><p class="small">Not "nobody may in" &mdash; <strong>everybody</strong>. Deliberate, but it needs writing down as an accepted risk with a compensating control. <strong>A brand-new region is exactly this state</strong> until its first row: write the <code>zz-gate-closed</code> sentinel before announcing any region's URL.</p></div>
+    <div class="card bad"><h3>Nothing detects secret drift between the two regions</h3><p class="small">Both serve real customers off the same build: no version mismatch, no error, no failing health check &mdash; only a customer in one region who cannot see something the other can. And <strong>the EU Litestream bucket's region restriction is still unverified</strong>, which would put an EU database's write-ahead log on US edges while everything else looks compliant.</p></div>
     <div class="card bad"><h3>The audit log started empty on 2026-08-29</h3><p class="small">Nothing before that date was ever recorded, and <strong>nothing is recoverable</strong>. Expect the account filter to show both old and new spellings of renamed accounts &mdash; audit rows deliberately keep the label the event actually carried.</p></div>
   </div>
   <div class="note">A module licence also <strong>fails open for old rows</strong>: a pre-3.23.0 <code>account_access</code> row has no <code>allow_ask_paul</code> column and therefore reads as <em>licensed</em>. That is deliberate &mdash; blocking those saves would lock the dialog for most tenants &mdash; but it is a fail-open and belongs on the accepted-risk list too.</div>
 </div>
 </section>
 
-<section class="slide" data-part="5" data-title="ISO 27001 — what we already have" data-imp="ref">
+<section class="slide" data-part="6" data-title="ISO 27001 — what we already have" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">ISO 27001:2022</div>
   <h2>We sell to regulated customers. Our own tooling has to stand up to it.</h2>
@@ -1187,7 +1334,7 @@ claude --model claude-sonnet-5
 </div>
 </section>
 
-<section class="slide" data-part="5" data-title="ISO 27001 — the seven gaps" data-imp="key">
+<section class="slide" data-part="6" data-title="ISO 27001 — the seven gaps" data-imp="key">
 <div class="pad">
   <div class="eyebrow">ISO 27001:2022</div>
   <h2>Seven gaps to close before an audit.</h2>
@@ -1200,17 +1347,17 @@ claude --model claude-sonnet-5
     </div>
     <div class="stack">
       <div class="card or"><div class="kicker">5</div><h3>No sub-processor list</h3><p class="small">Anthropic, OpenAI, Google, AWS (via the gateway), Supabase, Vercel, Fly, GitBook, GitHub. Customers on ISO 27001 will ask for it &mdash; and for whether customer data reaches each one.</p></div>
-      <div class="card or"><div class="kicker">6</div><h3>Data residency is unstated</h3><p class="small">Supabase tenant projects default to <code>us-east-1</code>; the Bedrock gateway uses <code>eu.</code> models. <strong>An EU customer will ask.</strong></p></div>
+      <div class="card or"><div class="kicker">6</div><h3>Data residency &mdash; now <em>partly</em> built</h3><p class="small">Since 2026-09-10 Traceability runs one deployment per region and Ask Paul provisions each vector DB in the matching Supabase region (Part 3). <strong>The remaining half is the risky half</strong> &mdash; the Ask Paul backend, embeddings, most LLM branches and Traceability's own AI calls are all still US. <strong>A half-true residency claim is worse than none.</strong></p></div>
       <div class="card or"><div class="kicker">7</div><h3>Two fail-opens are undocumented</h3><p class="small">The empty-allowlist gate and the module-licence default for old rows are both deliberate &mdash; but they need writing down as accepted risks, with compensating controls.</p></div>
     </div>
   </div>
 </div>
 </section>
 
-<!-- ============ PART 6 ============ -->
-<section class="slide part" data-part="6" data-title="Part 6 — How we build">
+<!-- ============ PART 7 ============ -->
+<section class="slide part" data-part="7" data-title="Part 7 — How we build">
 <div class="pad">
-  <div class="part-n">PART SIX</div>
+  <div class="part-n">PART SEVEN</div>
   <h1>How we build.</h1>
   <div class="part-rule"></div>
   <p class="sub">Everything here was built with Claude Code. This is the standard practice &mdash; the modes, the lifecycle, the session loop, the skills, the release ritual, and the deploy scripts we treat as best practice.</p>
@@ -1222,7 +1369,7 @@ claude --model claude-sonnet-5
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="Two modes, not two products" data-imp="key">
+<section class="slide" data-part="7" data-title="Two modes, not two products" data-imp="key">
 <div class="pad">
   <div class="eyebrow">Working with Claude Code</div>
   <h2>Two modes. Not two products.</h2>
@@ -1238,7 +1385,7 @@ claude --model claude-sonnet-5
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="The project lifecycle" data-imp="key">
+<section class="slide" data-part="7" data-title="The project lifecycle" data-imp="key">
 <div class="pad">
   <div class="eyebrow">Working with Claude Code</div>
   <h2>From idea to running code.</h2>
@@ -1258,7 +1405,7 @@ claude --model claude-sonnet-5
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="Bootstrapping a project" data-imp="ref">
+<section class="slide" data-part="7" data-title="Bootstrapping a project" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">Working with Claude Code</div>
   <h2>Six steps, once per project.</h2>
@@ -1283,7 +1430,7 @@ irm https://claude.ai/install.ps1 | iex</pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="The session loop" data-imp="key">
+<section class="slide" data-part="7" data-title="The session loop" data-imp="key">
 <div class="pad">
   <div class="eyebrow">Working with Claude Code</div>
   <h2>One step at a time. Every session.</h2>
@@ -1304,7 +1451,7 @@ irm https://claude.ai/install.ps1 | iex</pre></div>
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="Prompting, and building locally" data-imp="ref">
+<section class="slide" data-part="7" data-title="Prompting, and building locally" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">Working with Claude Code</div>
   <h2>Describe the outcome, not the steps.</h2>
@@ -1327,7 +1474,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="Commands and context files" data-imp="ref">
+<section class="slide" data-part="7" data-title="Commands and context files" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">Working with Claude Code</div>
   <h2>The commands worth knowing, and the two files that survive a session.</h2>
@@ -1352,7 +1499,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="⚠ Two different things are called &quot;skills&quot;" data-imp="crit">
+<section class="slide" data-part="7" data-title="⚠ Two different things are called &quot;skills&quot;" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Skills</div>
   <h2>Do not confuse the two.</h2>
@@ -1380,7 +1527,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="CLAUDE.md and our MD files" data-imp="key">
+<section class="slide" data-part="7" data-title="CLAUDE.md and our MD files" data-imp="key">
 <div class="pad">
   <div class="eyebrow">Documentation</div>
   <h2>CLAUDE.md is loaded into every session. That makes it precious.</h2>
@@ -1416,7 +1563,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="GitHub and the deployment gate" data-imp="crit">
+<section class="slide" data-part="7" data-title="GitHub and the deployment gate" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">CI/CD</div>
   <h2>The gate, and the release ritual.</h2>
@@ -1434,7 +1581,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="The deploy scripts — our best practice" data-imp="crit">
+<section class="slide" data-part="7" data-title="The deploy scripts — our best practice" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">CI/CD</div>
   <h2>Six gated steps. Any failure stops everything.</h2>
@@ -1455,7 +1602,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="The documentation pipeline" data-imp="ref">
+<section class="slide" data-part="7" data-title="The documentation pipeline" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">Documentation</div>
   <h2>Release notes, GitBook, the landing page, the help video.</h2>
@@ -1481,7 +1628,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="Installing Traceability on IIS" data-imp="crit">
+<section class="slide" data-part="7" data-title="Installing Traceability on IIS" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">On-premises</div>
   <h2>Nine steps on the customer's Windows Server.</h2>
@@ -1512,24 +1659,25 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="Admin manual — accounts and licences" data-imp="key">
+<section class="slide" data-part="7" data-title="Admin manual — accounts and licences" data-imp="key">
 <div class="pad">
   <div class="eyebrow">User manual · Account Management</div>
   <h2>Signing in, the list, creating and editing.</h2>
   <div class="g2">
     <div class="stack">
       <div class="card"><h3>Signing in</h3><p class="small">To get in at all you need <strong>both</strong>: <code>role = 'admin'</code> on your master <code>users</code> row, <strong>and</strong> an <code>@orcanos.com</code> email. Everyone else gets a <strong>404</strong> on every route, by design.<br><br>For Orcanos email sign-in you also need <code>orcanos_user_name</code> set on your row &mdash; set by an admin, directly in the database; there is no self-service screen yet. The first field accepts that username <em>or</em> your email, and <strong><code>QW_Login</code> is always called with the stored username, never with what you typed.</strong></p></div>
-      <div class="card"><h3>The accounts list</h3><p class="small">Every tenant, one row: name, status, database, module licences, spend. Module columns come <strong>live from the Traceability instance</strong> &mdash; a <strong>dash means "no answer from that source"</strong>, which is not the same as "off".</p></div>
+      <div class="card"><h3>The accounts list</h3><p class="small">Every tenant, one row: name, status, database, <strong>data region</strong>, module licences, spend. Module columns come <strong>live from the Traceability instance</strong> &mdash; a <strong>dash means "no answer from that source"</strong>, which is not the same as "off".<br><br>The region column is read from <strong>the instance that actually holds the data</strong>, not from what was recorded. When the two disagree the row is flagged as a <strong>conflict</strong> &mdash; one of them is wrong and nothing here can tell which. Since 0.6.0 the account name opens one window with <strong>six tabs</strong>: Overview, Orcanos, Traceability, Ask Paul, LLM, Spend.</p></div>
     </div>
     <div class="stack">
-      <div class="card"><h3>Creating an account</h3><p class="small">The <strong>Orcanos tenant is parsed out of the API URL</strong>, and the form shows you which one it decided on. With no URL there is no tenant, and the licence pills stay disabled.<br><br>Since 0.3.3 <strong>every creation writes the Traceability <code>account_access</code> row</strong>, even with nothing ticked &mdash; without that row the tenant cannot sign in to Traceability at all. A database is optional since 0.3.0, and <strong>an account created without one is created inactive</strong>.</p></div>
+      <div class="card"><h3>Creating an account</h3><p class="small">The <strong>Orcanos tenant is parsed out of the API URL</strong>, and the form shows you which one it decided on. With no URL there is no tenant, and the licence pills stay disabled.<br><br>Since 0.3.3 <strong>every creation writes the Traceability <code>account_access</code> row</strong>, even with nothing ticked &mdash; without that row the tenant cannot sign in to Traceability at all. A database is optional since 0.3.0, and <strong>an account created without one is created inactive</strong>.<br><br><strong>The Data Region is required and has no pre-selected value</strong>, and it cannot be changed afterwards. Creating an EU account is <strong>refused</strong> while no EU Traceability instance is configured. The new account is then signposted in every region, best-effort.</p></div>
+      <div class="card"><h3>Moving an account to another region</h3><p class="small">Behind a button, because it happens once in an account's life if ever. The <strong>seven steps appear as soon as the tenant name is typed</strong> &mdash; so the plan is readable before the move is authorised &mdash; and each is ticked off with the row counts actually moved.<br><br>Tell the customer three things first: <strong>everyone signed in gets signed out</strong>; <strong>their Ask Paul vector database does not move</strong>; and <strong>the source copy is deleted only after both sides' row counts match</strong>. Afterwards, check that region's secrets before believing a bug report.</p></div>
       <div class="trap"><span class="tag">⚠ Four editing rules</span><b>A blank password field means "keep the stored secret"</b> &mdash; an empty string would wipe a working credential. <b>A new vector key cannot be saved until it tests green</b>, and editing any vector field clears the previous result. <b><code>{success: null}</code> is a third state</b> &mdash; "nothing configured to test", not a failure. <b>The Status switch writes <code>is_active</code></b> and is therefore an Ask Paul control despite its label.</div>
     </div>
   </div>
 </div>
 </section>
 
-<section class="slide" data-part="6" data-title="Admin manual — provisioning, deleting, audit" data-imp="crit">
+<section class="slide" data-part="7" data-title="Admin manual — provisioning, deleting, audit" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">User manual · Account Management</div>
   <h2>Provisioning is a resumable job. Read this before running it.</h2>
@@ -1552,10 +1700,10 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<!-- ============ PART 7 ============ -->
-<section class="slide part" data-part="7" data-title="Part 7 — Where it goes">
+<!-- ============ PART 8 ============ -->
+<section class="slide part" data-part="8" data-title="Part 8 — Where it goes">
 <div class="pad">
-  <div class="part-n">PART SEVEN</div>
+  <div class="part-n">PART EIGHT</div>
   <h1>Where it goes.</h1>
   <div class="part-rule"></div>
   <p class="sub">Stay on Vercel and Fly, or move everything to Orcanos AWS? The honest case for each, a recommendation, and the seventeen next steps ranked by value per unit of risk.</p>
@@ -1567,7 +1715,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="7" data-title="Domain buys SSO. Host buys tidiness." data-imp="ref">
+<section class="slide" data-part="8" data-title="Domain buys SSO. Host buys tidiness." data-imp="ref">
 <div class="pad">
   <div class="eyebrow">The future · the guiding position</div>
   <h2>Hosting is the axis that matters least.</h2>
@@ -1589,7 +1737,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="7" data-title="Stay, or move to Orcanos AWS?" data-imp="ref">
+<section class="slide" data-part="8" data-title="Stay, or move to Orcanos AWS?" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">The future · the two options</div>
   <h2>The honest case for each.</h2>
@@ -1617,7 +1765,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="7" data-title="The recommendation" data-imp="key">
+<section class="slide" data-part="8" data-title="The recommendation" data-imp="key">
 <div class="pad">
   <div class="eyebrow">The future · recommendation</div>
   <h2>A hybrid, in this order.</h2>
@@ -1632,7 +1780,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="7" data-title="Moving Ask Paul to AWS RDS" data-imp="ref">
+<section class="slide" data-part="8" data-title="Moving Ask Paul to AWS RDS" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">The future · Ask Paul specifically</div>
   <h2>AWS RDS Postgres + pgvector, instead of a Supabase project per tenant.</h2>
@@ -1655,12 +1803,19 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="7" data-title="Next steps — ranked" data-imp="key">
+<section class="slide" data-part="8" data-title="Next steps — ranked" data-imp="key">
 <div class="pad">
   <div class="eyebrow">The future · next steps</div>
-  <h2>Seventeen steps, ranked by value per unit of risk.</h2>
+  <h2>Residency first. Then seventeen, ranked by value per unit of risk.</h2>
+  <p class="sub"><strong>The R-list comes before everything else</strong>, because we now have EU customers on a guarantee that is only <em>partly</em> true &mdash; and each unfinished row is a compliance claim we cannot yet make.</p>
   <div class="tw"><table>
   <tr><th style="width:5%">#</th><th style="width:40%">Step</th><th style="width:37%">Why now</th><th>Risk</th></tr>
+  <tr><td class="num">R1</td><td><strong>Verify the EU Litestream bucket is EU-region-restricted</strong></td><td>Tigris distributes globally by default, and <strong>nothing in the app can detect it</strong></td><td><span class="pill bad">live</span></td></tr>
+  <tr><td class="num">R2</td><td><strong>Put the <code>zz-gate-closed</code> sentinel into the region-standup checklist</strong></td><td>A fresh region's empty allowlist fails open &mdash; the EU app was open to every tenant for minutes</td><td><span class="pill ok">none</span></td></tr>
+  <tr><td class="num">R3</td><td><strong>Region-route Traceability's own AI calls</strong> to a regional endpoint</td><td>Requirement text and trainee names go to the US API today, and <strong>a US call for an EU tenant returns a normal answer</strong></td><td><span class="pill or">medium</span></td></tr>
+  <tr><td class="num">R4</td><td><strong>Decide the Ask Paul EU story</strong> &mdash; an EU backend and embedding path, or a stated contractual limitation</td><td>The vector DB is in Frankfurt; the backend, embeddings and most LLM branches are not. <strong>Until this is answered, do not claim EU residency for Ask Paul</strong></td><td><span class="pill bad">high</span></td></tr>
+  <tr><td class="num">R5&ndash;R6</td><td><strong>Only then</strong> set the EU Ask Paul SSO secrets · a <strong>secret-parity check on deploy</strong></td><td>Pointing EU at the US app is a breach that looks like a feature working · nothing detects the drift today</td><td><span class="pill ok">low</span></td></tr>
+  <tr><td class="num">R7&ndash;R9</td><td><strong>Make <code>deploy.bat</code> cover both regions</strong> · set <code>ADMIN_PASSWORD</code>/<code>SECRET_KEY</code> per region · <strong>rehearse a region move</strong> on a test tenant</td><td>A release is not shipped until both commands run · <code>/admin</code> is 503 until they are set · the purge is irreversible and the row-count comparison is the only safety</td><td><span class="pill ok">low</span></td></tr>
   <tr><td class="num">1</td><td><strong>Fix the orphaned Supabase project</strong> <code>qms-pcure</code> and run the orphan-finder query</td><td>It is billing us today</td><td><span class="pill ok">none</span></td></tr>
   <tr><td class="num">2</td><td><strong>Fix provisioning to use the Supabase pooler host</strong>, and create the <code>accounts</code> row <em>before</em> the project</td><td>The DDL step cannot work from Vercel; failures are unrecoverable</td><td><span class="pill ok">low</span></td></tr>
   <tr><td class="num">3</td><td><strong>Test everything in Account Management that writes</strong></td><td>We are one save away from finding out the hard way</td><td><span class="pill ok">low</span></td></tr>
@@ -1679,7 +1834,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="7" data-title="The open decisions" data-imp="key">
+<section class="slide" data-part="8" data-title="The open decisions" data-imp="key">
 <div class="pad">
   <div class="eyebrow">The future · unsettled</div>
   <h2>Five decisions, blocking step 9.</h2>
@@ -1698,7 +1853,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide" data-part="7" data-title="What this does not cover" data-imp="ref">
+<section class="slide" data-part="8" data-title="What this does not cover" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">Honesty</div>
   <h2>Eight things this deck does <em>not</em> cover.</h2>
@@ -1716,7 +1871,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </div>
 </section>
 
-<section class="slide part" data-part="7" data-title="Close">
+<section class="slide part" data-part="8" data-title="Close">
 <div class="pad">
   <div class="part-n">THE WHOLE DECK IN TWO LINES</div>
   <h1>Nothing here crashes.<br>That is the problem.</h1>
@@ -1749,7 +1904,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 (function(){
   var slides=[].slice.call(document.querySelectorAll('.slide'));
   var cur=0;
-  var PARTS=['Opening','What we run','Where it runs','How it works','What it costs','Keeping it safe','How we build','Where it goes'];
+  var PARTS=['Opening','What we run','Where it runs','Data residency','How it works','What it costs','Keeping it safe','How we build','Where it goes'];
 
   function render(){
     slides.forEach(function(s,i){s.classList.toggle('on',i===cur);});

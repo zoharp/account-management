@@ -7,16 +7,17 @@ plan to do next.
 | | |
 |---|---|
 | **Audience** | IT, developers, auditors, new team members |
-| **Written** | 2026-09-09 |
+| **Written** | 2026-09-09 · **last updated 2026-09-10** |
+| **Latest change** | **Data residency (EU / US)** — a new [chapter 5](#5-data-residency--eu-and-us), and updates through chapters 3, 4, 7, 8, 10, 13, 14, 19, 20, 22. The full account is in [`CHANGES-2026-09-09-REGIONS.md`](CHANGES-2026-09-09-REGIONS.md) |
 | **Owner** | Zohar Peretz |
 | **Status** | Living document — update it when infrastructure changes |
 | **Lives in** | `account-management/docs/platform/` (git repo `zoharp/account-management`) |
 | **Built from** | The repos themselves (each project's own `CLAUDE.md` is the authority for its code), the internal Claude team deck and setup guide in `OneDrive/Documents/Claude/Projects/Claude Infrastructure`, and the AI-infrastructure onboarding session of 2026-09-09 |
 
-> **How to read this.** Every chapter stands on its own. Chapters 1–4 are the map.
-> Chapters 5–13 are how things work day to day. Chapters 14–19 are how we build and ship.
-> Chapters 20–21 are the future. Words in **bold** the first time they appear are in the
-> [Glossary](#22-glossary).
+> **How to read this.** Every chapter stands on its own. Chapters 1–5 are the map.
+> Chapters 6–14 are how things work day to day. Chapters 15–20 are how we build and ship.
+> Chapters 21–22 are the future. Words in **bold** the first time they appear are in the
+> [Glossary](#23-glossary).
 
 ---
 
@@ -27,25 +28,28 @@ plan to do next.
    · [2.6 Inside Ask Paul — the RAG architecture](#26-inside-ask-paul--the-rag-architecture)
 3. [Environments — Fly, Vercel, Supabase, Cloud Run, IIS](#3-environments--fly-vercel-supabase-cloud-run-iis)
 4. [Single-tenant vs multi-tenant](#4-single-tenant-vs-multi-tenant)
-5. [Working with Orcanos web services](#5-working-with-orcanos-web-services)
-6. [Authentication](#6-authentication)
-7. [Silent login to Ask Paul (cross-app SSO)](#7-silent-login-to-ask-paul-cross-app-sso)
-8. [Caching — quick cache and slow cache](#8-caching--quick-cache-and-slow-cache)
-9. [Databases, and converting SQLite to Postgres](#9-databases-and-converting-sqlite-to-postgres)
-10. [Cost — how we record it and how we control it](#10-cost--how-we-record-it-and-how-we-control-it)
-11. [Managing the LLMs](#11-managing-the-llms)
-12. [Security — how we work](#12-security--how-we-work)
-13. [ISO 27001 considerations](#13-iso-27001-considerations)
-14. [How we work with Claude Code](#14-how-we-work-with-claude-code)
-15. [Skills — what they are, where they live, how to use them](#15-skills--what-they-are-where-they-live-how-to-use-them)
-16. [CLAUDE.md and MD files](#16-claudemd-and-md-files)
-17. [GitHub and our CI/CD](#17-github-and-our-cicd)
-18. [Installing Traceability on IIS](#18-installing-traceability-on-iis)
-19. [User manual — Account Management (admin)](#19-user-manual--account-management-admin)
-20. [Future: stay on Vercel/Fly, or move everything to Orcanos AWS?](#20-future-stay-on-vercelfly-or-move-everything-to-orcanos-aws)
-21. [Next steps — the short list](#21-next-steps--the-short-list)
-22. [Glossary](#22-glossary)
-23. [What this document does *not* cover yet](#23-what-this-document-does-not-cover-yet)
+5. [**Data residency — EU and US**](#5-data-residency--eu-and-us) 🆕
+   · [5.7 ⚠️ What is NOT residency yet](#57--what-is-not-residency-yet)
+   · [5.8 ⚠️ The secret-parity trap](#58--the-secret-parity-trap)
+6. [Working with Orcanos web services](#6-working-with-orcanos-web-services)
+7. [Authentication](#7-authentication)
+8. [Silent login to Ask Paul (cross-app SSO)](#8-silent-login-to-ask-paul-cross-app-sso)
+9. [Caching — quick cache and slow cache](#9-caching--quick-cache-and-slow-cache)
+10. [Databases, and converting SQLite to Postgres](#10-databases-and-converting-sqlite-to-postgres)
+11. [Cost — how we record it and how we control it](#11-cost--how-we-record-it-and-how-we-control-it)
+12. [Managing the LLMs](#12-managing-the-llms)
+13. [Security — how we work](#13-security--how-we-work)
+14. [ISO 27001 considerations](#14-iso-27001-considerations)
+15. [How we work with Claude Code](#15-how-we-work-with-claude-code)
+16. [Skills — what they are, where they live, how to use them](#16-skills--what-they-are-where-they-live-how-to-use-them)
+17. [CLAUDE.md and MD files](#17-claudemd-and-md-files)
+18. [GitHub and our CI/CD](#18-github-and-our-cicd)
+19. [Installing Traceability on IIS](#19-installing-traceability-on-iis)
+20. [User manual — Account Management (admin)](#20-user-manual--account-management-admin)
+21. [Future: stay on Vercel/Fly, or move everything to Orcanos AWS?](#21-future-stay-on-vercelfly-or-move-everything-to-orcanos-aws)
+22. [Next steps — the short list](#22-next-steps--the-short-list)
+23. [Glossary](#23-glossary)
+24. [What this document does *not* cover yet](#24-what-this-document-does-not-cover-yet)
 
 ---
 
@@ -350,7 +354,7 @@ Every result event carries the full router trace: `confidence`, `router_rule`,
 | Environment | We use it for | What it is good at | What it cannot do |
 |---|---|---|---|
 | **Vercel** | Account Management (full Next.js app), Ask Paul frontend, covaris-bom, quiz-management | Push to `main` = deployed. Free SSL, global CDN, preview deploys per branch. Zero servers to run. | **No long-running work.** Functions have a time limit. **IPv4 only** — it cannot reach `db.<ref>.supabase.co`, which is IPv6-only. No ODBC driver. No disk. |
-| **Fly.io** | Traceability Matrix (one container: FastAPI + React + SQLite) | A real always-on machine with a **persistent volume**. Background jobs that run for minutes survive. Cheap. Litestream continuously replicates SQLite. | One machine only. **Never `fly scale count 2`** — Fly gives the second machine its own volume, and you silently get two divergent databases. |
+| **Fly.io** | Traceability Matrix — **two separate apps, one per region** (`traceability-matrix` in `iad`, `traceability-matrix-eu` in `fra`). Each is one container: FastAPI + React + SQLite | A real always-on machine with a **persistent volume**. Background jobs that run for minutes survive. Cheap. Litestream continuously replicates SQLite. A volume being pinned to one region is what makes per-region residency possible at all (§5.3) | One machine **per app**. **Never `fly scale count 2`** — Fly gives the second machine its own volume, and you silently get two divergent databases. That is also why an EU region is a second *app*, not a second machine |
 | **Google Cloud Run** | Ask Paul backend | Containers, autoscaling, Secret Manager, Cloud Build CI. Handles streaming responses well. | Cold starts. Config lives in Cloud Build triggers and Secret Manager, so it is easy to set something on the running service and have the next build erase it. |
 | **Supabase** | Master database + one project per Ask Paul tenant | Postgres + **pgvector** + PostgREST + a Management API that can **create projects by API**. | PostgREST cannot run DDL — schema changes need a direct Postgres connection or the Management API `database/query` route. Direct-connection hostnames are IPv6-only. |
 | **IIS (customer site)** | Traceability Matrix, installed on the customer's own Windows Server | The customer keeps all data on-premises. No internet dependency. | Manual install and manual upgrade. Needs URL Rewrite + ARR. `/admin` is only reachable on the server itself. |
@@ -373,6 +377,10 @@ Every result event carries the full router trace: `confidence`, `router_rule`,
    publishes only an AAAA (IPv6) record; Vercel functions are IPv4. The error is
    `getaddrinfo ENOTFOUND`, which reads like a typo in the hostname. The fix is the
    **pooler** host `aws-0-<region>.pooler.supabase.com:5432` with user `postgres.<ref>`.
+6. **A second Fly region inherits the CODE but none of the SECRETS.** `fly deploy -c
+   fly.eu.toml` ships the identical image; secrets are per-app, write-only, and there is no
+   "copy from". The features that go missing are exactly the ones written to fail closed, and
+   nothing reports the drift. This has already cost us a support call — §5.8.
 
 ### 3.3 Where everything is, in one table
 
@@ -380,7 +388,8 @@ Every result event carries the full router trace: `confidence`, `router_rule`,
 |---|---|---|
 | Ask Paul frontend | Vercel | https://askpaul.orcanos.ai |
 | Ask Paul backend | Cloud Run (`us-east4`) | service `orcanos-qms` |
-| Traceability Matrix | Fly.io (`iad`) | https://traceability.orcanos.ai · `traceability-matrix.fly.dev` |
+| Traceability Matrix — **US** | Fly.io (`iad`) | https://traceability.orcanos.ai · `traceability-matrix.fly.dev` |
+| Traceability Matrix — **EU** | Fly.io (`fra`) | `traceability-matrix-eu` · deployed with `fly deploy -c fly.eu.toml` |
 | Account Management | Vercel | https://accounts.orcanos.ai |
 | Master database | Supabase | project `jjiavhexvfahboiodomv` |
 | Per-tenant vector DBs | Supabase | one project per account, created on demand |
@@ -407,7 +416,7 @@ data?**
 > (production). Legacy or direct DB access → **Orcanos AWS**.
 
 Railway is on the menu but **nothing runs on it today**. Adding a sixth platform is a real
-cost ([chapter 20](#20-future-stay-on-vercelfly-or-move-everything-to-orcanos-aws)) — reach
+cost ([chapter 21](#21-future-stay-on-vercelfly-or-move-everything-to-orcanos-aws)) — reach
 for one we already operate unless the persistent-worker case is genuine.
 
 ---
@@ -416,6 +425,11 @@ for one we already operate unless the persistent-worker case is genuine.
 
 This is the single biggest architectural difference between our two main apps, and it
 explains most of the other differences.
+
+> **Since 2026-09-10 there is a third axis: the region.** Traceability is multi-tenant
+> **within** a region and has one database **per** region — the two share nothing. Ask Paul
+> is single-tenant, and each customer's database is created in the Supabase region matching
+> their account. Read [chapter 5](#5-data-residency--eu-and-us) alongside this one.
 
 ### 4.1 Ask Paul — a database per customer (single-tenant data)
 
@@ -465,13 +479,207 @@ a backfill. This is easy to miss because both systems work perfectly on their ow
 
 ---
 
-## 5. Working with Orcanos web services
+## 5. Data residency — EU and US
+
+> **Added 2026-09-10.** This is the largest change to the platform since it was written down.
+> The full account of it is in
+> [`CHANGES-2026-09-09-REGIONS.md`](CHANGES-2026-09-09-REGIONS.md).
+
+### 5.1 The rule
+
+Every account has a **data region** — `us` or `eu` — stored once in `accounts.region` on the
+**master** Supabase, and read by all three apps. **A customer has one region, not three
+settings that can drift apart.**
+
+It is **chosen when the account is created** and **cannot be changed afterwards** by editing
+the field. Neither a Supabase project nor a Fly volume can be moved between regions, so
+rewriting the value would move no data — it would only record the customer as living somewhere
+they do not, while the console asserts a residency guarantee that is false. Moving a customer
+is a physical migration (§5.5).
+
+### 5.2 Why — what is actually being protected
+
+Orcanos holds the requirements, but **our own databases hold their own copies of personal
+data**:
+
+| Where | What personal data |
+|---|---|
+| `matrix_cache` / `source_cache` / `funnel_cache` | Trainee **names, emails, roles, completion dates** |
+| `quiz_attempts` / `quiz_answers` | Somebody's **exam record** — the one thing Orcanos cannot rebuild |
+| `sessions.auth_header` | The user's **real Orcanos credential**, encrypted |
+| Ask Paul's per-customer Supabase | The customer's **document text and its embeddings** |
+
+We are the **processor**; the tenant is the **controller**.
+
+### 5.3 The shape: one deployment per region
+
+**There is no "EU mode". There is an EU deployment.** A Fly volume is pinned to one region and
+is never shared between machines, so `fly scale count 2` does not produce a region — it
+produces **two divergent databases with nothing reporting the split**.
+
+| | US | EU |
+|---|---|---|
+| Fly app | `traceability-matrix` | `traceability-matrix-eu` |
+| Config | `fly.toml` | **`fly.eu.toml`** |
+| Region | `iad` — Virginia | `fra` — Frankfurt |
+| Volume / SQLite / Litestream bucket | its own | its own |
+| Replication between them | **none — that is the feature** | |
+
+```bash
+fly deploy                    # US
+fly deploy -c fly.eu.toml     # EU
+```
+
+⚠️ **`deploy.bat` deploys the US app only.** A release is not shipped until both commands have
+run. Both regions serve real customers off the same build, so a version drift produces no
+error anywhere — only a customer in one region seeing something the other cannot.
+
+**`SELF_REGION`** is the whole of an instance's identity. Two apps sharing one value is a
+deployment mistake nothing else would catch, so `GET /api/admin/regions` returns `self_region`
+and the console checks it.
+
+#### ⚠️ Two setup steps that silently void the whole thing
+
+1. **The Litestream bucket.** Tigris distributes objects **globally by default**, so an EU
+   database's write-ahead log lands on US edges while every other part of the deployment looks
+   correct. Restrict the bucket to EU regions, or point `LITESTREAM_BUCKET` at an EU-only
+   S3/R2 bucket. **Nothing in the app can detect this.**
+2. **A fresh region is an open door until its allowlist has one row.** An empty `account_access`
+   fails open by design — right for a first install on a laptop, exactly wrong for a new public
+   Fly app. `traceability-matrix-eu` answered *allowed* to **every** tenant for the minutes
+   between its first deploy and its first row. Write the **denied sentinel row**
+   (`zz-gate-closed`, `allow_access: 0`) **before announcing the URL** — it makes the count
+   non-zero and therefore turns the gate on without granting anything.
+
+### 5.4 The signpost, and the automatic hand-off
+
+Each instance holds only its own region's tenants, so an EU tenant has **no `account_access`
+row in the US database at all** — and the old code told them *"Access is not allowed. Please
+contact us to open an account."* False, and a dead end.
+
+**`account_region`** is a two-column **directory** (tenant → region) held **identically in
+every instance**. A tenant name and a region string — **no personal data**, so copying it
+across the border transfers nothing.
+
+> ⚠️ **It grants nothing, and that is load-bearing.** `account_access` is still the only
+> permission gate; `region_check()` treats a missing entry as *"no idea"*, never as *"here"*.
+> That is what makes the console's cross-region write safe to do **best-effort** — a missing
+> signpost costs a worse error message, never access. **Never consult the directory in a gate.**
+
+**The hand-off happens before the password is submitted.** Credentials POSTed to the wrong
+region are themselves a cross-border transfer of personal data, even though that instance
+refuses them and stores nothing. So the check hangs off `POST /api/auth/check-account`, which
+already fired on URL blur; `/login` enforces it as **409 with the correct URL**, not 403 —
+nothing is wrong with the account, the request arrived at the wrong deployment.
+
+Since 3.45.0 the customer is **redirected automatically**, carrying the Orcanos URL they typed
+so they do not type it twice. Which region holds their data is **our** implementation detail.
+
+- **`rr=1` is a loop guard, and it is not theoretical.** The two instances hold separate copies
+  of the directory. If they ever disagree — a half-finished move, a directory write that failed
+  on one side — an automatic redirect bounces the browser between two servers forever, each
+  certain the customer belongs to the other. Arriving with the flag set means *"you have been
+  sent once already"*: show the panel with a link and let a person decide.
+- ⚠️ **The address bar does change.** A true single origin would need an edge proxy in front of
+  both apps, which puts a third processor in the path of every EU request.
+
+### 5.5 Moving a tenant between regions
+
+The two regions share no data, so *"move to the EU"* is a **physical migration**, not a flag
+(`tenant_move.py`, driven from the Account Management console).
+
+```
+freeze → export → import → COMPARE ROW COUNTS → restore access → update master + directory → purge
+```
+
+**Order is the safety.** The purge is **last**, so a short import stops the move with the
+source fully intact. The import is **one transaction** — a half-landed import is the state that
+would make *"may I delete the source?"* unanswerable.
+
+| Decision | Why |
+|---|---|
+| The table list is **discovered from the schema**, never written down | It grows every few releases; a hand-maintained list is correct the day it is written and silently short after — and short here means a customer's quiz attempts stay on the wrong continent while the move reports success |
+| **Two keys, both needed** | One tenant can own several `accounts.id` rows (unique on `(url, virtual_dir)`, so the same tenant on two hosts is two rows), and three tables key on the tenant **name** |
+| **`sessions` never travels** | It holds the Orcanos credential under a key deliberately different per region, so a moved row would be undecryptable. It **is** purged from the source — that is the point |
+| **Caches DO travel** | They look disposable and are not: a training report renders the snapshot and never re-reads Orcanos, so dropping them discards the evidence behind training records already signed off |
+| **Ask Paul does not move** | Its vector database is a Supabase project, which cannot be relocated. The response says so rather than leaving it to be found later |
+
+Everyone signed in is signed out. The console requires the tenant name to be typed, and shows
+the seven steps ticked off with the row counts actually moved.
+
+### 5.6 Ask Paul and the region
+
+`provision_account(account_name, data_region)` maps the region through
+`SUPABASE_REGION_BY_DATA_REGION` (`us` → `us-east-1`, `eu` → `eu-central-1`) and creates the
+customer's vector database there. `POST /admin/accounts` **400s** on a missing or invalid
+`region` and writes it to the account row in the same request, so the recorded region and the
+region the project was created in cannot disagree.
+
+⚠️ **The bug this fixed was invisible.** The signature used to be `provision_account(name,
+region="us-east-1")` and the only caller never passed it, so **every customer ever provisioned
+from this app landed in Virginia**, whatever they had contracted for. A database in the wrong
+region works perfectly — every query succeeds, nothing reports it. **The default was removed
+rather than corrected**, because a correct default is still a default: the next caller that
+omits the argument gets a silent residency decision made for it. See `REQ-047`.
+
+### 5.7 ⚠️ What is NOT residency yet
+
+**An EU vector database while the backend and embeddings are in the US is a residency claim
+that reads as true and is not.** Do not tell a customer we have EU residency for Ask Paul.
+
+| Part | State |
+|---|---|
+| Traceability app + database | ✅ per-region deployment |
+| Ask Paul vector DB region | ✅ per-account, chosen at creation |
+| Ask Paul FastAPI backend | ❌ **one Cloud Run service, `us-east4`** — every EU customer's questions and document text are processed in the US |
+| Embeddings | ❌ **always OpenAI on the platform key**, no per-account override |
+| Chat LLM | ⚠️ per-account engine; only `bedrock_claude` uses an EU inference profile — the Anthropic / OpenAI / Gemini branches are US |
+| Traceability AI calls | ❌ **not region-routed** — panel-describe, trace-build and quiz-generation send requirement text and trainee names to the US Anthropic API |
+| SSO into Ask Paul from the EU app | ❌ deliberately unconfigured — §5.8 |
+| EU Litestream bucket restriction | ⚠️ **unverified from the CLI** |
+
+A US call for an EU tenant returns a perfectly normal answer, which is exactly the problem.
+
+### 5.8 ⚠️ The secret-parity trap
+
+`fly deploy -c fly.eu.toml` ships the **identical image**. What it does **not** ship is the
+other app's secrets — those are per-app, write-only, with no "copy from". So a second region
+comes up running the same build with a **different set of features switched on**, and nothing
+anywhere says so.
+
+Found the ordinary way: a tenant was moved US → EU, signed in, and **Ask Paul was gone.** The
+move was flawless — the licence row said `1`, verified in the EU database. The button was
+hidden because `ASK_PAUL_APP_URL` / `ASK_PAUL_SSO_SECRET` had never been set on the EU app.
+
+> **The features that vanish are exactly the ones written to fail CLOSED.** That is correct
+> behaviour (§8), but "fails closed" plus "new region" reads to the customer as **a licence
+> they paid for that is missing**, and to the operator as a bad move.
+
+**Secret parity is not the goal — a decision per secret is:**
+
+| Secret | US | EU | Decision |
+|---|---|---|---|
+| `ADMIN_PASSWORD`, `SECRET_KEY` | set | set | **Different per region.** One leak must not open both |
+| `SESSION_ENC_KEY` | set | set | **Must differ** — the databases never travel together |
+| `AWS_*`, `BUCKET_NAME` | set | set | **Must differ** — and the EU bucket must be EU-restricted |
+| `ADMIN_DB_BROWSER` | set | set | Same value is fine — a flag, not a credential |
+| `ASK_PAUL_APP_URL` / `ASK_PAUL_SSO_SECRET` | set | **unset** | ⚠️ Needs an **EU Ask Paul** first. Do **not** point EU at the US app |
+| `ANTHROPIC_API_KEY` | set | **unset** | ⚠️ Regional Bedrock endpoint — not the US key |
+
+**The two unset rows are a residency decision, not an oversight.** An operator who finds them
+blank at 2 a.m. will "fix" them by copying, because copying is what parity means everywhere
+else. Wiring either in sends EU personal data to the US **through a deployment whose entire
+purpose is that it does not** — a breach that looks like a feature working.
+
+---
+
+## 6. Working with Orcanos web services
 
 Everything ultimately talks to the Orcanos QMS REST API. **Read the `orcanos-api` skill
 before writing any integration code** — it documents the quirks below and about 100
 endpoints.
 
-### 5.1 The basics
+### 6.1 The basics
 
 | | |
 |---|---|
@@ -480,7 +688,7 @@ endpoints.
 | **Style** | POST with a JSON body, even for reads |
 | **CORS** | **There are no CORS headers.** A browser cannot call Orcanos directly — a server-side proxy is mandatory. |
 
-### 5.2 The quirks that have cost us releases
+### 6.2 The quirks that have cost us releases
 
 * **XML-wrapped arrays.** Responses are XML converted to JSON, so a list of one item comes
   back as an object, not an array of one. Always normalise.
@@ -496,18 +704,18 @@ endpoints.
 * **Orcanos item fields are untrusted input.** Anyone who can edit an item controls names,
   descriptions and custom fields. Treat them as hostile in any sink.
 
-### 5.3 We have three separate Orcanos clients
+### 6.3 We have three separate Orcanos clients
 
 `covaris-bom/src/api/orcanosClient.js`, Ask Paul's `backend/api.py`, and
 `traceability-matrix/src/backend/orcanos_client.py`. Each independently rediscovered the
 same quirks. **One shared client is the highest-value piece of de-duplication available to
-us** — see chapter 21.
+us** — see chapter 22.
 
 ---
 
-## 6. Authentication
+## 7. Authentication
 
-### 6.1 The four ways in
+### 7.1 The four ways in
 
 ```mermaid
 flowchart TB
@@ -523,12 +731,12 @@ flowchart TB
 | **Google** | Standard OAuth2 authorization-code flow. The app builds the Google URL, the server exchanges the code. A CSPRNG `state` value is round-tripped to block authorization-code injection. | Ask Paul: `localStorage`. Account Management: **httpOnly cookie**. |
 | **Office 365** | Same flow, Microsoft endpoints, per-account tenant ID. | Same. |
 | **Orcanos email** | The password is verified by **`QW_Login` against the tenant's own Orcanos**, not against a stored hash. Orcanos is the sole credential authority. | Same. |
-| **Silent SSO** | See [chapter 7](#7-silent-login-to-ask-paul-cross-app-sso). | Same. |
+| **Silent SSO** | See [chapter 8](#8-silent-login-to-ask-paul-cross-app-sso). | Same. |
 
 All four converge on the same tail, which issues the **same HS256 JWT**. The
 `auth_method` claim records which door was used.
 
-### 6.2 Google sign-in, specifically
+### 7.2 Google sign-in, specifically
 
 1. The app calls `GET /api/auth/config` (public) to find out which methods this account has
    enabled — this reads the `auth_methods` table.
@@ -546,7 +754,7 @@ Two things to know:
   when no local state existed, for compatibility with an old path. There is no old path in
   Account Management, so skipping would only create a CSRF hole.
 
-### 6.3 The staff gate (Account Management)
+### 7.3 The staff gate (Account Management)
 
 ```
 user.role === 'admin'  &&  user.email endsWith '@orcanos.com'
@@ -560,7 +768,7 @@ Three properties that must never be weakened:
 3. **The page-level check is not the boundary.** Pages redirect for user experience; the
    route handlers are what actually protect data.
 
-### 6.4 The login error message is deliberately useless
+### 7.4 The login error message is deliberately useless
 
 Every failure path in Orcanos email sign-in returns the same `Invalid credentials` —
 missing user, wrong password, wrong tenant, not an admin, identity already linked. That is
@@ -569,7 +777,7 @@ on purpose: the route cannot be used to enumerate users.
 > 🔎 **When someone reports a login problem, read the `security_audit_log` table.**
 > The real reason is recorded there and **only** there. The screen cannot tell you anything.
 
-### 6.5 Where the differences still are
+### 7.5 Where the differences still are
 
 | | Ask Paul | Traceability | Account Management |
 |---|---|---|---|
@@ -578,13 +786,13 @@ on purpose: the route cannot be used to enumerate users.
 | Session length | 24 h JWT | 45 min sliding (`SESSION_TIMEOUT=2700`) | 24 h JWT |
 | Orcanos calls made as | one account-level credential | **the end user** | account credential |
 
-Unifying these is [step 4 of the consolidation plan](#20-future-stay-on-vercelfly-or-move-everything-to-orcanos-aws).
+Unifying these is [step 4 of the consolidation plan](#21-future-stay-on-vercelfly-or-move-everything-to-orcanos-aws).
 Note that "as the end user" vs "as the account" changes what Orcanos records in **its own**
 audit trail — which matters in a regulated QMS.
 
 ---
 
-## 7. Silent login to Ask Paul (cross-app SSO)
+## 8. Silent login to Ask Paul (cross-app SSO)
 
 A user already signed in to Traceability clicks **Ask Paul** and lands in Ask Paul already
 signed in.
@@ -642,9 +850,23 @@ ANDed — the account's `allow_ask_paul` column, the user's Orcanos `O` permissi
 and the deployment secrets above. Only the last one fails closed, so the Account Management
 pill can read "licensed" while the button is hidden from everyone.
 
+> ⚠️ **Diagnose a hidden button in this order, or you will blame the wrong layer.** Only the
+> first cause is visible in the Account Management console:
+>
+> ```
+> ask_paul_enabled = allow_ask_paul        (the ACCOUNT's licence — console + /admin)
+>                  AND can_ask_paul        (the USER's Orcanos "O" letter — fail-open)
+>                  AND ask_paul_configured (THIS DEPLOYMENT's two secrets — fail-CLOSED)
+> ```
+>
+> Check `fly secrets list` **before** touching a licence. Since 2026-09-10 there are **two
+> Traceability deployments**, and the EU one deliberately has neither secret set (§5.8) —
+> so for an EU tenant the button is hidden by design, and the licence row still says `1`.
+> This has already been mistaken for a failed region move.
+
 ---
 
-## 8. Caching — quick cache and slow cache
+## 9. Caching — quick cache and slow cache
 
 Building a matrix or a training report means many Orcanos calls and can take minutes. So
 **almost nothing is built when you look at it.** Understanding the two speeds is the single
@@ -693,18 +915,26 @@ filters? (3) Was the change a **deletion** — those only surface via the count 
 
 ---
 
-## 9. Databases, and converting SQLite to Postgres
+## 10. Databases, and converting SQLite to Postgres
 
-### 9.1 What we run
+### 10.1 What we run
 
 | Store | Used by | Notes |
 |---|---|---|
 | **Supabase Postgres (master)** | all apps | Identity, tenant registry, encrypted secrets, spend, audit |
 | **Supabase Postgres per tenant** (pgvector) | Ask Paul | Documents, embeddings, conversations. No `users` table by design |
-| **SQLite on a Fly volume** | Traceability | 15 tables, WAL, single writer, Litestream replication |
+| **SQLite on a Fly volume** | Traceability | WAL, single writer, Litestream replication. **One database per region** since 2026-09-10 — the US and EU files share nothing (§5.3) |
 | **Customer SQL Server** | Ask Paul (read-only) | Reached with `mssql`/tedious, because Vercel has no ODBC driver |
 
-### 9.2 Changing schema on Supabase
+**Tables added by the residency work (2026-09-10):**
+
+| Table | Where | What it is |
+|---|---|---|
+| `accounts.region` | master Supabase | `'us'` \| `'eu'`, one per account. The `'us'` default is a **backfill for pre-residency rows**, not a default for new ones. Migration `sql/003_account_region.sql` |
+| `account_region` | **every** Traceability instance | The cross-region directory (tenant → region). Grants nothing — §5.4 |
+| `admin_blocked_ips` | each Traceability instance | Permanently blocked admin-login IPs — §13.5 |
+
+### 10.2 Changing schema on Supabase
 
 PostgREST **cannot run DDL**. Do not hand-edit in the SQL editor — you lose the record of
 what was run. Use the Management API and keep the `.sql` file as the source of truth:
@@ -722,7 +952,7 @@ re-running one is a no-op.
 database constraint. Verify a new insert shape by actually running it against the live
 table and deleting the row.
 
-### 9.3 Converting the SQLite database to SQL / Postgres
+### 10.3 Converting the SQLite database to SQL / Postgres
 
 Two different questions people mean by this.
 
@@ -759,7 +989,7 @@ classify first:
 | **Tenant registry — conflicting** | `accounts` | Must be **reconciled**, not copied — see [§4.3](#43--the-same-customer-has-two-different-tenant-ids). |
 
 **Which Postgres?** Supabase, if we stay as we are — it is already the master and the tool
-chain exists. AWS RDS Postgres if we move to Orcanos AWS ([chapter 20](#20-future-stay-on-vercelfly-or-move-everything-to-orcanos-aws)).
+chain exists. AWS RDS Postgres if we move to Orcanos AWS ([chapter 21](#21-future-stay-on-vercelfly-or-move-everything-to-orcanos-aws)).
 There is no third candidate worth the argument.
 
 **Honest cost warning.** `src/backend/db.py` is ~1,800 lines of raw `sqlite3` — no ORM,
@@ -769,14 +999,14 @@ then the config tables, and stop there unless something forces more.
 
 ---
 
-## 10. Cost — how we record it and how we control it
+## 11. Cost — how we record it and how we control it
 
-### 10.1 The rule
+### 11.1 The rule
 
 > **Every Claude API call the app makes writes one ledger row, keyed on the tenant, with
 > the price frozen at write time.**
 
-### 10.2 How it works (Traceability, `ai_usage.py`)
+### 11.2 How it works (Traceability, `ai_usage.py`)
 
 | Rule | Why |
 |---|---|
@@ -789,7 +1019,7 @@ then the config tables, and stop there unless something forces more.
 | Unknown model → falls back to Sonnet-tier pricing, flagged `known_model:false` | Never crash, and **never under-count** |
 | Intro discounts are deliberately **not** applied | Same reason — never under-count |
 
-### 10.3 What is *not* billed to the customer, and why
+### 11.3 What is *not* billed to the customer, and why
 
 * **Ask Paul answers** — that is Orcanos AI; the tenant pays Orcanos, not us. No Anthropic
   tokens are involved from our side.
@@ -800,7 +1030,7 @@ then the config tables, and stop there unless something forces more.
   ($3/$15 per million tokens) — the opposite of Traceability's treatment of the same
   gateway. This inconsistency is deliberate today but is worth a decision.
 
-### 10.4 Where to look
+### 11.4 Where to look
 
 | Question | Where |
 |---|---|
@@ -809,7 +1039,7 @@ then the config tables, and stop there unless something forces more.
 | Which engine is an account on? | `GET /api/admin/engine` |
 | Platform-wide history | master `account_usage_logs` |
 
-### 10.5 The non-LLM costs, which are the ones that surprise us
+### 11.5 The non-LLM costs, which are the ones that surprise us
 
 | Cost | How it appears |
 |---|---|
@@ -820,7 +1050,7 @@ then the config tables, and stop there unless something forces more.
 | Vercel | Per project |
 | GitBook, domains | Fixed |
 
-### 10.6 Development spend — the Anthropic console
+### 11.6 Development spend — the Anthropic console
 
 The chapters above are about what our **products** spend on the customer's behalf. What
 **we** spend building them lives in one place:
@@ -835,9 +1065,9 @@ The chapters above are about what our **products** spend on the customer's behal
 Check it during long agentic sessions. The habits that actually control this cost —
 matching the model to the task, starting a fresh chat instead of dragging stale context,
 keeping `CLAUDE.md` current, `/compact` at 15–20 %, and answering with the terminal what
-the terminal can answer for free — are in [chapter 14](#14-how-we-work-with-claude-code).
+the terminal can answer for free — are in [chapter 15](#15-how-we-work-with-claude-code).
 
-### 10.7 The centralized cost service — designed, not built
+### 11.7 The centralized cost service — designed, not built
 
 There is a full design for replacing per-project cost tracking with **one service every
 Orcanos app reports into**: `orcanos-ai-cost-analysis`
@@ -878,16 +1108,16 @@ The shape of it:
    both keys, or two ledgers with an explicit boundary**, before writing code.
 2. ⚠️ **Its price table is stale.** The design's `cost-reporter` skill lists
    `claude-opus-4-6` at $15/$75 and `claude-haiku-4-5` at $0.80/$4 per million tokens.
-   Neither matches the current published rates ([§11.5](#115-which-model-a-developer-should-use)),
+   Neither matches the current published rates ([§12.5](#125-which-model-a-developer-should-use)),
    and a wrong price table silently produces a wrong ledger — the exact failure the live
    implementation avoids by freezing the price at write time and never under-counting.
    **Fix the table before the first row is written.**
 
 ---
 
-## 11. Managing the LLMs
+## 12. Managing the LLMs
 
-### 11.1 One routing layer, per account
+### 12.1 One routing layer, per account
 
 Every AI call goes through a single routing layer that resolves the calling tenant's
 `ai_config` row and picks a provider. **No configuration means the old default path,
@@ -908,7 +1138,7 @@ flowchart TB
 So an admin can point every unconfigured tenant at a different engine in one place. `'*'`
 can never collide with a real tenant, because a tenant name is a URL path segment.
 
-### 11.2 The two providers
+### 12.2 The two providers
 
 | Provider | Endpoint | Notes |
 |---|---|---|
@@ -932,7 +1162,7 @@ defensive there.
 Ask Paul additionally routes `gpt_4o` to OpenAI and `gemini_pro` / `gemini_flash` to
 Google, per account, from the same kind of table.
 
-### 11.3 Keys
+### 12.3 Keys
 
 * A per-account key overrides; otherwise the provider's global environment key is used
   (`ANTHROPIC_API_KEY` / `BEDROCK_API_KEY` — one shared gateway key today).
@@ -943,14 +1173,14 @@ Google, per account, from the same kind of table.
 * **Verify before save.** The admin *Test key* button makes a tiny live call, and Save
   auto-verifies first.
 
-### 11.4 Two rules
+### 12.4 Two rules
 
 1. **Never reintroduce a direct LLM client inside an engine.** It bypasses per-account
    routing and per-account billing at a stroke.
 2. **On a provider error we hard-fail with a clear message** — no silent fallback to the
    other provider. A misconfigured account gets fixed, not masked.
 
-### 11.5 Which model a developer should use
+### 12.5 Which model a developer should use
 
 Everything above is the **product's** model routing. This is the model *you* run Claude
 Code with — a different decision, made in `~/.claude/settings.json` or with `/model`.
@@ -989,16 +1219,16 @@ claude --model claude-sonnet-5
 > Opus 4.7 and does not mention the Claude 5 family at all. The Haiku and Sonnet 4.6 rates
 > in it are still correct; Sonnet 5 and Opus 5 are missing entirely, and Sonnet 5 is
 > **cheaper** than the Sonnet 4.6 the deck recommends. Update
-> [the deck](#1412-the-deck-itself) and the price table in
-> [§10.7](#107-the-centralized-cost-service--designed-not-built) together — model IDs and
+> [the deck](#1512-the-deck-itself) and the price table in
+> [§11.7](#117-the-centralized-cost-service--designed-not-built) together — model IDs and
 > prices change, so state where the live source is (`anthropic.com/pricing`) rather than
 > only the numbers.
 
 ---
 
-## 12. Security — how we work
+## 13. Security — how we work
 
-### 12.1 The standing rules
+### 13.1 The standing rules
 
 | Rule | Detail |
 |---|---|
@@ -1013,7 +1243,7 @@ claude --model claude-sonnet-5
 | **A disabled input is not a boundary** | The login screen's URL box is disabled but still sends its value. Client-supplied is client-supplied |
 | **Audit everything security-relevant** | `security_audit_log`, shared by all apps. Writes are non-blocking but a non-2xx write is logged to the server console, not silently dropped |
 
-### 12.2 The security skills
+### 13.2 The security skills
 
 | Skill | Scope | Use it when |
 |---|---|---|
@@ -1033,7 +1263,7 @@ claude --model claude-sonnet-5
 4. **Never fix during the scan.** Report first; fix what the user picks.
 5. Findings go into a **status ledger updated in place**, not a fresh wall of text each run.
 
-### 12.3 Handling a security finding
+### 13.3 Handling a security finding
 
 1. Reproduce it, or downgrade it to PLAUSIBLE honestly.
 2. Record it in the project's `SECURITY_AUDIT.md` / `SECURITY_FIXES.md` with severity and
@@ -1041,23 +1271,65 @@ claude --model claude-sonnet-5
 3. Fix it, bump the version, write the release note (**never naming a customer**).
 4. Re-run the scan on the diff.
 
-### 12.4 Known open operational risks
+### 13.4 Known open operational risks
 
 * **SQL Server reachability from Vercel.** Connection tests use `mssql`/tedious because
   Vercel has no ODBC driver. A customer SQL Server firewalled to the Cloud Run egress IPs
   will refuse Vercel. Confirm against a real customer account before retiring the old panel.
 * **Provisioning cannot run its DDL step from Vercel** ([§3.2](#32-the-differences-that-actually-bite)).
-* **An empty Traceability allowlist table means the gate is off.**
+* **An empty Traceability allowlist table means the gate is off** — and a **brand-new region**
+  is exactly that state. `traceability-matrix-eu` answered *allowed* to every tenant for the
+  minutes between its first deploy and its first row. Write the `zz-gate-closed` sentinel row
+  before announcing any new region's URL (§5.3).
 * **The audit log started empty on 2026-08-29.** Nothing before that date was ever recorded
   and nothing is recoverable.
+* **Nothing detects secret drift between the two regions** (§5.8). Both serve real customers
+  off the same build: no version mismatch, no error, no failing health check.
+* **The EU Litestream bucket's region restriction is unverified from the CLI.** Tigris
+  distributes globally by default, so an unrestricted bucket puts an EU database's
+  write-ahead log on US edges while everything else looks compliant.
+
+### 13.5 The Traceability `/admin` console (hardened 2026-09-10, v3.44.0)
+
+`/admin` is a FastAPI route on the **same public host as the app**, registered before the SPA
+catch-all. Everything below follows from that one fact: **the admin console is on the open
+internet**, and one shared password stands in front of it.
+
+* **`ADMIN_PASSWORD` no longer has a default, and must never get one again.** It used to fall
+  back to a literal written in `admin_api.py`, so **every deployment that had not set the
+  secret was fully administrable by anyone who had read the repository** — and a working login
+  looked identical whether the password was configured or guessed. It now answers **503** when
+  unset, on login *and* every authenticated route. A console nobody can open is the correct
+  failure; a console with a publicly-known password is not.
+  ⚠️ **Set the secret on both regions before deploying**, or `/admin` 503s the moment it ships.
+* **A staged per-IP login throttle.** 10 failures → 5 minutes · 15 more → an hour · 25 more →
+  **permanent block** (50 guesses total). Checked **before** the password is compared, so a
+  correct password during a pause is still refused — which also stops the lockout being a
+  timing oracle for *"this guess was right"*. The temporary stages are process memory (a
+  restart clears them, each machine counts separately); the permanent block is a row in
+  `admin_blocked_ips`, because a permanent block a restart clears is not permanent.
+* **The out-of-band release matters.** A permanent block can lock out the only admin, and the
+  Release button lives inside the console they can no longer reach — so starting the process
+  once with `ADMIN_UNBLOCK_ALL=1` clears the table and logs loudly that it did. Reading the
+  blocked list **fails open**: a database hiccup must not be what locks an admin out.
+* **A read-only table browser, off unless `ADMIN_DB_BROWSER=1`.** Its blast radius is *every
+  row in production*, so it does not exist on a deployment that has not asked for it.
+  **Injection is prevented by membership, not escaping** — no WHERE, no ORDER BY, no query
+  box; the table name is checked against what `sqlite_master` actually returns **before** it is
+  interpolated. The connection runs `PRAGMA query_only = ON`. `sessions.auth_header`,
+  `sessions.session_id` (which **is** the bearer cookie), `sessions.csrf_token` and
+  `ai_config.api_key` are redacted by name, and any column whose *name* looks like a secret is
+  redacted too. ⚠️ **A missed entry is not a visible bug — it is a silent disclosure on a page
+  reachable from the internet.** Add the column to the redaction list in the same commit that
+  adds the table, and never add a filter box.
 
 ---
 
-## 13. ISO 27001 considerations
+## 14. ISO 27001 considerations
 
 We sell to regulated customers, so our own tooling has to stand up to the same scrutiny.
 
-### 13.1 What we already have
+### 14.1 What we already have
 
 | Annex A theme | What exists today |
 |---|---|
@@ -1067,10 +1339,11 @@ We sell to regulated customers, so our own tooling has to stand up to the same s
 | **A.8.16 Monitoring** | `/admin` dashboards, deploy verification scripts |
 | **A.8.32 Change management** | Version bump + release note + changelog for every shippable change; deploy gate requiring explicit approval |
 | **A.5.23 Cloud services** | Documented per-environment configuration; secrets in Secret Manager / Fly secrets / Vercel env |
+| **A.5.34 / A.8.10 Privacy and residency** | Per-account data region on the master `accounts` table; one Traceability deployment per region sharing no data; a tenant migration that compares row counts before purging the source. ⚠️ **Partial** — see the gap list below |
 | **A.8.13 Backup** | Litestream continuous replication for SQLite; Supabase managed backups |
 | **A.8.8 Vulnerabilities** | `/security-scan` + `/security-review` + tracked ledgers |
 
-### 13.2 The gaps to close before an audit
+### 14.2 The gaps to close before an audit
 
 1. **Backup restore has not been rehearsed.** Litestream replicating is not the same as a
    proven restore. Do one, and write down how long it took.
@@ -1082,12 +1355,19 @@ We sell to regulated customers, so our own tooling has to stand up to the same s
 5. **Sub-processor list.** Anthropic, OpenAI, Google, AWS (via the Orcanos gateway),
    Supabase, Vercel, Fly, GitBook, GitHub. Customers on ISO 27001 will ask for it — and for
    whether customer data reaches each one.
-6. **Data residency.** Supabase tenant projects default to `us-east-1`; the Bedrock gateway
-   uses `eu.` models. An EU customer will ask.
+6. **Data residency — now partly built, and the remaining half is the risky half.** As of
+   2026-09-10 Traceability runs one deployment per region and Ask Paul provisions each
+   customer's vector database in the matching Supabase region ([chapter 5](#5-data-residency--eu-and-us)).
+   What is **not** done — and must not be claimed to a customer or an auditor — is the Ask Paul
+   backend (one Cloud Run service in `us-east4`), embeddings (always OpenAI on the platform
+   key), most chat-LLM branches, Traceability's own AI calls, and verification that the EU
+   Litestream bucket is EU-restricted. The full status table is §5.7. **An EU customer is
+   compliant only when the whole column is**, and a US call for an EU tenant returns a
+   perfectly normal answer.
 7. **The empty-allowlist fail-open** and the module-licence **fail-open for old rows** are
    deliberate, but both need writing down as accepted risks, with a compensating control.
 
-### 13.3 The tooling
+### 14.3 The tooling
 
 `/compliance-audit` is built for exactly this. Each audited repo gets a
 `compliance/scope.yaml` naming its frameworks, which connectors apply (code, Supabase, Fly,
@@ -1099,7 +1379,7 @@ There is also an evidence generator for Google Drive-based controls in
 
 ---
 
-## 14. How we work with Claude Code
+## 15. How we work with Claude Code
 
 Everything in this handbook was built with Claude Code. This chapter is **how we build** —
 the standard practice, taken from the internal team deck
@@ -1110,7 +1390,7 @@ beside it.
 > Your input is the ceiling. Brief Claude the way you would brief a smart new colleague
 > who is new to the project but learns fast.
 
-### 14.1 Two modes, not two products
+### 15.1 Two modes, not two products
 
 Every Claude tool has a chat mode and an agentic mode. This is the distinction that
 matters most.
@@ -1124,7 +1404,7 @@ matters most.
 > **Always plan in chat first. Only switch to agentic when the design is settled.**
 > This single habit prevents most wasted time.
 
-### 14.2 The Orcanos project lifecycle
+### 15.2 The Orcanos project lifecycle
 
 ```mermaid
 flowchart LR
@@ -1144,7 +1424,7 @@ flowchart LR
 > **Naming rule:** always `orcanos-[addon]-[name]` — lowercase letters and hyphens only.
 > **The GitHub repo, the local folder and the Claude project all share the same name.**
 
-### 14.3 Bootstrapping a new project
+### 15.3 Bootstrapping a new project
 
 | # | Step |
 |---|---|
@@ -1152,7 +1432,7 @@ flowchart LR
 | 2 | **Copy the project template** — [`github.com/zoharp/new-project`](https://github.com/zoharp/new-project). It ships `CLAUDE.md`, `SYSTEM.md`, the folder skeleton, `run_claude.bat` / `run.bat` / `deploy.bat`, `.env.example`, `.gitignore` |
 | 3 | **Put the generated design files in `Design/`** |
 | 4 | **Create the GitHub repo**, same name, push the template |
-| 5 | **Copy the skills library** — clone [`github.com/zoharp/claude-skills`](https://github.com/zoharp/claude-skills) and copy the folders you need into `%USERPROFILE%\.claude\skills\`. Claude picks them up automatically ([chapter 15](#15-skills--what-they-are-where-they-live-how-to-use-them)) |
+| 5 | **Copy the skills library** — clone [`github.com/zoharp/claude-skills`](https://github.com/zoharp/claude-skills) and copy the folders you need into `%USERPROFILE%\.claude\skills\`. Claude picks them up automatically ([chapter 16](#16-skills--what-they-are-where-they-live-how-to-use-them)) |
 | 6 | **Open VS Code and start Claude Code** in the project folder |
 
 Installing Claude Code itself:
@@ -1169,7 +1449,7 @@ The tools, one sentence each: **Claude.ai** (web/mobile — strategy, design pha
 without leaving your files), **Claude Desktop** (quick questions outside a project folder),
 **Cowork** (recurring background automation).
 
-### 14.4 The session loop — every session, same five steps
+### 15.4 The session loop — every session, same five steps
 
 | # | Step |
 |---|---|
@@ -1189,7 +1469,7 @@ than three times on the same problem. The reset sequence:
 3. Give a tighter instruction. Still stuck? `git checkout` to roll back and try a
    different approach.
 
-### 14.5 Prompting — describe the outcome, not the steps
+### 15.5 Prompting — describe the outcome, not the steps
 
 This is the single biggest lever on output quality.
 
@@ -1206,7 +1486,7 @@ Two more habits: **upload real content instead of describing it** — screenshot
 the existing UI, a design file; and **when the result is wrong, be surgical** — *"the error
 message shows in the wrong place"* beats rewriting the whole prompt.
 
-### 14.6 Build locally, push only when it works
+### 15.6 Build locally, push only when it works
 
 **Never build and test on the live environment.** Run the full stack on your machine and
 treat it as the proving ground: start locally → let Claude build one step → verify at
@@ -1223,7 +1503,7 @@ git reset HEAD~1               # undo the last commit, keep the files
 > **Nothing Claude does is permanent.** Git gives you a save point at every step, so let
 > Claude try things freely — rolling back is one command.
 
-### 14.7 Essential commands
+### 15.7 Essential commands
 
 | Command | What it does |
 |---|---|
@@ -1232,12 +1512,12 @@ git reset HEAD~1               # undo the last commit, keep the files
 | `/context` | Shows what is in the context window and how much space each part takes — **system prompt** (built-in instructions), **system tools** (file/bash access), **memory files** (`CLAUDE.md`, `SYSTEM.md`, `~/.claude/`), **conversation** (this session). Use it to diagnose "why is Claude forgetting things" |
 | `/compact` | Summarises the conversation into a tight digest. **Run it at 15–20 % context usage, not when you are nearly full** — compacting when full loses more detail |
 | `/clear` | Clears history and starts clean. Use when switching tasks |
-| `/model` | Switch model mid-session ([§11.5](#115-which-model-a-developer-should-use)) |
+| `/model` | Switch model mid-session ([§12.5](#125-which-model-a-developer-should-use)) |
 | `claude -c` | Resume the last session — context and history continue |
 | `Ctrl+C` | Stop immediately if Claude starts doing something unexpected |
 | `exit` / `Ctrl+D` | Close the session |
 
-### 14.8 Context files — CLAUDE.md and SYSTEM.md
+### 15.8 Context files — CLAUDE.md and SYSTEM.md
 
 Claude forgets everything between sessions. These two files are what fix that.
 
@@ -1245,9 +1525,9 @@ Claude forgets everything between sessions. These two files are what fix that.
 |---|---|---|
 | Holds | Tech stack, platform choice, key file paths, the reference to `~/.claude/skills`, the Orcanos API base URL and auth pattern, how to run the dev server | What each page or feature does, how data flows, the Orcanos integrations and their purpose, business logic and access rules |
 
-Chapter 16 goes deeper on how we keep `CLAUDE.md` small and what belongs one link away.
+Chapter 17 goes deeper on how we keep `CLAUDE.md` small and what belongs one link away.
 
-### 14.9 Claude.ai — projects and memory
+### 15.9 Claude.ai — projects and memory
 
 Claude.ai is where non-technical team members work, and **projects** plus **memory** make
 it far more useful than a fresh chat every time.
@@ -1261,7 +1541,7 @@ it far more useful than a fresh chat every time.
 > **Orcanos practice:** one project per addon, design doc pinned at the top. Use the web
 > project for design and planning, then switch to local Claude Code to build.
 
-### 14.10 External tools and MCP
+### 15.10 External tools and MCP
 
 | Tool | What it gives us |
 |---|---|
@@ -1270,7 +1550,7 @@ it far more useful than a fresh chat every time.
 | **NotebookLM** | Many sources in, one understanding out — build a knowledge base from documents and bring the output into Claude |
 | **Firecrawl** | Turns any public URL into clean text Claude can reason about |
 
-### 14.11 Keys — the one rule
+### 15.11 Keys — the one rule
 
 **API keys live in `.env` on the backend server, and nowhere else.** The browser is public:
 anything in frontend code is visible to anyone who opens developer tools. `.env` is in
@@ -1279,9 +1559,9 @@ anything in frontend code is visible to anyone who opens developer tools. `.env`
 > ⚠️ **Never paste a key into a chat, an email or Slack — even privately.** If you do,
 > treat it as compromised and rotate it immediately at
 > `console.anthropic.com/settings/keys`. Full platform rules in
-> [chapter 12](#12-security--how-we-work).
+> [chapter 13](#13-security--how-we-work).
 
-### 14.12 The deck itself
+### 15.12 The deck itself
 
 The team deck lives at
 `C:\Users\zohar\OneDrive\Documents\Claude\Projects\Claude Infrastructure\orcanos-claude-guide.html`
@@ -1291,13 +1571,13 @@ for editing it: bump the version in **two** places (the `<title>` and the badge)
 slides with a script rather than by hand.
 
 ⚠️ **It is due an update.** `change_Instructions.md` beside it lists pending edits, and its
-model table predates the Claude 5 family — see [§11.5](#115-which-model-a-developer-should-use).
+model table predates the Claude 5 family — see [§12.5](#125-which-model-a-developer-should-use).
 
 ---
 
-## 15. Skills — what they are, where they live, how to use them
+## 16. Skills — what they are, where they live, how to use them
 
-### 15.1 Two completely different things are called "skills"
+### 16.1 Two completely different things are called "skills"
 
 > ⚠️ **Do not confuse them.**
 
@@ -1311,7 +1591,7 @@ model table predates the Claude 5 family — see [§11.5](#115-which-model-a-dev
 
 The rest of this chapter is about the first kind.
 
-### 15.2 Where they live
+### 16.2 Where they live
 
 | Location | Scope | Contents |
 |---|---|---|
@@ -1320,13 +1600,13 @@ The rest of this chapter is about the first kind.
 | `Orcanos QMS\.claude\skills\` | That repo only | `gitbook`, `document` |
 | `c:\AI Projects\Claude-skills\` | **The source repo** | The library, with `install.bat` / `install.sh` and project templates |
 
-### 15.3 Using a skill
+### 16.3 Using a skill
 
 Type `/skill-name` in Claude Code, e.g. `/release-management`, `/gitbook releases`,
 `/security-scan diff`. Many also auto-invoke: each skill's `description` frontmatter is the
 trigger, so asking "review this spec" pulls in `spec-review` without being told.
 
-### 15.4 Adding or changing a skill
+### 16.4 Adding or changing a skill
 
 ```
 1. Create  Claude-skills/skills/my-skill/SKILL.md
@@ -1340,7 +1620,7 @@ trigger, so asking "review this spec" pulls in `spec-review` without being told.
 Project-specific knowledge belongs in the **project's** `.claude/skills/`. Only things that
 are true everywhere go global.
 
-### 15.5 The Orcanos API skills
+### 16.5 The Orcanos API skills
 
 `orcanos-api` is the **router**. Start there; it points at one skill per endpoint —
 `qw-login.md`, `qw-get-filter-results.md`, `QW_Add_Object`, `QW_Add_Relations_Custom_Code`,
@@ -1361,9 +1641,9 @@ when and by whom.**
 
 ---
 
-## 16. CLAUDE.md and MD files
+## 17. CLAUDE.md and MD files
 
-### 16.1 What CLAUDE.md is
+### 17.1 What CLAUDE.md is
 
 `CLAUDE.md` in a repo root is **loaded into every Claude Code session in that project**. It
 is the standing brief: architecture summary, the traps, the conventions, what not to do.
@@ -1389,7 +1669,7 @@ repos:
 > **The test for a `CLAUDE.md` line:** would getting this wrong produce a *clean, plausible,
 > wrong* result? If yes, it belongs there. If it is history or reference, link to it.
 
-### 16.2 Our MD file conventions
+### 17.2 Our MD file conventions
 
 | File | Purpose |
 |---|---|
@@ -1414,15 +1694,15 @@ Two habits worth copying:
 
 ---
 
-## 17. GitHub and our CI/CD
+## 18. GitHub and our CI/CD
 
-### 17.1 Repos
+### 18.1 Repos
 
 All private, all under `zoharp/`, all on `main`, all cloned under `c:\AI Projects\`:
 `orcanos_qms_AI`, `traceability-matrix`, `account-management`, `covaris_bom`,
 `quiz-management`, `ai-portal`, `Claude-skills`.
 
-### 17.2 ⚠️ The deployment gate
+### 18.2 ⚠️ The deployment gate
 
 > **Commit locally. Do not `git push`, deploy, or trigger Cloud Build without explicit
 > approval.**
@@ -1430,7 +1710,7 @@ All private, all under `zoharp/`, all on `main`, all cloned under `c:\AI Project
 On Vercel-backed repos **a push to `main` is a production deploy**. This gate is not
 overridden by the "don't ask for permission on routine work" rule.
 
-### 17.3 The release ritual — every shippable change
+### 18.3 The release ritual — every shippable change
 
 1. **Bump the version** — `package.json` (or the equivalent) *and* the version block at the
    top of `CLAUDE.md`.
@@ -1445,7 +1725,7 @@ overridden by the "don't ask for permission on routine work" rule.
 
 The `/release-management` skill does steps 1–3.
 
-### 17.4 The deploy scripts — Traceability is our best practice
+### 18.4 The deploy scripts — Traceability is our best practice
 
 `deploy.bat` is a **six-step gated publish**. This is the model to copy:
 
@@ -1468,7 +1748,7 @@ Account Management's `deploy.bat`: **typecheck → `next build` → commit promp
 build gate runs **before** the commit prompt, so a broken build never reaches a red Vercel
 deploy. Pushing requires typing `DEPLOY`.
 
-### 17.5 The dev scripts
+### 18.5 The dev scripts
 
 `run_dev.bat` in each project. What Traceability's does, and why each part exists:
 
@@ -1489,7 +1769,7 @@ dev server in the **foreground** so Ctrl+C works.
 > **Critical Note #32, and it applies to every project:** *"my code change had no effect"* is
 > usually a **stale process holding the port**, not a code problem.
 
-### 17.6 The documentation pipeline
+### 18.6 The documentation pipeline
 
 ```mermaid
 flowchart LR
@@ -1532,12 +1812,12 @@ produces IEC 62304 evidence into `/docs/`. **Keep it separate from the GitBook u
 
 ---
 
-## 18. Installing Traceability on IIS
+## 19. Installing Traceability on IIS
 
 For customers who want it on their own Windows Server. Full detail in
 `traceability-matrix/INSTALL.md`.
 
-### 18.1 The shape of it
+### 19.1 The shape of it
 
 ```mermaid
 flowchart LR
@@ -1548,7 +1828,7 @@ flowchart LR
   PY --> ORC[Orcanos REST API]
 ```
 
-### 18.2 Steps
+### 19.2 Steps
 
 | # | Step |
 |---|---|
@@ -1566,7 +1846,7 @@ The build package comes from `build_and_zip.bat`, which builds React with
 `PUBLIC_URL=/traceability-matrix`. `src/frontend/public/web.config` handles SPA routing and
 is included in the build automatically.
 
-### 18.3 ⚠️ Upgrading an existing install
+### 19.3 ⚠️ Upgrading an existing install
 
 The customer's saved panels live in
 `C:\inetpub\wwwroot\traceability-matrix\backend\traceability.db`.
@@ -1581,7 +1861,7 @@ The customer's saved panels live in
 > **Critical Note #9: never ship the database inside a deploy package.** That is a
 > data-loss bug, and it is why the zip no longer contains one.
 
-### 18.4 `/admin` on IIS
+### 19.4 `/admin` on IIS
 
 `GET /admin` is a FastAPI route, so on Fly it just works at `https://<host>/admin`. On a
 reverse-proxied IIS install IIS forwards only `/api/*` to the backend, and the React SPA has
@@ -1593,11 +1873,11 @@ stays live while the login answers 401.
 
 ---
 
-## 19. User manual — Account Management (admin)
+## 20. User manual — Account Management (admin)
 
 Who this is for: Orcanos staff. Everyone else gets a **404** on every route, by design.
 
-### 19.1 Signing in
+### 20.1 Signing in
 
 Go to https://accounts.orcanos.ai. You will see whichever methods the platform account has
 enabled: **Google**, **Office 365**, or **Orcanos email**.
@@ -1613,13 +1893,24 @@ the stored username, never with what you typed.**
 > If sign-in fails, the screen says only *Invalid credentials*. **Read `security_audit_log`
 > for the real reason.**
 
-### 19.2 The Accounts list
+### 20.2 The Accounts list
 
-Every tenant, one row each: name, status, database, module licences, and spend. Module
-columns come live from the Traceability instance — a **dash means "no answer from that
-source"**, which is not the same as "off".
+Every tenant, one row each: name, status, database, **data region**, module licences, and
+spend. Module columns come live from the Traceability instance — a **dash means "no answer
+from that source"**, which is not the same as "off".
 
-### 19.3 Creating an account
+The **region column is read from the instance that actually holds the data**, not from what
+was recorded on the account row. When the two disagree the row is flagged as a **conflict**,
+because one of them is wrong and nothing in the console can tell which. Investigate a
+conflict before touching anything else about that account.
+
+Since 0.6.0 clicking the account name opens **one window with six tabs** — Overview, Orcanos,
+**Traceability**, **Ask Paul**, **LLM**, **Spend** — one per *system* rather than one per
+*table*. The two AI configurations sit together on the LLM tab, and both cost ledgers sit on
+Spend, listed separately rather than summed: one is a lifetime counter, the other a total over
+the events shown, so a combined figure would mean nothing.
+
+### 20.3 Creating an account
 
 1. Click **Create account**.
 2. Fill in the name and the Orcanos API URL. **The Orcanos tenant is parsed out of that
@@ -1628,10 +1919,21 @@ source"**, which is not the same as "off".
 3. Choose modules. Since 0.3.3, **every account creation writes the Traceability
    `account_access` row**, even with nothing ticked — without that row the tenant cannot sign
    in to Traceability at all.
-4. A database is optional since 0.3.0. **An account created without one is created
+4. **Choose the Data Region — United States or European Union.** Since 0.4.0 this is
+   **required and has no pre-selected value**, and the form says the choice cannot be changed
+   afterwards. It decides which Supabase region the customer's own database is created in and
+   which Traceability instance holds their data. Creating an **EU** account is **refused**
+   while no EU Traceability instance is configured — it would write the tenant's data to the
+   US while recording it as EU, and nothing anywhere would report the contradiction.
+5. A database is optional since 0.3.0. **An account created without one is created
    inactive.**
 
-### 19.4 Editing an account
+The new account is **signposted in every region**, best-effort, so a customer who opens the
+wrong region's address is redirected to their own instead of being told the account does not
+exist. If a region cannot be reached the account is still created and the console says which
+one to retry.
+
+### 20.4 Editing an account
 
 | Field | Notes |
 |---|---|
@@ -1639,12 +1941,13 @@ source"**, which is not the same as "off".
 | Vector DB key | **Cannot be saved until it tests green.** Editing any vector field clears the previous test result — a green tick from the old value must not authorise a new one. |
 | Connection tests | Three states. Green, red, and **neutral `{success: null}` = "nothing configured to test"**, which is not a failure. |
 | Status switch | Writes `is_active` — and because Ask Paul depends on it, it is an Ask Paul control despite its label. |
+| **Data region** | **Read-only.** It is fixed when the account is created, so it is displayed as a fact rather than offered as a field, and `PATCH` refuses a change. Rewriting it would move no data — it would only record the customer as living somewhere they do not, while the console asserts a residency guarantee that is false. To actually move them, use the region move (§20.8). |
 
 Test buttons: **Orcanos DB**, **Vector DB**, **Orcanos login**. The login test pins the URL
 to the account's own saved one whenever it falls back to the stored password — a decrypted
 secret must never be sent to a host someone typed.
 
-### 19.5 Module licences
+### 20.5 Module licences
 
 | Module | Rule |
 |---|---|
@@ -1654,7 +1957,7 @@ secret must never be sent to a host someone typed.
 Because of the provisioning limitation, **Ask Paul currently cannot be licensed at creation
 time.** Create the account, add the database under *Edit → Vector DB*, then use the pill.
 
-### 19.6 Provisioning a database
+### 20.6 Provisioning a database
 
 A **resumable job**, not a single long request: `creating_project → waiting_healthy →
 fetching_keys → running_schema → saving_account → done` (or `error`). The browser polls
@@ -1670,12 +1973,46 @@ Consequences you must know before running it:
 * The orphan-finder query is at the bottom of `sql/001_account_provisioning.sql`. **Run it
   after any failed run.**
 
-### 19.7 Deleting an account
+### 20.7 Deleting an account
 
 ⚠️ **Delete does not de-provision the tenant's Supabase project.** That project keeps
 costing money until someone removes it by hand. The warning is shown on screen — read it.
 
-### 19.8 The Audit page
+Since 0.5.0 delete requires typing **DELETE** — the old confirmation was a single click, one
+row away from a module toggle. Since 0.6.0 it lives on the **Ask Paul** tab, where it says
+what it destroys: the master account record, its database credentials, its key and its
+sign-in methods. **It never touches the traceability tenant** — a distinction the old
+Danger zone did not draw.
+
+### 20.8 Moving an account to another region
+
+This happens once in an account's life, if ever, so it sits behind a button on the account
+screen rather than on the first tab you land on.
+
+1. The **seven steps appear as soon as the confirmation is typed**, so the plan is readable
+   *before* the move is authorised: freeze → export → import → compare row counts → restore
+   access → update master and the directory → purge.
+2. Each step is ticked off as the server passes it, with the row counts it actually moved.
+   There is no percentage bar — the export, import and purge are each a single call to a
+   regional instance that reports no fraction.
+3. Confirm by typing the **tenant name**.
+
+What to tell the customer beforehand:
+
+* **Everyone signed in gets signed out.** Sessions do not travel — they hold the Orcanos
+  credential under a key that is deliberately different per region.
+* **Their Ask Paul vector database does not move**, because a Supabase project cannot be
+  relocated between regions.
+* **Their training snapshots and quiz records do move** — those are the evidence behind
+  records they have already signed off, so they are not disposable.
+* **The source copy is deleted only after both sides' row counts match.** If anything arrives
+  short, the move stops and nothing is deleted.
+
+⚠️ **After a move into a region, check that region's secrets before believing a bug report.**
+A feature written to fail closed disappears in a region that never had its secret set, and it
+looks exactly like a failed move — see §5.8.
+
+### 20.9 The Audit page
 
 Every security-relevant event from **both** apps: sign-ins with method, tenant and outcome
 reason; account changes; licence changes.
@@ -1686,9 +2023,9 @@ audit rows deliberately keep the label the event actually carried at the time.
 
 ---
 
-## 20. Future: stay on Vercel/Fly, or move everything to Orcanos AWS?
+## 21. Future: stay on Vercel/Fly, or move everything to Orcanos AWS?
 
-### 20.1 The guiding position
+### 21.1 The guiding position
 
 > **Hosting is the axis that matters least, and consolidating it should come last.**
 > Three hosts is untidy, but it is not what blocks a single login, and unifying them is
@@ -1702,7 +2039,7 @@ one session**.
 
 **Domain unification buys SSO. Host unification buys tidiness. Do the first; defer the second.**
 
-### 20.2 Option A — stay where we are
+### 21.2 Option A — stay where we are
 
 | Pros | Cons |
 |---|---|
@@ -1711,7 +2048,7 @@ one session**.
 | Push-to-deploy already works everywhere | Skills and knowledge split three ways |
 | Managed SSL, CDN, backups included | Data sits with three vendors — more sub-processor questions in an ISO 27001 review |
 
-### 20.3 Option B — move everything to Orcanos AWS
+### 21.3 Option B — move everything to Orcanos AWS
 
 | Pros | Cons |
 |---|---|
@@ -1721,7 +2058,7 @@ one session**.
 | Customer data never leaves Orcanos infrastructure | Weeks of work, **zero new features** |
 | Simpler network path to customer SQL Servers | New failure modes we have no experience with |
 
-### 20.4 Recommendation
+### 21.4 Recommendation
 
 **A hybrid, in this order:**
 
@@ -1740,7 +2077,7 @@ one session**.
 **Keep Vercel for the Next.js control plane and the static frontends either way.** There is
 no scenario where hand-rolling that on AWS is a good use of our time.
 
-### 20.5 Moving Ask Paul to Orcanos AWS specifically
+### 21.5 Moving Ask Paul to Orcanos AWS specifically
 
 The interesting part is the vector store: **AWS RDS Postgres + pgvector instead of a
 Supabase project per tenant.**
@@ -1756,7 +2093,7 @@ Supabase project per tenant.**
 
 **What gets better:**
 
-* **No per-tenant project bill, and no orphaned-project problem.** [§10.5](#105-the-non-llm-costs-which-are-the-ones-that-surprise-us)
+* **No per-tenant project bill, and no orphaned-project problem.** [§11.5](#115-the-non-llm-costs-which-are-the-ones-that-surprise-us)
   goes away entirely.
 * **The provisioning state machine gets much simpler** — no waiting for a project to become
   `ACTIVE_HEALTHY`, no `readServiceKey()` guessing at response shapes.
@@ -1778,9 +2115,26 @@ parallel and compare answers → move the rest → decommission. The master data
 
 ---
 
-## 21. Next steps — the short list
+## 22. Next steps — the short list
 
-Ordered by value per unit of risk.
+### 22.0 Residency — the list that moved to the top on 2026-09-10
+
+These come before everything below, because we now have EU customers on a guarantee that is
+**partly** true, and each unfinished row is a compliance claim we cannot make yet (§5.7).
+
+| # | Step | Why now | Risk |
+|---|---|---|---|
+| R1 | **Verify the EU Litestream bucket is EU-region-restricted** | Tigris distributes globally by default. An unrestricted bucket puts the EU database's write-ahead log on US edges and **nothing in the app can detect it** | None to do; the current state is the risk |
+| R2 | **Write the `zz-gate-closed` sentinel into any new region before announcing its URL**, and make it a step in the region-standup checklist | A fresh region's empty allowlist fails open — the EU app was open to every tenant for minutes | None |
+| R3 | **Region-route Traceability's own AI calls** through the per-account engine to a regional Bedrock endpoint | Panel-describe, trace-build and quiz-generation send requirement text and trainee names to the US Anthropic API today. **A US call for an EU tenant returns a perfectly normal answer** | Medium |
+| R4 | **Decide the Ask Paul EU story** — an EU Cloud Run service and an EU embedding path, or a stated limitation in the contract | The vector DB is in Frankfurt; the backend, the embeddings and most LLM branches are not. Until this is answered, **do not claim EU residency for Ask Paul** | High |
+| R5 | **Only then** set `ASK_PAUL_APP_URL` / `ASK_PAUL_SSO_SECRET` on the EU app | Pointing EU at the US app is a residency breach that looks like a feature working (§5.8) | — |
+| R6 | **A secret-parity check that runs on deploy** and reports the difference between the two regions' `fly secrets list` against the decision table in §5.8 | Nothing detects the drift today, and the failure is invisible: same build, no error, one region quietly missing a paid feature | Low |
+| R7 | **Make `deploy.bat` deploy both regions, or refuse to finish until the other one is done** | It deploys the US app only. A release is not shipped until both commands have run, and a version drift produces no error anywhere | Low |
+| R8 | **Set `ADMIN_PASSWORD` and `SECRET_KEY` on both regions** — different values — and confirm `/admin` is not 503 | v3.44.0 removed the password default. Until they are set, `/admin` is unusable; before it shipped, it was open | None |
+| R9 | **Rehearse a region move on a test tenant end to end**, including the sign-out and the Ask Paul caveat | It has run once, in anger. The purge is irreversible and the safety is the row-count comparison | Low |
+
+### 22.1 The rest, ordered by value per unit of risk
 
 | # | Step | Why now | Risk |
 |---|---|---|---|
@@ -1799,8 +2153,8 @@ Ordered by value per unit of risk.
 | 13 | **Hosting consolidation**, if still wanted | Optional, and possibly never worth it | — |
 | 14 | **Add `accounts.orcanos_tenant`** so the tenant stops being parsed out of a URL | Removes a whole class of guessing | Low |
 | 15 | **Retention policy + access review schedule + sub-processor list** | The remaining ISO 27001 gaps | None |
-| 16 | **Update the team deck and its model table** ([§14.12](#1412-the-deck-itself), [§11.5](#115-which-model-a-developer-should-use)), and work through the pending `change_Instructions.md` edits | It is what new people are onboarded with, and it predates the Claude 5 family | None |
-| 17 | **Decide the cost-ledger boundary** — one service keyed on both tenant and application, or two ledgers with a stated line between them — then fix the stale price table before building `orcanos-ai-cost-analysis` ([§10.7](#107-the-centralized-cost-service--designed-not-built)) | A wrong price table writes a wrong ledger silently, and two overlapping ledgers is how numbers stop agreeing | Low |
+| 16 | **Update the team deck and its model table** ([§15.12](#1512-the-deck-itself), [§12.5](#125-which-model-a-developer-should-use)), and work through the pending `change_Instructions.md` edits | It is what new people are onboarded with, and it predates the Claude 5 family | None |
+| 17 | **Decide the cost-ledger boundary** — one service keyed on both tenant and application, or two ledgers with a stated line between them — then fix the stale price table before building `orcanos-ai-cost-analysis` ([§11.7](#117-the-centralized-cost-service--designed-not-built)) | A wrong price table writes a wrong ledger silently, and two overlapping ledgers is how numbers stop agreeing | Low |
 
 ### The open decisions blocking step 9
 
@@ -1821,7 +2175,7 @@ Ordered by value per unit of risk.
 
 ---
 
-## 22. Glossary
+## 23. Glossary
 
 | Term | Meaning |
 |---|---|
@@ -1830,6 +2184,14 @@ Ordered by value per unit of risk.
 | **Bedrock gateway** | `br.orcanos.com/ext/chat` — an Orcanos-owned proxy in front of AWS Bedrock. Serves Claude *and* OpenAI models |
 | **ContextVar** | Python per-request variable. How Ask Paul routes a request to the right customer database |
 | **Control plane** | Account Management — the app that manages the other apps' tenants |
+| **Data region** | `us` or `eu`. One value per account on `accounts.region` in master, chosen at creation and **immutable** |
+| **Regional instance** | One of the two Traceability deployments. Its identity is `SELF_REGION`; two apps sharing one value is undetectable from inside either |
+| **`account_region`** | The cross-region directory (tenant → region), held identically everywhere. **Grants nothing** — never consult it in a gate |
+| **Hand-off** | The automatic redirect from the wrong region's login screen to the right one, decided from the Orcanos URL alone, **before** the password fields unlock |
+| **`rr=1`** | The loop guard on a hand-off URL: *"you have been sent once already"* — stops two regions that disagree from bouncing a browser forever |
+| **Region move** | The physical migration of one tenant's rows between regions. Freeze → export → import → compare counts → restore → update → purge |
+| **Region conflict** | The console's flag when the recorded region and the instance actually holding the data disagree |
+| **Denied sentinel row** | `zz-gate-closed` — closes a fresh region's fail-open allowlist without granting anything |
 | **Litestream** | Continuously replicates a SQLite file to object storage. Only works while the process runs |
 | **Master Supabase** | The one shared database: identity, tenants, secrets, audit, spend |
 | **pgvector** | Postgres extension for vector search — the RAG index |
@@ -1837,14 +2199,14 @@ Ordered by value per unit of risk.
 | **PostgREST** | Supabase's automatic REST API over Postgres. Cannot run DDL |
 | **QW_Login** | The Orcanos authentication endpoint. Our credential authority |
 | **RAG** | Retrieval-Augmented Generation — search the customer's documents, then answer from what was found |
-| **Skill** | Either a Claude Code instruction pack, or an Ask Paul persona. [Do not confuse them](#151-two-completely-different-things-are-called-skills) |
+| **Skill** | Either a Claude Code instruction pack, or an Ask Paul persona. [Do not confuse them](#161-two-completely-different-things-are-called-skills) |
 | **Smart refresh** | Incremental rebuild reading only rows changed since a watermark |
 | **WAL** | SQLite Write-Ahead Log mode. Readers do not block writers — mandatory here |
 | **Watermark** | The timestamp a smart refresh reads forward from |
 
 ---
 
-## 23. What this document does *not* cover yet
+## 24. What this document does *not* cover yet
 
 Honest gaps, so nobody assumes coverage we do not have:
 
