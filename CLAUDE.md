@@ -204,7 +204,7 @@ the server need it, while `src/lib/orcanos.ts` reaches `decryptSecret`.
 | File | What it does |
 |---|---|
 | `run_dev.bat` | Frees port 3100, creates + opens `.env.local` if absent (and stops — the app cannot start without it), installs deps on first run, `npm run dev` in the foreground so Ctrl+C works |
-| `deploy.bat` | typecheck → `next build` → commit → push. The build gate runs **before** the commit prompt, so a broken build never reaches a red Vercel deploy. Pushing requires typing `DEPLOY`. |
+| `deploy.bat` | typecheck → `next build` → commit → fetch → push. The build gate runs **before** the commit prompt, so a broken build never reaches a red Vercel deploy. **There is no confirmation prompt** — running the script is the approval. If the remote is ahead it rebases first and then **re-runs typecheck and build**, because after a rebase the thing being deployed is no longer what was built; a conflict aborts cleanly and pushes nothing. |
 
 Same shape as the `run_dev.bat` / `deploy.bat` pair in the traceability-matrix
 project. Don't add scripts for things `npm` already does — the `.bat` files

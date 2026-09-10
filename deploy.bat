@@ -49,28 +49,75 @@ if errorlevel 1 (
 )
 echo.
 
-REM ── [5/5] Push (gated) ──────────────────────────────────────────────
+REM ── [5/5] Push ──────────────────────────────────────────────────────
+REM No confirmation prompt: running this script IS the approval. The build
+REM gates above are what protect production, not a typed word.
 echo === [5/5] Push to GitHub ^(deploys to production^) ===
 echo.
 git log -1 --oneline
 echo.
-set /p CONFIRM="Type DEPLOY to push to production, anything else to stop: "
-if /i not "!CONFIRM!"=="DEPLOY" (
-    echo.
-    echo Stopped. Commit is local only - nothing was pushed or deployed.
-    pause
-    exit /b 0
-)
 
-echo.
 git rev-parse --abbrev-ref --symbolic-full-name @{u} >nul 2>&1
 if errorlevel 1 (
     echo First push - setting upstream...
     git push -u origin main
-) else (
-    git push
+    if errorlevel 1 ( echo Push FAILED. & pause & exit /b 1 )
+    goto :pushed
 )
+
+REM Someone else may have pushed since you last pulled - another machine, or
+REM a Claude cloud session. Git refuses a non-fast-forward push because
+REM completing it would erase their commits. Catch that HERE, with the repo
+REM in a known state, instead of as a raw "[rejected] (fetch first)".
+echo Fetching remote...
+git fetch origin
+if errorlevel 1 ( echo Fetch FAILED - check the network or your credentials. & pause & exit /b 1 )
+
+set BEHIND=0
+for /f %%i in ('git rev-list --count HEAD..origin/main') do set BEHIND=%%i
+
+if not "!BEHIND!"=="0" (
+    echo.
+    echo Remote has !BEHIND! commit^(s^) you do not have locally:
+    git log --format="   %%h  %%an  %%s" HEAD..origin/main
+    echo.
+    echo Rebasing your work on top of them...
+    git pull --rebase --autostash
+    if errorlevel 1 (
+        git rebase --abort >nul 2>&1
+        git stash pop >nul 2>&1
+        echo.
+        echo ========================================
+        echo  REBASE CONFLICT - nothing was pushed.
+        echo.
+        echo  Your commits and theirs touch the same lines. Resolve it by
+        echo  hand, then run this script again:
+        echo.
+        echo     git pull --rebase
+        echo     ^<fix the conflicted files^>
+        echo     git add -A ^&^& git rebase --continue
+        echo.
+        echo  Version files ^(package.json, release_notes.json, the
+        echo  changelog^) conflict whenever both sides shipped a release.
+        echo  Keep BOTH release notes and renumber yours upward.
+        echo ========================================
+        pause
+        exit /b 1
+    )
+    echo.
+    echo Rebased. Re-checking, because what you are about to deploy
+    echo is no longer what was built above.
+    call npx tsc --noEmit
+    if errorlevel 1 ( echo Typecheck FAILED after rebase - nothing deployed. & pause & exit /b 1 )
+    call npx next build
+    if errorlevel 1 ( echo Build FAILED after rebase - nothing deployed. & pause & exit /b 1 )
+    echo.
+)
+
+git push
 if errorlevel 1 ( echo Push FAILED. & pause & exit /b 1 )
+
+:pushed
 
 echo.
 echo ========================================

@@ -96,7 +96,7 @@ npm run dev          # http://localhost:3100
 | File | What it does |
 |---|---|
 | `run_dev.bat` | **Main dev launcher** — frees port 3100, checks `.env.local`, installs deps if missing, runs `npm run dev` on http://localhost:3100 |
-| `deploy.bat` | **Deploy** — typecheck → production build → commit → push. Refuses to push unless the build passes, and requires typing `DEPLOY` to confirm, because a push to `main` is a production deploy |
+| `deploy.bat` | **Deploy** — typecheck → production build → commit → fetch → push. Refuses to push unless the build passes. **No confirmation prompt** — running it is the approval, and a push to `main` is a production deploy. If the remote is ahead it rebases and re-checks first; a conflict stops it with nothing pushed |
 
 ### 4. OAuth redirect URI
 
