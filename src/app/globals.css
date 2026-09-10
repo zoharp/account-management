@@ -1322,3 +1322,118 @@ button {
     padding-top: 0;
   }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   One account screen (AccountManageModal)
+
+   Replaces a row of buttons whose visibility depended on facts the operator
+   could not see. Every name in the list opens the same window; what an account
+   does not have is a DISABLED tab carrying the reason, never a missing button.
+   ───────────────────────────────────────────────────────────────────────── */
+
+/* The name is the way in, so it must read as a link and not as a button —
+   it sits inside a table cell where a button would look like an action. */
+.acl-name-link {
+  background: none;
+  border: 0;
+  padding: 0;
+  font: inherit;
+  font-weight: 600;
+  color: var(--accent-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.acl-name-link:hover {
+  text-decoration: underline;
+}
+
+.acl-modal--manage {
+  max-width: 860px;
+}
+
+.acl-tabs {
+  display: flex;
+  gap: 2px;
+  padding: 0 20px;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-subtle);
+  /* Narrow windows must scroll the strip rather than wrap it — a wrapped tab
+     row changes the body's offset and the panel jumps as you switch tabs. */
+  overflow-x: auto;
+}
+
+.acl-tab {
+  background: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  padding: 10px 14px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.acl-tab:hover:not(:disabled) {
+  color: var(--accent-primary);
+}
+
+.acl-tab--active {
+  color: var(--accent-primary);
+  border-bottom-color: var(--accent-primary);
+}
+
+/* Not hidden. A capability this account lacks stays visible so the operator can
+   see it exists and read WHY it is unavailable from the tooltip. */
+.acl-tab:disabled {
+  color: var(--text-muted);
+  cursor: not-allowed;
+}
+
+.acl-badge--region {
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+/* Master and the instance disagree about where the data is. Loud on purpose:
+   one of the two is wrong and nothing can tell which. */
+.acl-badge--warn {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  border: 1px solid var(--warn-border);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.acl-section--danger {
+  border: 1px solid var(--warn-border);
+  border-radius: 6px;
+  padding: 14px 16px;
+  background: var(--warn-bg);
+}
+
+.acl-hint--ok {
+  color: var(--text-secondary);
+}
+
+.acl-steps {
+  margin: 6px 0 0;
+  padding-left: 20px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+
+.acl-kv,
+.acl-kv-list {
+  font-size: 13px;
+}
+
+.acl-kv-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  line-height: 1.9;
+}

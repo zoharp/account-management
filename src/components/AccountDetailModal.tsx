@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import TestResult from './TestResult';
+import ModalShell from './ModalShell';
 import { normalizeOrcanosUrl } from '@/lib/orcanos-url';
 import { coerceRegion, REGION_LABELS } from '@/lib/regions';
 import type { AccountRow, ConnectionTestResult, LlmKeyStatus } from '@/lib/types';
@@ -34,7 +35,10 @@ export default function AccountDetailModal({
   accountId,
   onSaved,
   onClose,
+  embedded = false,
 }: {
+  /** Rendered as a tab inside AccountManageModal — no window of its own. */
+  embedded?: boolean;
   accountId: string;
   onSaved: (updated: Partial<AccountRow>) => void;
   onClose: () => void;
@@ -231,15 +235,11 @@ export default function AccountDetailModal({
   }
 
   return (
-    <div className="acl-overlay" onClick={onClose}>
-      <div className="acl-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="acl-header">
-          <h2>{loading ? 'Loading…' : account?.account_name}</h2>
-          <button className="acl-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-
+    <ModalShell
+      embedded={embedded}
+      title={loading ? 'Loading…' : account?.account_name}
+      onClose={onClose}
+    >
         {loading ? (
           <div style={{ padding: 32, textAlign: 'center' }}>Loading…</div>
         ) : loadError ? (
@@ -497,8 +497,7 @@ export default function AccountDetailModal({
               </button>
             </div>
           </div>
-        )}
-      </div>
-    </div>
+      )}
+    </ModalShell>
   );
 }

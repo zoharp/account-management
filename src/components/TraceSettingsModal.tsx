@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import ModalShell from './ModalShell';
 
 /**
  * Everything the traceability-matrix `/admin` page can do to one account,
@@ -78,11 +79,14 @@ export default function TraceSettingsModal({
   accountName,
   onClose,
   onSaved,
+  embedded = false,
 }: {
   tenant: string;
   accountName: string;
   onClose: () => void;
   onSaved: () => void;
+  /** Rendered as a tab inside AccountManageModal — no window of its own. */
+  embedded?: boolean;
 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -302,22 +306,12 @@ export default function TraceSettingsModal({
   }
 
   return (
-    <div className="acl-overlay" onClick={onClose}>
-      <div className="acl-modal" onClick={(e) => e.stopPropagation()}>
-        <div className="acl-header">
-          <h2>
-            Traceability — {accountName}
-            {accountName.toLowerCase() !== tenant && (
-              <span className="acl-header-sub">
-                tenant <code>{tenant}</code>
-              </span>
-            )}
-          </h2>
-          <button className="acl-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-
+    <ModalShell
+      embedded={embedded}
+      title={`Traceability — ${accountName}`}
+      subtitle={accountName.toLowerCase() !== tenant ? <>tenant <code>{tenant}</code></> : undefined}
+      onClose={onClose}
+    >
         <div className="acl-detail-body">
           {loading ? (
             <p className="acl-empty">Loading…</p>
@@ -624,8 +618,7 @@ export default function TraceSettingsModal({
             </>
           )}
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }
 

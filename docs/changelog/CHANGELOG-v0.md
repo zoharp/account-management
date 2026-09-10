@@ -9,6 +9,47 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.5.0** (2026-09-10) — **one screen per account, the region on the list, and a real move.**
+
+**The row used to be the problem.** It offered *Traceability…*, *Edit* and *Delete* — but which
+appeared depended on facts an operator could not see: *Edit* and *Delete* only for accounts with a
+**master record**, which most tenants do not have, and *Traceability…* only when the tenant had an
+allowlist row. So a full customer showed three buttons, a traceability-only customer showed one, and
+nothing on screen explained the difference. Clicking the **account name** now opens one window with
+everything that exists for that account as tabs, and a capability the account lacks is a **disabled
+tab carrying the reason** instead of a button that silently is not there.
+
+The tabs are the SAME components that used to be separate dialogs, rendered through a new
+`ModalShell` with `embedded` so they draw no window of their own. They were not reimplemented — their
+save logic, three-state secret handling and invariants stay in one place. Tabs mount lazily and
+unmount on leave, so switching back re-reads rather than showing a snapshot from when the window
+opened.
+
+**Region on the list.** A column on every row, taken from `MergedAccountRow.region`, which prefers
+**the instance the row was read from** over `accounts.region`. That ordering is the point: the
+instance holding the rows is where the data physically is; the master column is only what somebody
+recorded. When both exist and disagree the row shows a **conflict** badge — one of them is wrong,
+nothing here can tell which, and resolving it silently is how a residency claim stays plausible while
+being false.
+
+**Moving a customer** (`POST /api/accounts/move`). The only sanctioned way `accounts.region` ever
+changes — `PATCH` still refuses the field, because setting it moves nothing.
+
+- Order: freeze the source → export → import → **compare row counts** → restore the tenant's own
+  access flag (not a default: a suspended customer stays suspended) → update master and the
+  directory in every region → purge the source.
+- **A short import stops the move with the source intact and the tenant left frozen.** Reopening the
+  region they are leaving for writing would be worse than the stall.
+- Refuses outright when the tenant exists in **more than one** region — that is a previous move whose
+  purge failed, and picking a copy would destroy the other.
+- Reports that an **Ask Paul vector database cannot travel**: it is a Supabase project, so that
+  customer additionally needs a new project and a re-index before the move counts for GDPR.
+
+**Deleting needs `DELETE` typed.** The old confirmation was a single click, in a table row where the
+click before it was "toggle a module".
+
+---
+
 **0.4.2** (2026-09-10) — **one admin password per region.**
 
 `TRACE_ADMIN_PASSWORD` stays the US instance's under its original name; `TRACE_ADMIN_PASSWORD_EU`

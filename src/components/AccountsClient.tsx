@@ -1,11 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import AccountDetailModal from './AccountDetailModal';
-import AccountBillingModal from './AccountBillingModal';
+import AccountManageModal from './AccountManageModal';
 import CreateAccountModal from './CreateAccountModal';
-import TraceSettingsModal from './TraceSettingsModal';
 import { MODULES } from '@/lib/module-catalog';
+import { REGION_LABELS, coerceRegion } from '@/lib/regions';
 import type { MergedAccountRow, ModuleKey, TraceSourceStatus } from '@/lib/types';
 
 /**
@@ -41,11 +40,9 @@ export default function AccountsClient() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
-  const [selected, setSelected] = useState<MergedAccountRow | null>(null);
-  const [billing, setBilling] = useState<MergedAccountRow | null>(null);
-  const [traceSettings, setTraceSettings] = useState<MergedAccountRow | null>(null);
+  /** The one account screen. Every row opens this; the tabs inside are the old dialogs. */
+  const [manage, setManage] = useState<MergedAccountRow | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [toast, setToast] = useState('');
 
@@ -115,23 +112,6 @@ export default function AccountsClient() {
     setBusy(null);
   }
 
-  async function remove(id: string) {
-    try {
-      const res = await fetch(`/api/accounts/${id}`, { method: 'DELETE' });
-      const data = (await res.json().catch(() => ({}))) as { warning?: string };
-      if (!res.ok) throw new Error();
-      setConfirmDelete(null);
-      showToast('✓ Account deleted');
-      if (data.warning) {
-        // Kept visible far longer than a normal toast — this one costs money.
-        setTimeout(() => showToast(`⚠ ${data.warning}`), 100);
-      }
-      await load();
-    } catch {
-      showToast('✗ Delete failed');
-    }
-  }
-
   const needle = search.trim().toLowerCase();
   const filtered = accounts.filter(
     (a) =>
@@ -190,6 +170,7 @@ export default function AccountsClient() {
               <tr>
                 <th>Account Name</th>
                 <th>Tenant</th>
+                <th>Region</th>
                 <th>Modules</th>
                 <th style={{ textAlign: 'right' }}>Spend</th>
                 <th style={{ textAlign: 'right' }}>Tokens</th>
@@ -201,14 +182,14 @@ export default function AccountsClient() {
                 const spend = row.total_cost_usd + row.trace_cost_usd;
                 const tokens = row.total_tokens + row.trace_tokens;
                 return (
-                  <tr
-                    key={row.key}
-                    className="acl-row"
-                    onClick={() => row.id && setSelected(row)}
-                    style={row.id ? undefined : { cursor: 'default' }}
-                  >
+                  <tr key={row.key} className="acl-row">
                     <td>
-                      <strong>{row.account_name}</strong>
+                      {/* The name is the way in, for EVERY row — including a
+                          traceability-only tenant, which used to have no way in
+                          at all because it has no master record to "edit". */}
+                      <button className="acl-name-link" onClick={() => setManage(row)}>
+                        {row.account_name}
+                      </button>
                       {!row.id && (
                         <span
                           className="acl-badge acl-badge--muted"
@@ -222,7 +203,37 @@ export default function AccountsClient() {
 
                     <td className="acl-tenant">{row.tenant || '—'}</td>
 
-                    <td onClick={(e) => e.stopPropagation()}>
+                    <td>
+                      {row.region ? (
+                        <span
+                          className="acl-badge acl-badge--region"
+                          title={
+                            row.region_source === 'instance'
+                              ? 'Read from the traceability instance that actually holds this data.'
+                              : 'Recorded on the master account record.'
+                          }
+                        >
+                          {REGION_LABELS[coerceRegion(row.region)].label}
+                        </span>
+                      ) : (
+                        <span className="acl-muted" title="No region on record for this account.">
+                          —
+                        </span>
+                      )}
+                      {/* Master and the instance disagree — one of them is wrong
+                          and nothing here can tell which. Never resolved silently. */}
+                      {row.region_mismatch && (
+                        <span
+                          className="acl-badge acl-badge--warn"
+                          style={{ marginLeft: 6 }}
+                          title="The master record and the instance holding the data name different regions. Check which instance actually has its panels."
+                        >
+                          conflict
+                        </span>
+                      )}
+                    </td>
+
+                    <td>
                       <div className="acl-mods">
                         {MODULES.map((m) => (
                           <ModuleCell
@@ -238,11 +249,11 @@ export default function AccountsClient() {
                       </div>
                     </td>
 
-                    <td className="acl-num" onClick={(e) => e.stopPropagation()}>
+                    <td className="acl-num">
                       {row.id ? (
                         <button
                           className="acl-cost-link"
-                          onClick={() => setBilling(row)}
+                          onClick={() => setManage(row)}
                           title={`QMS AI $${row.total_cost_usd.toFixed(4)} · Traceability $${row.trace_cost_usd.toFixed(4)}`}
                         >
                           ${spend.toFixed(4)}
@@ -256,62 +267,14 @@ export default function AccountsClient() {
 
                     <td className="acl-num acl-muted">{tokens.toLocaleString()}</td>
 
-                    <td style={{ textAlign: 'center' }} onClick={(e) => e.stopPropagation()}>
-                      {/* Available for a traceability-only tenant too — that is
-                          the whole point of merging the lists, and those rows
-                          have no master record to edit. */}
-                      {row.tenant && trace?.available && (
-                        <button
-                          className="btn-sm"
-                          style={{ marginRight: 6 }}
-                          onClick={() => setTraceSettings(row)}
-                          title="Access, modules, AI engine and spend for this tenant in traceability"
-                        >
-                          Traceability…
-                        </button>
-                      )}
-                      {row.id ? (
-                        <>
-                          <button
-                            className="btn-sm"
-                            style={{ marginRight: 6 }}
-                            onClick={() => setSelected(row)}
-                          >
-                            Edit
-                          </button>
-                          {confirmDelete === row.id ? (
-                            <>
-                              <span style={{ fontSize: 12, marginRight: 4 }}>Delete?</span>
-                              <button
-                                className="btn-danger-sm"
-                                style={{ marginRight: 4 }}
-                                onClick={() => void remove(row.id!)}
-                              >
-                                Yes
-                              </button>
-                              <button className="btn-sm" onClick={() => setConfirmDelete(null)}>
-                                No
-                              </button>
-                            </>
-                          ) : (
-                            <button
-                              className="btn-danger-sm"
-                              onClick={() => setConfirmDelete(row.id)}
-                            >
-                              Delete
-                            </button>
-                          )}
-                        </>
-                      ) : (
-                        !row.tenant && (
-                          <span
-                            className="acl-muted"
-                            title="Create a master account record to edit it here."
-                          >
-                            —
-                          </span>
-                        )
-                      )}
+                    <td style={{ textAlign: 'center' }}>
+                      {/* One door per row. Which capabilities exist is decided
+                          INSIDE that screen, where the reason a tab is disabled
+                          can actually be shown — the old row offered a different
+                          set of buttons per account with nothing explaining why. */}
+                      <button className="btn-sm" onClick={() => setManage(row)}>
+                        Manage…
+                      </button>
                     </td>
                   </tr>
                 );
@@ -336,34 +299,16 @@ export default function AccountsClient() {
         />
       )}
 
-      {selected?.id && (
-        <AccountDetailModal
-          accountId={selected.id}
-          onClose={() => setSelected(null)}
-          onSaved={() => {
-            setSelected(null);
+      {manage && (
+        <AccountManageModal
+          row={manage}
+          trace={trace}
+          onClose={() => setManage(null)}
+          onChanged={() => void load()}
+          onDeleted={() => {
+            showToast('✓ Account deleted');
             void load();
-            showToast('✓ Account saved');
           }}
-        />
-      )}
-
-      {billing?.id && (
-        <AccountBillingModal
-          accountId={billing.id}
-          accountName={billing.account_name}
-          onClose={() => setBilling(null)}
-        />
-      )}
-
-      {traceSettings?.tenant && (
-        <TraceSettingsModal
-          tenant={traceSettings.tenant}
-          accountName={traceSettings.account_name}
-          onClose={() => setTraceSettings(null)}
-          // Flags here feed the Modules column and the combined spend, so the
-          // list has to re-read rather than assume what changed.
-          onSaved={() => void load()}
         />
       )}
 

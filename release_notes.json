@@ -1,5 +1,15 @@
 [
   {
+    "version": "0.5.0",
+    "date": "2026-09-10",
+    "changes": [
+      "✨ **One screen per account** — click the account name and everything about it is in one window, as tabs: overview, account and databases, traceability, spend. The row used to offer a different set of buttons depending on facts you could not see, and a traceability-only tenant had no way in at all. A capability an account does not have is now a disabled tab that says why.",
+      "✨ **The data region is on the list** — a column on every row, read from the traceability instance that actually holds the data rather than from what was recorded. When the record and the instance disagree the row is flagged as a conflict, because one of them is wrong and nothing here can tell which.",
+      "✨ **A customer can be moved between regions** — from the account screen. Everything travels, the source copy is deleted only after both sides' row counts match, and the move is confirmed by typing the tenant name. It says up front that everyone signed in gets signed out, and that an Ask Paul vector database cannot move with it.",
+      "⚠️ **Deleting an account now needs you to type DELETE** — the old confirmation was a single click, one row away from a module toggle."
+    ]
+  },
+  {
     "version": "0.4.2",
     "date": "2026-09-10",
     "changes": [

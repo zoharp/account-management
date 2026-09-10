@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
+import ModalShell from './ModalShell';
 import type { UsageLogRow } from '@/lib/types';
 
 /**
@@ -15,10 +16,13 @@ export default function AccountBillingModal({
   accountId,
   accountName,
   onClose,
+  embedded = false,
 }: {
   accountId: string;
   accountName: string;
   onClose: () => void;
+  /** Rendered as a tab inside AccountManageModal — no window of its own. */
+  embedded?: boolean;
 }) {
   const [logs, setLogs] = useState<UsageLogRow[]>([]);
   const [totalTokens, setTotalTokens] = useState(0);
@@ -51,15 +55,12 @@ export default function AccountBillingModal({
   }, [load]);
 
   return (
-    <div className="acl-overlay" onClick={onClose}>
-      <div className="acl-modal acl-modal--billing" onClick={(e) => e.stopPropagation()}>
-        <div className="acl-header">
-          <h2>Billing — {accountName}</h2>
-          <button className="acl-close" onClick={onClose}>
-            ✕
-          </button>
-        </div>
-
+    <ModalShell
+      embedded={embedded}
+      title={`Billing — ${accountName}`}
+      className="acl-modal--billing"
+      onClose={onClose}
+    >
         <div className="acl-detail-body">
           {errorMsg && <div className="acl-error">{errorMsg}</div>}
 
@@ -130,7 +131,6 @@ export default function AccountBillingModal({
             </div>
           )}
         </div>
-      </div>
-    </div>
+    </ModalShell>
   );
 }

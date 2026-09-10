@@ -474,6 +474,62 @@ export async function upsertRegionDirectory(
   return { failed };
 }
 
+/* ── Moving a tenant between regions (0.5.0) ────────────────────────────────
+ * Three calls against ONE instance each; the sequencing lives in
+ * `api/accounts/move`. Nothing here decides anything — deciding when it is safe
+ * to purge is the orchestrator's job, and it is the only place that has seen
+ * both halves.
+ */
+
+export interface TenantExport {
+  tenant: string;
+  account_ids: string[];
+  tables: Record<string, Array<Record<string, unknown>>>;
+  counts: Record<string, number>;
+  total_rows: number;
+}
+
+export interface TenantImportResult {
+  tenant: string;
+  counts: Record<string, number>;
+  total_rows: number;
+  skipped_tables: Record<string, string>;
+}
+
+/** Everything one region holds for this tenant. Excludes sessions by design. */
+export async function exportTenant(tenant: string, region: DataRegion): Promise<TenantExport> {
+  return call<TenantExport>(region, `/api/admin/tenants/${encodeURIComponent(tenant)}/export`);
+}
+
+/** Insert an export into another region. One transaction, idempotent by key. */
+export async function importTenant(
+  payload: TenantExport,
+  region: DataRegion,
+): Promise<TenantImportResult> {
+  return call<TenantImportResult>(region, '/api/admin/tenants/import', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Delete every row a region holds for this tenant.
+ *
+ * ⚠️ Irreversible, and it takes quiz attempts with it — the one thing Orcanos
+ * cannot rebuild. The tenant name is sent again in the body because the instance
+ * refuses a mismatch: this is called from an orchestrator that has just been
+ * talking to two instances about two tenants.
+ */
+export async function purgeTenant(
+  tenant: string,
+  region: DataRegion,
+): Promise<{ total_rows: number; counts: Record<string, number> }> {
+  return call(region, `/api/admin/tenants/${encodeURIComponent(tenant)}/purge`, {
+    method: 'POST',
+    body: JSON.stringify({ confirm_account: tenant }),
+  });
+}
+
 export async function deleteTraceAccount(account: string, region: DataRegion): Promise<void> {
   await call(region, `/api/admin/accounts/${encodeURIComponent(account)}`, { method: 'DELETE' });
 }

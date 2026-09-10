@@ -214,6 +214,14 @@ function buildRow(args: {
     total_cost_usd: Number(master?.total_cost_usd ?? 0),
     total_tokens: Number(master?.total_tokens ?? 0),
 
+    // Ground truth first. The instance a row was READ from is where that
+    // customer's panels and quiz attempts physically are; `accounts.region` is
+    // only what someone recorded. When both exist and disagree, say so rather
+    // than choosing — see `region_mismatch` in types.ts.
+    region: (trace?.region ?? master?.region ?? null) as MergedAccountRow['region'],
+    region_source: trace?.region ? 'instance' : master?.region ? 'master' : null,
+    region_mismatch: Boolean(trace?.region && master?.region && trace.region !== master.region),
+
     trace_present: Boolean(trace),
     trace_allow_access: trace ? Boolean(trace.allow_access) : null,
     trace_allow_ai: trace ? Boolean(trace.allow_ai) : null,

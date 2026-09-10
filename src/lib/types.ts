@@ -99,6 +99,33 @@ export interface MergedAccountRow {
   total_cost_usd: number;
   total_tokens: number;
 
+  /**
+   * Where this customer's data actually is.
+   *
+   * Two independent sources can answer, and they are NOT equally authoritative:
+   *
+   *  - `master`    — `accounts.region`, what the console recorded at creation.
+   *  - `instance`  — which regional traceability app the `account_access` row was
+   *                  read from. This is the **ground truth** for a traceability
+   *                  customer: it is where their panels, snapshots and quiz
+   *                  attempts physically live.
+   *
+   * Most tenants have no master row at all, so the instance is usually the only
+   * answer — which is why the list reads it rather than the master column.
+   */
+  region: DataRegion | null;
+  region_source: 'master' | 'instance' | null;
+  /**
+   * True when master and the instance disagree about where this customer is.
+   *
+   * ⚠️ It means one of them is lying, and the console cannot tell which. Either
+   * the data was moved and master was not updated, or master was edited and the
+   * data never moved. Rendered as a loud warning rather than being resolved
+   * silently, because picking a winner here is exactly how a residency claim
+   * becomes false while still looking consistent.
+   */
+  region_mismatch: boolean;
+
   // ── traceability `account_access` half
   trace_present: boolean;
   trace_allow_access: boolean | null;
