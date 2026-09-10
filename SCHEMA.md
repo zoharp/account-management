@@ -268,16 +268,18 @@ plain `bigint` holding the master `users.id`. See QMS `SCHEMA.md` §17.
 
 ## 7. Migrations
 
-Two files so far, each run once, by hand, in the master Supabase SQL editor:
+The `sql/NNN_*.sql` files are applied automatically by `deploy.bat` via
+`scripts/apply-master-migrations.mjs`, which POSTs each one to the Supabase
+Management API `database/query` route (the same route that works for master
+DDL — see CLAUDE.md's "curl not urllib" note) and records the filename in a
+`schema_migrations` ledger table. Every existing file uses
+`create ... if not exists` / `add column if not exists`, so re-runs are safe
+even independent of the ledger. A failing migration aborts the deploy before
+push, so code never reaches production ahead of its schema.
 
-```
-sql/001_account_provisioning.sql
-sql/002_orcanos_identity.sql
-```
-
-There is no migration runner here — unlike quiz-management's ledger-backed
-GitHub Actions runner. A couple of additive changes didn't justify one. If a
-third migration ever appears, revisit that.
+To apply manually (e.g. from a machine that is not running the .bat):
+`node scripts/apply-master-migrations.mjs` with `SUPABASE_ORG_ACCESS_TOKEN`
+and `SUPABASE_URL` in `.env.local`.
 
 Account creation fails with a clear message until `001` is applied; everything
 else works without it. `POST /api/auth/local/login` 500s on every attempt until

@@ -15,8 +15,8 @@ REM when something has actually failed.
 REM   deploy.bat                      commits as "Deploy <date> <time>"
 REM   deploy.bat "Fix audit filter"   commits with that message
 
-REM ── [1/5] Dependencies ──────────────────────────────────────────────
-echo === [1/5] Checking dependencies ===
+REM ── [1/6] Dependencies ──────────────────────────────────────────────
+echo === [1/6] Checking dependencies ===
 if not exist "node_modules" (
     call npm install --no-audit --no-fund
     if errorlevel 1 ( echo npm install FAILED - nothing deployed. & pause & exit /b 1 )
@@ -25,26 +25,38 @@ if not exist "node_modules" (
 )
 echo.
 
-REM ── [2/5] Typecheck ─────────────────────────────────────────────────
+REM ── [2/6] Typecheck ─────────────────────────────────────────────────
 REM Catch it here rather than in a red Vercel build.
-echo === [2/5] Typecheck ===
+echo === [2/6] Typecheck ===
 call npx tsc --noEmit
 if errorlevel 1 ( echo Typecheck FAILED - nothing deployed. & pause & exit /b 1 )
 echo Typecheck OK.
 echo.
 
-REM ── [3/5] Production build ──────────────────────────────────────────
-echo === [3/5] Production build ===
+REM ── [3/6] Production build ──────────────────────────────────────────
+echo === [3/6] Production build ===
 call npx next build
 if errorlevel 1 ( echo Build FAILED - nothing deployed. & pause & exit /b 1 )
 echo.
 
-REM ── [4/5] Commit ────────────────────────────────────────────────────
+REM ── [4/6] Master DB migrations ──────────────────────────────────────
+REM Apply any sql/NNN_*.sql not yet recorded in schema_migrations on the
+REM master Supabase, via the Management API (the only route that works
+REM for master DDL - see CLAUDE.md). Ledger-backed and idempotent, so a
+REM repeat deploy with nothing pending is a fast no-op. Fails the deploy
+REM if a migration errors: better to stop here than push code that
+REM expects a column that is not there.
+echo === [4/6] Master DB migrations ===
+call node scripts/apply-master-migrations.mjs
+if errorlevel 1 ( echo Migrations FAILED - nothing deployed. & pause & exit /b 1 )
+echo.
+
+REM ── [5/6] Commit ────────────────────────────────────────────────────
 REM Nothing is asked. The message is whatever was passed on the command line
 REM (deploy.bat "Fix the audit filter"), else "Deploy <date> <time>" — a real
 REM message is a thing you write in a commit, not at a prompt that blocks a
 REM deploy you already decided to run.
-echo === [4/5] Commit ===
+echo === [5/6] Commit ===
 set "MSG=%~1"
 if "!MSG!"=="" set "MSG=Deploy %DATE% %TIME:~0,5%"
 git add -A
@@ -59,10 +71,10 @@ if errorlevel 1 (
 )
 echo.
 
-REM ── [5/5] Push ──────────────────────────────────────────────────────
+REM ── [6/6] Push ──────────────────────────────────────────────────────
 REM No confirmation prompt: running this script IS the approval. The build
 REM gates above are what protect production, not a typed word.
-echo === [5/5] Push to GitHub ^(deploys to production^) ===
+echo === [6/6] Push to GitHub ^(deploys to production^) ===
 echo.
 git log -1 --oneline
 echo.
@@ -121,6 +133,8 @@ if not "!BEHIND!"=="0" (
     if errorlevel 1 ( echo Typecheck FAILED after rebase - nothing deployed. & pause & exit /b 1 )
     call npx next build
     if errorlevel 1 ( echo Build FAILED after rebase - nothing deployed. & pause & exit /b 1 )
+    call node scripts/apply-master-migrations.mjs
+    if errorlevel 1 ( echo Migrations FAILED after rebase - nothing deployed. & pause & exit /b 1 )
     echo.
 )
 
