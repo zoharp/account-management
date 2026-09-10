@@ -18,8 +18,12 @@
  * US database, so there are two independent Fly apps with two independent
  * volumes and nothing syncing them:
  *
- *   `TRACE_API_URL`     → us  (Fly `iad`, or http://127.0.0.1:8010 in dev)
- *   `TRACE_API_URL_EU`  → eu  (Fly `fra`)
+ *   `TRACE_API_URL`     + `TRACE_ADMIN_PASSWORD`     → us  (Fly `iad`, :8010 in dev)
+ *   `TRACE_API_URL_EU`  + `TRACE_ADMIN_PASSWORD_EU`  → eu  (Fly `fra`)
+ *
+ * Each deployment has its OWN admin password. The two databases never travel
+ * together, so one password covering both would mean a single leak opens both
+ * regions' admin APIs.
  *
  * Every function here therefore names the region it acts on. **There is no
  * default and no fallback** — see `traceApiUrlFor()` in `lib/regions.ts` for
@@ -39,7 +43,7 @@
  * minted by one is meaningless to the other.
  */
 
-import { traceAdminPassword } from './env';
+import { traceAdminPasswordFor } from './env';
 import { DATA_REGIONS, traceApiUrlFor } from './regions';
 import type { DataRegion, ModuleKey } from './types';
 
@@ -151,13 +155,14 @@ async function login(region: DataRegion): Promise<string> {
   const res = await fetch(`${baseUrl(region)}/api/admin/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: traceAdminPassword() }),
+    body: JSON.stringify({ password: traceAdminPasswordFor(region) }),
     cache: 'no-store',
   });
   if (!res.ok) {
     throw new TraceApiError(
       res.status === 401
-        ? `TRACE_ADMIN_PASSWORD was rejected by the ${region.toUpperCase()} traceability API.`
+        ? `${region === 'eu' ? 'TRACE_ADMIN_PASSWORD_EU' : 'TRACE_ADMIN_PASSWORD'} was rejected `+
+          `by the ${region.toUpperCase()} traceability API.`
         : `Traceability admin login failed for ${region.toUpperCase()} (HTTP ${res.status}).`,
       res.status,
     );
@@ -205,9 +210,20 @@ async function call<T>(
   return (res.status === 204 ? undefined : await res.json()) as T;
 }
 
-/** The regions that actually have an instance behind them right now. */
+/**
+ * The regions that actually have an instance behind them right now.
+ *
+ * A region counts only when BOTH its URL and its OWN password are set. Each
+ * deployment has its own `ADMIN_PASSWORD` — one password covering both regions
+ * would mean a single leak opens both admin APIs — so a half-configured region
+ * is treated as absent rather than being called with the other's credentials.
+ */
 export function traceRegions(): DataRegion[] {
-  return DATA_REGIONS.filter((r) => traceApiUrlFor(r) && process.env.TRACE_ADMIN_PASSWORD);
+  return DATA_REGIONS.filter(
+    (r) =>
+      traceApiUrlFor(r) &&
+      (r === 'eu' ? process.env.TRACE_ADMIN_PASSWORD_EU : process.env.TRACE_ADMIN_PASSWORD),
+  );
 }
 
 /**

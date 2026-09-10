@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `0.4.2` | 2026-09-10 | Each region's traceability instance has its own admin password (`TRACE_ADMIN_PASSWORD_EU`); a region counts as configured only with both a URL and its own password, and never falls back to the other's. |
 | `0.4.1` | 2026-09-09 | The residency signpost is written to every region on account creation, so a customer opening the wrong region's address is redirected instead of told the account does not exist. Best-effort by design — it grants nothing. Data Region shown read-only in the editor. |
 | `0.4.0` | 2026-09-09 | GDPR data residency: an account is created in a US or EU region, which decides where its Supabase project is provisioned and which of the two traceability instances holds it. Immutable after creation, and EU is refused until the EU instance exists. |
 | `0.3.4` | 2026-09-02 | The sign-in screen's Orcanos URL is shown disabled instead of typed; the remembered-server value is no longer read, so it cannot pin a stale server. |

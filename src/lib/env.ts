@@ -131,6 +131,21 @@ export const traceApiUrl = () => required('TRACE_API_URL').replace(/\/$/, '');
 export const traceAdminPassword = () => required('TRACE_ADMIN_PASSWORD');
 
 /**
+ * The admin password of ONE region's traceability instance.
+ *
+ * Each regional deployment has its own `ADMIN_PASSWORD`, deliberately: the two
+ * databases never travel together, and one password covering both would mean a
+ * single leak opens both regions' admin APIs. `TRACE_ADMIN_PASSWORD` stays the
+ * US one under its original name so nothing existing breaks.
+ *
+ * **No fallback to the US password**, for the same reason nothing else in the
+ * residency path falls back: a wrong-region call that happens to authenticate is
+ * far worse than one that fails. A missing variable throws naming itself.
+ */
+export const traceAdminPasswordFor = (region: 'us' | 'eu') =>
+  region === 'eu' ? required('TRACE_ADMIN_PASSWORD_EU') : required('TRACE_ADMIN_PASSWORD');
+
+/**
  * Absolute origin of this deployment, for building the OAuth `redirect_uri`.
  * The redirect_uri must match byte-for-byte between the authorize call and the
  * token exchange, so both sides derive it from here.

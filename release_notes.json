@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.4.2",
+    "date": "2026-09-10",
+    "changes": [
+      "🔒 **Each region's traceability instance now has its own admin password** — `TRACE_ADMIN_PASSWORD` stays the US one, `TRACE_ADMIN_PASSWORD_EU` is the EU one. The two databases never travel together, so a single password covering both would have meant one leak opening both regions' admin APIs. A region counts as configured only when it has both a URL and its own password; there is no fallback to the other region's."
+    ]
+  },
+  {
     "version": "0.4.1",
     "date": "2026-09-09",
     "changes": [

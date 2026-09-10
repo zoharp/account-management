@@ -9,6 +9,25 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.4.2** (2026-09-10) — **one admin password per region.**
+
+`TRACE_ADMIN_PASSWORD` stays the US instance's under its original name; `TRACE_ADMIN_PASSWORD_EU`
+is the EU one. The two regional databases never travel together, so a single password covering both
+would have meant one leak opening both regions' admin APIs — the same reasoning that gives them
+separate `SESSION_ENC_KEY`s.
+
+`traceRegions()` now counts a region as configured only when it has **both** a URL and its own
+password, and `traceAdminPasswordFor()` has **no fallback** to the other region's. A wrong-region
+call that happens to authenticate is far worse than one that fails.
+
+**Found the hard way:** the EU app's `ADMIN_PASSWORD` could not simply be set to the US app's,
+because a Fly secret is write-only and `vercel env pull` returns sensitive variables as empty. That
+forced the per-region design — which was the better one anyway. It also surfaced that this repo's
+local `.env.local` holds a **stale** `TRACE_ADMIN_PASSWORD` that does not match the live US
+instance, so a local dev console cannot reach production traceability.
+
+---
+
 **0.4.1** (2026-09-09) — **the residency signpost, written to every region.**
 
 Completes 0.4.0 against traceability-matrix 3.43.0, which added the `account_region` directory.
