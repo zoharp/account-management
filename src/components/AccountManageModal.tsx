@@ -1,9 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import AccountDetailModal from './AccountDetailModal';
-import AccountBillingModal from './AccountBillingModal';
-import TraceSettingsModal from './TraceSettingsModal';
+import OrcanosPanel from './OrcanosPanel';
+import TraceabilityPanel from './TraceabilityPanel';
+import AskPaulPanel from './AskPaulPanel';
+import LlmPanel from './LlmPanel';
+import SpendPanel from './SpendPanel';
 import MoveRegionPanel from './MoveRegionPanel';
 import { REGION_LABELS, coerceRegion } from '@/lib/regions';
 import type { AccountRow, MergedAccountRow, TraceSourceStatus } from '@/lib/types';
@@ -14,31 +16,38 @@ import type { AccountRow, MergedAccountRow, TraceSourceStatus } from '@/lib/type
  * ## Why this exists
  *
  * The list used to offer three different doors per row, and which ones appeared
- * depended on facts the operator could not see: **Traceability…** only when the
- * tenant had an allowlist row, **Edit** and **Delete** only when the account had
- * a *master* record — which most tenants do not. So the row for a
- * traceability-only customer showed one button, the row for a full customer
- * showed three, and nothing on screen explained the difference. Clicking the name
- * now opens everything that exists for that account, and a capability the account
- * does not have is a disabled tab with the reason on it rather than a button that
- * silently is not there.
+ * depended on facts the operator could not see. Clicking the name now opens
+ * everything that exists for that account, and a capability the account does not
+ * have is a disabled tab with the reason on it rather than a button that silently
+ * is not there.
  *
- * ## How the tabs are built
+ * ## The tabs are one per system, not one per table
  *
- * Each tab is the SAME component that used to be its own dialog, rendered with
- * `embedded` so it draws no window of its own (see `ModalShell`). They are not
- * reimplemented here — their save logic, their three-state secret handling and
- * their invariants stay in one place. This file owns only the frame, the tab
- * strip, and the two things that belong to no single tab: moving the account
- * between data regions, and deleting it.
+ * The first cut of this window split by *where a setting was stored*, which put
+ * two different applications' settings in the same tab and the same
+ * application's settings in two: Ask Paul's licence sat inside the Traceability
+ * dialog (it is a column on the trace row), while Ask Paul's database and kill
+ * switch sat under "Account & databases" (they are columns on the master
+ * account). An operator had to know the storage layout to find anything.
  *
- * ⚠️ **Tabs are mounted lazily and unmounted when you leave them.** That is
- * deliberate: each one loads live data on mount, so switching back re-reads
- * rather than showing a snapshot from when the window opened — and an edit made
- * on the Traceability tab is visible on Overview immediately after.
+ * Now each tab is one thing an operator thinks about:
+ *
+ * | Tab | What it is |
+ * |---|---|
+ * | Overview | Where the data is, what is licensed, and the region move |
+ * | Orcanos | The customer's own Orcanos server — the API both apps hang off, and what identifies the tenant |
+ * | Traceability | The traceability app's access gates and modules |
+ * | Ask Paul | The QMS AI app: licence, kill switch, database, and deleting the account |
+ * | LLM | Both AI configurations — traceability's engine and Ask Paul's key |
+ * | Spend | Both AI ledgers |
+ *
+ * ⚠️ **Tabs are mounted lazily and unmounted when you leave them.** Deliberate:
+ * each loads live data on mount, so switching back re-reads rather than showing a
+ * snapshot from when the window opened — which matters more now that three tabs
+ * read the same trace row and can each change part of it.
  */
 
-type TabKey = 'overview' | 'account' | 'trace' | 'billing';
+type TabKey = 'overview' | 'orcanos' | 'trace' | 'askpaul' | 'llm' | 'spend';
 
 export default function AccountManageModal({
   row,
@@ -59,13 +68,16 @@ export default function AccountManageModal({
   const hasMaster = Boolean(row.id);
   const hasTrace = Boolean(row.tenant && trace?.available);
 
+  const noMaster =
+    'This tenant exists in traceability only — it has no master account record.';
+
   const tabs: Array<{ key: TabKey; label: string; enabled: boolean; why?: string }> = [
     { key: 'overview', label: 'Overview', enabled: true },
     {
-      key: 'account',
-      label: 'Account & databases',
+      key: 'orcanos',
+      label: 'Orcanos',
       enabled: hasMaster,
-      why: 'This tenant exists in traceability only — it has no master account record, so there are no databases or Orcanos credentials to edit.',
+      why: `${noMaster} The Orcanos server address and credentials are stored on that record.`,
     },
     {
       key: 'trace',
@@ -76,10 +88,24 @@ export default function AccountManageModal({
         : 'The traceability instance is not reachable right now.',
     },
     {
-      key: 'billing',
+      key: 'askpaul',
+      label: 'Ask Paul',
+      // The licence lives on the trace row and the database on the master row —
+      // either one alone is worth showing, with the missing half explained inside.
+      enabled: hasMaster || hasTrace,
+      why: 'Ask Paul needs either a master account record or a traceability tenant, and this account has neither.',
+    },
+    {
+      key: 'llm',
+      label: 'LLM',
+      enabled: hasMaster || hasTrace,
+      why: 'There is neither a master account record nor a traceability tenant to hold an AI configuration.',
+    },
+    {
+      key: 'spend',
       label: 'Spend',
-      enabled: hasMaster,
-      why: 'Spend detail comes from the master account record, which this tenant does not have.',
+      enabled: hasMaster || hasTrace,
+      why: 'Neither ledger exists for this account.',
     },
   ];
 
@@ -126,13 +152,10 @@ export default function AccountManageModal({
           ))}
         </div>
 
-        {tab === 'overview' && (
-          <Overview row={row} onChanged={onChanged} onDeleted={onDeleted} onClose={onClose} />
-        )}
+        {tab === 'overview' && <Overview row={row} onChanged={onChanged} />}
 
-        {tab === 'account' && row.id && (
-          <AccountDetailModal
-            embedded
+        {tab === 'orcanos' && row.id && (
+          <OrcanosPanel
             accountId={row.id}
             onSaved={(patch) => onChanged(patch)}
             onClose={onClose}
@@ -140,23 +163,29 @@ export default function AccountManageModal({
         )}
 
         {tab === 'trace' && row.tenant && (
-          <TraceSettingsModal
-            embedded
-            tenant={row.tenant}
+          <TraceabilityPanel tenant={row.tenant} onSaved={() => onChanged()} />
+        )}
+
+        {tab === 'askpaul' && (
+          <AskPaulPanel
+            accountId={row.id ?? null}
             accountName={row.account_name}
-            onSaved={() => onChanged()}
+            tenant={row.tenant ?? null}
+            onSaved={(patch) => onChanged(patch)}
+            onDeleted={onDeleted}
             onClose={onClose}
           />
         )}
 
-        {tab === 'billing' && row.id && (
-          <AccountBillingModal
-            embedded
-            accountId={row.id}
-            accountName={row.account_name}
-            onClose={onClose}
+        {tab === 'llm' && (
+          <LlmPanel
+            accountId={row.id ?? null}
+            tenant={row.tenant ?? null}
+            onSaved={() => onChanged()}
           />
         )}
+
+        {tab === 'spend' && <SpendPanel accountId={row.id ?? null} tenant={row.tenant ?? null} />}
       </div>
     </div>
   );
@@ -165,14 +194,22 @@ export default function AccountManageModal({
 function Overview({
   row,
   onChanged,
-  onDeleted,
-  onClose,
 }: {
   row: MergedAccountRow;
   onChanged: () => void;
-  onDeleted: () => void;
-  onClose: () => void;
 }) {
+  /**
+   * The move is collapsed, and starts closed every time.
+   *
+   * A customer is moved between regions **once, if ever** — it is the rarest
+   * thing on this screen and the only one that deletes data at the end. Left
+   * expanded it was the largest block on the tab an operator opens by default,
+   * with a red warning and a type-the-name box, which makes a routine screen
+   * read as dangerous and makes the actual danger ordinary. Behind a button it
+   * is one deliberate click away and nothing else changes.
+   */
+  const [moveOpen, setMoveOpen] = useState(false);
+
   return (
     <div className="acl-detail-body">
       <div className="acl-section">
@@ -194,8 +231,8 @@ function Overview({
           </>
         ) : (
           <p className="acl-hint acl-hint--warn">
-            No region on record. This account exists in neither a regional traceability instance
-            nor with a region on its master record, so nothing can say where its data is.
+            No region on record. This account exists in neither a regional traceability instance nor
+            with a region on its master record, so nothing can say where its data is.
           </p>
         )}
 
@@ -207,21 +244,39 @@ function Overview({
         {row.region_mismatch && (
           <p className="acl-hint acl-hint--warn">
             <strong>The two sources disagree about this account&rsquo;s region.</strong> Its
-            traceability data is in one region while the master record says another. Either the
-            data was moved and the record not updated, or the record was changed and the data never
-            moved. Do not treat either as correct until you have checked which instance actually
-            holds its panels.
+            traceability data is in one region while the master record says another. Either the data
+            was moved and the record not updated, or the record was changed and the data never moved.
+            Do not treat either as correct until you have checked which instance actually holds its
+            panels.
           </p>
         )}
+
       </div>
 
-      <MoveRegionPanel row={row} onMoved={onChanged} />
+      {/* Its own section rather than a nested one, so the collapsed state is a
+          single quiet line and the expanded state is a full-width block. */}
+      {!moveOpen ? (
+        <div className="acl-section">
+          <button className="acl-disclosure" onClick={() => setMoveOpen(true)}>
+            Move this account to another region…
+          </button>
+        </div>
+      ) : (
+        <>
+          <MoveRegionPanel row={row} onMoved={onChanged} />
+          <div className="acl-section">
+            <button className="acl-disclosure" onClick={() => setMoveOpen(false)}>
+              Hide the region move
+            </button>
+          </div>
+        </>
+      )}
 
       <div className="acl-section">
         <h3 className="acl-section-title">Modules</h3>
         <p className="acl-hint">
           Licences are toggled from the pills on the account list, and in detail on the{' '}
-          <em>Traceability</em> tab.
+          <em>Traceability</em> and <em>Ask Paul</em> tabs.
         </p>
         <ul className="acl-kv-list">
           <li>
@@ -235,8 +290,6 @@ function Overview({
           </li>
         </ul>
       </div>
-
-      <DangerZone row={row} onDeleted={onDeleted} onClose={onClose} />
     </div>
   );
 }
@@ -246,87 +299,4 @@ function ModuleState({ value }: { value: boolean | null }) {
   // unticked box. Unknown is not the same as off (lib/modules.ts).
   if (value === null) return <span className="acl-muted">— not known</span>;
   return <strong>{value ? 'Licensed' : 'Not licensed'}</strong>;
-}
-
-/**
- * Delete, behind a typed confirmation.
- *
- * A single "Are you sure?" is one stray click from destroying an account, and the
- * button used to sit inline in a table row where the click before it was
- * "toggle a module". Typing the account's own name-independent word makes the act
- * deliberate and, more importantly, makes you read WHICH account you are on.
- */
-function DangerZone({
-  row,
-  onDeleted,
-  onClose,
-}: {
-  row: MergedAccountRow;
-  onDeleted: () => void;
-  onClose: () => void;
-}) {
-  const [typed, setTyped] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  const armed = typed.trim().toUpperCase() === 'DELETE';
-
-  async function remove() {
-    if (!armed || !row.id) return;
-    setBusy(true);
-    setError('');
-    try {
-      const res = await fetch(`/api/accounts/${row.id}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const d = (await res.json().catch(() => ({}))) as { detail?: string };
-        throw new Error(d.detail || `HTTP ${res.status}`);
-      }
-      onDeleted();
-      onClose();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setBusy(false);
-    }
-  }
-
-  if (!row.id) {
-    return (
-      <div className="acl-section">
-        <h3 className="acl-section-title">Danger zone</h3>
-        <p className="acl-hint">
-          This tenant has no master account record, so there is nothing to delete here. Its
-          traceability allowlist entry is removed from the <em>Traceability</em> tab.
-        </p>
-      </div>
-    );
-  }
-
-  return (
-    <div className="acl-section acl-section--danger">
-      <h3 className="acl-section-title">Danger zone</h3>
-      <p className="acl-hint acl-hint--warn">
-        Deleting <strong>{row.account_name}</strong> removes its master account record. Its
-        traceability data is <strong>not</strong> deleted by this and has to be removed separately
-        from the <em>Traceability</em> tab.
-      </p>
-      <div className="acl-field-row">
-        <label className="acl-label" htmlFor="acl-del">
-          Type <code>DELETE</code> to confirm
-        </label>
-        <input
-          id="acl-del"
-          className="acl-input"
-          value={typed}
-          onChange={(e) => setTyped(e.target.value)}
-          placeholder="DELETE"
-          autoComplete="off"
-          disabled={busy}
-        />
-      </div>
-      {error && <div className="acl-error">{error}</div>}
-      <button className="btn-danger-sm" disabled={!armed || busy} onClick={() => void remove()}>
-        {busy ? 'Deleting…' : `Delete ${row.account_name}`}
-      </button>
-    </div>
-  );
 }

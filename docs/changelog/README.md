@@ -9,6 +9,9 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `0.6.0` | 2026-09-10 | The account window re-cut into one tab per system — Overview, Orcanos, Traceability, Ask Paul, LLM, Spend. Ask Paul's licence, switch, database and delete are together at last; both AI configs and both spend ledgers are each on one tab; the region move and delete are collapsed. |
+| `0.5.2` | 2026-09-10 | A region move streams its progress: the seven steps are shown before it is authorised and ticked off as the server passes them. NDJSON response — the verdict is the last line, not the HTTP status. |
+| `0.5.1` | 2026-09-10 | The account window's tab strip no longer clipped by a tall tab body — the strip keeps its height and the body scrolls. |
 | `0.5.0` | 2026-09-10 | One screen per account behind the account name; data region shown on the list with a conflict flag; move a customer between regions; delete needs `DELETE` typed. |
 | `0.4.2` | 2026-09-10 | Each region's traceability instance has its own admin password (`TRACE_ADMIN_PASSWORD_EU`); a region counts as configured only with both a URL and its own password, and never falls back to the other's. |
 | `0.4.1` | 2026-09-09 | The residency signpost is written to every region on account creation, so a customer opening the wrong region's address is redirected instead of told the account does not exist. Best-effort by design — it grants nothing. Data Region shown read-only in the editor. |

@@ -9,6 +9,116 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.6.0** (2026-09-10) — **the account window is one tab per system, not one per table.**
+
+0.5.0 put everything about an account behind one door. It divided that door up by **where each
+setting was stored**, and storage does not match how anyone thinks about a customer. Ask Paul's
+licence is a column on the traceability allowlist row, so it appeared inside *Traceability*. Ask
+Paul's database and kill switch are columns on the master account, so they appeared under
+*Account & databases*. Turning Ask Paul on for a customer therefore meant two tabs, and the rule
+joining them — **no database, no Ask Paul** — had to be explained in both, in two copies of the
+same paragraph, enforced from four screens. Meanwhile *Traceability* held a second application's
+licence, an AI engine and a cost, none of which are traceability.
+
+Six tabs now, each one thing an operator thinks about:
+
+| Tab | What it holds |
+|---|---|
+| **Overview** | Region, module summary, and the region move — collapsed |
+| **Orcanos** | The customer's own Orcanos server: REST API, credentials, the derived tenant, and the direct SQL Server |
+| **Traceability** | Access gates, module licences, note — that app and nothing else |
+| **Ask Paul** | Licence, kill switch, vector database, and delete |
+| **LLM** | Both AI configurations side by side |
+| **Spend** | Both AI ledgers |
+
+Points worth keeping:
+
+- **`is_active` is on the Ask Paul tab and says so.** It is read in exactly two places, both inside
+  the QMS AI backend; traceability never reads it. Under a generic *Status* label it read as an
+  account-level gate, which it has never been — an inactive account still signs in to traceability
+  and uses every module it is licensed for.
+- **Delete says which of the two apps it destroys.** It removes the master record — the Ask Paul
+  account, its database credentials, its LLM key, its sign-in methods — and leaves the traceability
+  tenant working. It is also collapsed now, like the region move: both were permanently-expanded
+  red blocks on the tab you land on, which is how a screen teaches people to ignore red.
+- **The two tabs that read the same trace row save disjoint fields.** The trace `PUT` falls back to
+  the stored row for anything omitted, so Traceability sends only its flags and Ask Paul sends only
+  `allow_ask_paul` / `ask_paul_account`; neither can clobber the other. This is load-bearing — the
+  route was already written this way, but nothing depended on it until now.
+- **The direct SQL Server section is honest about being unused.** Tracing it through both
+  codebases: `pyodbc` appears in the QMS backend exactly once, inside the test function itself.
+  Nothing else on the platform reads those credentials — both apps reach Orcanos through the REST
+  API. It is collapsed when empty, and labelled rather than left looking like a skipped step.
+- **The Orcanos tab shows the derived tenant.** There is no `orcanos_tenant` column, so the virtual
+  directory in that URL is what every module licence is keyed on, and the fallback to the account
+  name is a guess. Both are now stated where the URL is edited.
+
+Three components were replaced by six: `AccountDetailModal`, `TraceSettingsModal` and
+`AccountBillingModal` became `OrcanosPanel`, `TraceabilityPanel`, `AskPaulPanel`, `LlmPanel`,
+`SpendPanel` and a shared `Check`. `ModalShell`'s `embedded` prop is no longer used by them — the
+panels are tab bodies now, never windows — but the shell stays for anything that needs a dialog
+again. Two duplicated copies of the `ASK_PAUL_NEEDS_DB` string collapsed into one in the new
+client-safe `lib/trace-ui.ts`, which also holds the trace row shapes the three tabs share.
+
+No API changed and no data shape changed; every save posts the same payloads to the same routes.
+
+---
+
+**0.5.2** (2026-09-10) — **a region move reports itself while it runs.**
+
+The move takes minutes on a real tenant and, until now, said nothing for all of them: one blocking
+`POST`, a disabled button reading *"Moving… this can take a few minutes"*, and the `steps[]` list
+only once it was over. For a flow whose **last** step deletes quiz attempts, the several minutes
+before that delete is exactly when an operator needs to see where it is — and a silent button is
+also the state in which someone reloads the tab.
+
+`POST /api/accounts/move` now answers with **NDJSON**: one line per step transition, terminated by a
+`done` or `failed` line carrying what the single JSON body used to carry. The six phases are
+unchanged, in the same order, for the same reasons — freeze, export, import, verify, restore,
+records, purge — and nothing about the safety properties moved. The panel renders all seven from the
+moment the tenant name is typed, so the plan is readable **before** the move is authorised, and
+lights each one as the server passes it, with the count it actually moved underneath.
+
+Three things worth knowing about the shape:
+
+- **Validation still answers with real status codes.** Everything decidable before the first write —
+  auth, the region, which instance holds the tenant, the two-copies 409 — is ordinary JSON, because a
+  status code only exists before the first byte is flushed. After that the transport is always 200
+  and the last line is the verdict: **a client that reads `res.ok` and stops has read nothing.** The
+  panel switches on the content type.
+- **A stream that ends with no verdict is its own error**, and says so loudly rather than looking
+  like a failure — that is the serverless-timeout case, the one where re-running blindly is how a
+  tenant ends up in both regions at once.
+- **There is no percentage.** Export, import and purge are each ONE opaque call to a regional
+  instance; none reports a fraction, so a bar could only be an animation. The one piece of motion is
+  a pulsing marker on the step genuinely in flight, and it is dropped under
+  `prefers-reduced-motion`.
+
+The failing step is now recorded in the audit event too (`failed_at`), which the previous shape
+could only imply from how far `steps` got.
+
+New file `src/lib/move-steps.ts` holds the step catalogue and the event union. It is its own
+module because `MoveRegionPanel` is a client component and may not import a route.
+
+---
+
+**0.5.1** (2026-09-10) — **the account window's tab strip was being clipped.**
+
+On any tab whose body was taller than the window — Traceability, in practice — the tab labels were
+cut in half and the strip grew a horizontal scrollbar of its own, so *Overview*, *Account &
+databases*, *Traceability* and *Spend* were half-readable and looked broken.
+
+Two CSS defaults compounded. `.acl-detail-body` is `flex: 1` inside the column-flex panel, but a
+flex item's `min-height` defaults to `auto` — *never smaller than my content* — so the body did not
+shrink and scroll, it pushed. `.acl-header` was protected with `flex-shrink: 0`; `.acl-tabs`, added
+later, was not, so it absorbed the whole overflow. Fixed by giving the body `min-height: 0` and the
+strip `flex-shrink: 0`. Both carry a comment saying why, because the symptom appears in a file
+nowhere near the cause.
+
+Nothing else changed; no behaviour, no routes, no data.
+
+---
+
 **0.5.0** (2026-09-10) — **one screen per account, the region on the list, and a real move.**
 
 **The row used to be the problem.** It offered *Traceability…*, *Edit* and *Delete* — but which

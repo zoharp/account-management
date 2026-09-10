@@ -37,12 +37,34 @@
  * cannot relocate a project, so an Ask Paul customer additionally needs a fresh
  * project provisioned in the new region and a full re-index. The response says
  * so rather than leaving it to be discovered.
+ *
+ * ## Why the response is a stream
+ *
+ * A big tenant's export/import runs for minutes. Holding `steps[]` until the end
+ * left the operator watching a disabled button through the one part of the flow
+ * that ends in a delete — and gave them nothing to act on if it hung. So once
+ * the move actually starts, the response becomes NDJSON: one line per step
+ * transition, terminated by a `done` or `failed` line carrying exactly what the
+ * single JSON body used to.
+ *
+ * **Validation still answers with real status codes.** Everything that can be
+ * decided before the first write — auth, the region, which instance holds the
+ * tenant, the two-copies conflict — returns ordinary JSON with 400/404/409/502,
+ * because a status code is only available before the first byte is flushed.
+ * After that the transport is always 200 and the terminal line is the verdict:
+ * a client that reads `res.ok` and stops has read nothing.
+ *
+ * There is no percentage. Export, import and purge are each ONE opaque call to
+ * a regional instance, which reports no fractional progress — a bar here would
+ * be an animation, not a measurement. Steps are what is actually known.
  */
 
 import { requirePlatformStaff } from '@/lib/session';
 import { pgGet, pgPatch } from '@/lib/supabase';
 import { logSecurityEvent } from '@/lib/audit';
 import { parseRegion, traceApiUrlFor } from '@/lib/regions';
+import type { MoveEvent, MoveStepKey } from '@/lib/move-steps';
+import type { DataRegion } from '@/lib/types';
 import {
   exportTenant,
   importTenant,
@@ -112,138 +134,183 @@ export async function POST(req: Request) {
   if (!from) return bad(`Could not determine which region holds '${tenant}'.`, 500);
   if (from === to) return bad(`'${tenant}' is already in the ${to.toUpperCase()} region.`);
 
+  // Everything above could still answer with a status code. From here the move
+  // writes, so the response becomes a stream and the verdict moves into the
+  // last line — see the header comment.
   const steps: string[] = [];
   const startedAt = Date.now();
+  const encoder = new TextEncoder();
 
-  try {
-    // 1 ── Freeze the source.
-    await saveTraceAccount(current, { allow_access: 0 });
-    steps.push(`froze '${tenant}' in ${from.toUpperCase()}`);
+  const src: DataRegion = from;
 
-    // 2 ── Export → import.
-    const exported = await exportTenant(tenant, from);
-    steps.push(`exported ${exported.total_rows} rows from ${from.toUpperCase()}`);
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      let closed = false;
+      /** Which step is in flight, so a throw can name the one that broke. */
+      let at: MoveStepKey = 'freeze';
 
-    const imported = await importTenant(exported, to);
-    steps.push(`imported ${imported.total_rows} rows into ${to.toUpperCase()}`);
+      const send = (event: MoveEvent) => {
+        if (closed) return;
+        controller.enqueue(encoder.encode(`${JSON.stringify(event)}\n`));
+      };
+      const begin = (key: MoveStepKey) => {
+        at = key;
+        send({ t: 'step', key, status: 'running' });
+      };
+      /** Mark a step done, and record the same sentence the audit trail gets. */
+      const finish = (key: MoveStepKey, note: string) => {
+        steps.push(note);
+        send({ t: 'step', key, status: 'done', note });
+      };
 
-    // 3 ── Verify BEFORE anything destructive.
-    const shortfall = Object.entries(exported.counts).filter(
-      ([table, n]) => (imported.counts[table] ?? 0) !== n,
-    );
-    const skipped = Object.keys(imported.skipped_tables ?? {});
-    if (shortfall.length || skipped.length) {
-      // Deliberately leaves the source frozen. A half-moved tenant must not be
-      // quietly reopened for writing in the region it is leaving.
-      await logSecurityEvent('account_region_move', {
-        user,
-        accountName: tenant,
-        success: false,
-        detail: { from, to, shortfall, skipped, steps },
-      });
-      return Response.json(
-        {
+      try {
+        // 1 ── Freeze the source.
+        begin('freeze');
+        await saveTraceAccount(current, { allow_access: 0 });
+        finish('freeze', `froze '${tenant}' in ${src.toUpperCase()}`);
+
+        // 2 ── Export → import.
+        begin('export');
+        const exported = await exportTenant(tenant, src);
+        finish('export', `exported ${exported.total_rows} rows from ${src.toUpperCase()}`);
+
+        begin('import');
+        const imported = await importTenant(exported, to);
+        finish('import', `imported ${imported.total_rows} rows into ${to.toUpperCase()}`);
+
+        // 3 ── Verify BEFORE anything destructive.
+        begin('verify');
+        const shortfall = Object.entries(exported.counts).filter(
+          ([table, n]) => (imported.counts[table] ?? 0) !== n,
+        );
+        const skipped = Object.keys(imported.skipped_tables ?? {});
+        if (shortfall.length || skipped.length) {
+          // Deliberately leaves the source frozen. A half-moved tenant must not
+          // be quietly reopened for writing in the region it is leaving.
+          await logSecurityEvent('account_region_move', {
+            user,
+            accountName: tenant,
+            success: false,
+            detail: { from: src, to, shortfall, skipped, steps },
+          });
+          send({
+            t: 'failed',
+            key: 'verify',
+            detail:
+              `The move was STOPPED before anything was deleted: the target did not receive ` +
+              `everything. ${
+                shortfall.length
+                  ? `Short tables: ${shortfall.map(([t, n]) => `${t} (${n} sent, ${imported.counts[t] ?? 0} landed)`).join('; ')}. `
+                  : ''
+              }${
+                skipped.length
+                  ? `Tables the ${to.toUpperCase()} instance has no home for: ${skipped.join(', ')} — it is probably on an older release. `
+                  : ''
+              }The source still holds everything and '${tenant}' is left signed out there. ` +
+              `Fix the target, then run the move again.`,
+            steps,
+          });
+          return;
+        }
+        finish('verify', 'verified row counts match');
+
+        // 4 ── Restore the access flag the tenant actually had, on the target.
+        begin('restore');
+        const landed = (await listTraceAccounts()).find(
+          (r) => (r.account ?? '').trim().toLowerCase() === tenant && r.region === to,
+        );
+        if (landed) {
+          await saveTraceAccount(landed, { allow_access: current.allow_access });
+        }
+        finish(
+          'restore',
+          landed
+            ? `restored access in ${to.toUpperCase()}`
+            : `no row to restore access on in ${to.toUpperCase()}`,
+        );
+
+        // 5 ── The records that point at the data, now that the data is there.
+        begin('records');
+        if (body.account_id) {
+          await pgPatch(`accounts?id=eq.${encodeURIComponent(body.account_id)}`, { region: to });
+          steps.push('updated the master account record');
+        }
+        const { failed } = await upsertRegionDirectory(tenant, to);
+        finish(
+          'records',
+          failed.length
+            ? `directory updated, except: ${failed.join(', ')}`
+            : 'directory updated in every region',
+        );
+
+        // 6 ── Only now is the source redundant.
+        begin('purge');
+        const purged = await purgeTenant(tenant, src);
+        finish('purge', `purged ${purged.total_rows} rows from ${src.toUpperCase()}`);
+
+        // Ask Paul's per-tenant Supabase project cannot be relocated, so say so
+        // rather than letting it be discovered later.
+        let askPaulNote = '';
+        if (body.account_id) {
+          const acct = await pgGet<Array<{ vector_db_host?: string | null }>>(
+            `accounts?id=eq.${encodeURIComponent(body.account_id)}&select=vector_db_host`,
+          );
+          if ((acct[0]?.vector_db_host ?? '').trim()) {
+            askPaulNote =
+              ` This account also has an Ask Paul vector database, which is a Supabase project and ` +
+              `CANNOT be moved between regions. Its data is still in ${src.toUpperCase()}: provision a ` +
+              `new project in ${to.toUpperCase()} and re-index before the move is complete for GDPR.`;
+          }
+        }
+
+        await logSecurityEvent('account_region_move', {
+          user,
+          accountName: tenant,
+          detail: {
+            from: src,
+            to,
+            rows: exported.total_rows,
+            tables: exported.counts,
+            directory_failed: failed,
+            seconds: Math.round((Date.now() - startedAt) / 1000),
+          },
+        });
+
+        send({ t: 'done', steps, rows_moved: exported.total_rows, warning: askPaulNote || undefined });
+      } catch (e) {
+        // Whatever failed, the source has NOT been purged unless the last step
+        // ran — and if it did, the failure is after the point of no return and
+        // says so.
+        await logSecurityEvent('account_region_move', {
+          user,
+          accountName: tenant,
+          success: false,
+          detail: { from: src, to, steps, error: msg(e), failed_at: at },
+        }).catch(() => {});
+        send({
+          t: 'failed',
+          key: at,
           detail:
-            `The move was STOPPED before anything was deleted: the target did not receive ` +
-            `everything. ${
-              shortfall.length
-                ? `Short tables: ${shortfall.map(([t, n]) => `${t} (${n} sent, ${imported.counts[t] ?? 0} landed)`).join('; ')}. `
-                : ''
-            }${
-              skipped.length
-                ? `Tables the ${to.toUpperCase()} instance has no home for: ${skipped.join(', ')} — it is probably on an older release. `
-                : ''
-            }The source still holds everything and '${tenant}' is left signed out there. ` +
-            `Fix the target, then run the move again.`,
+            `The move failed: ${msg(e)}. Completed steps: ${steps.join(' → ') || 'none'}. ` +
+            `'${tenant}' is left signed out of ${src.toUpperCase()}; nothing was deleted unless ` +
+            `"purged" appears in those steps.`,
           steps,
-        },
-        { status: 409 },
-      );
-    }
-    steps.push('verified row counts match');
-
-    // 4 ── Restore the access flag the tenant actually had, on the target.
-    const landed = (await listTraceAccounts()).find(
-      (r) => (r.account ?? '').trim().toLowerCase() === tenant && r.region === to,
-    );
-    if (landed) {
-      await saveTraceAccount(landed, { allow_access: current.allow_access });
-      steps.push(`restored access in ${to.toUpperCase()}`);
-    }
-
-    // 5 ── The records that point at the data, now that the data is there.
-    if (body.account_id) {
-      await pgPatch(`accounts?id=eq.${encodeURIComponent(body.account_id)}`, { region: to });
-      steps.push('updated the master account record');
-    }
-    const { failed } = await upsertRegionDirectory(tenant, to);
-    steps.push(
-      failed.length
-        ? `directory updated, except: ${failed.join(', ')}`
-        : 'directory updated in every region',
-    );
-
-    // 6 ── Only now is the source redundant.
-    const purged = await purgeTenant(tenant, from);
-    steps.push(`purged ${purged.total_rows} rows from ${from.toUpperCase()}`);
-
-    // Ask Paul's per-tenant Supabase project cannot be relocated, so say so
-    // rather than letting it be discovered later.
-    let askPaulNote = '';
-    if (body.account_id) {
-      const acct = await pgGet<Array<{ vector_db_host?: string | null }>>(
-        `accounts?id=eq.${encodeURIComponent(body.account_id)}&select=vector_db_host`,
-      );
-      if ((acct[0]?.vector_db_host ?? '').trim()) {
-        askPaulNote =
-          ` This account also has an Ask Paul vector database, which is a Supabase project and ` +
-          `CANNOT be moved between regions. Its data is still in ${from.toUpperCase()}: provision a ` +
-          `new project in ${to.toUpperCase()} and re-index before the move is complete for GDPR.`;
+        });
+      } finally {
+        closed = true;
+        controller.close();
       }
-    }
+    },
+  });
 
-    await logSecurityEvent('account_region_move', {
-      user,
-      accountName: tenant,
-      detail: {
-        from,
-        to,
-        rows: exported.total_rows,
-        tables: exported.counts,
-        directory_failed: failed,
-        seconds: Math.round((Date.now() - startedAt) / 1000),
-      },
-    });
-
-    return Response.json({
-      ok: true,
-      tenant,
-      from,
-      to,
-      rows_moved: exported.total_rows,
-      steps,
-      warning: askPaulNote || undefined,
-    });
-  } catch (e) {
-    // Whatever failed, the source has NOT been purged unless the last step ran —
-    // and if it did, the failure is after the point of no return and says so.
-    await logSecurityEvent('account_region_move', {
-      user,
-      accountName: tenant,
-      success: false,
-      detail: { from, to, steps, error: msg(e) },
-    });
-    return Response.json(
-      {
-        detail:
-          `The move failed: ${msg(e)}. Completed steps: ${steps.join(' → ') || 'none'}. ` +
-          `'${tenant}' is left signed out of ${from.toUpperCase()}; nothing was deleted unless ` +
-          `"purged" appears in those steps.`,
-        steps,
-      },
-      { status: 500 },
-    );
-  }
+  return new Response(stream, {
+    headers: {
+      'Content-Type': 'application/x-ndjson; charset=utf-8',
+      'Cache-Control': 'no-store',
+      // Proxies that buffer would defeat the entire point of streaming.
+      'X-Accel-Buffering': 'no',
+    },
+  });
 }
 
 function bad(detail: string, status = 400) {

@@ -9,6 +9,11 @@ echo.
 echo  Vercel auto-deploys this repo on push to main.
 echo  A PUSH IS A PRODUCTION DEPLOY.
 echo.
+REM Nothing below asks a question. Running this script is the approval, and
+REM typecheck + build are what protect production. It only stops - and waits -
+REM when something has actually failed.
+REM   deploy.bat                      commits as "Deploy <date> <time>"
+REM   deploy.bat "Fix audit filter"   commits with that message
 
 REM ── [1/5] Dependencies ──────────────────────────────────────────────
 echo === [1/5] Checking dependencies ===
@@ -35,13 +40,18 @@ if errorlevel 1 ( echo Build FAILED - nothing deployed. & pause & exit /b 1 )
 echo.
 
 REM ── [4/5] Commit ────────────────────────────────────────────────────
+REM Nothing is asked. The message is whatever was passed on the command line
+REM (deploy.bat "Fix the audit filter"), else "Deploy <date> <time>" — a real
+REM message is a thing you write in a commit, not at a prompt that blocks a
+REM deploy you already decided to run.
 echo === [4/5] Commit ===
+set "MSG=%~1"
+if "!MSG!"=="" set "MSG=Deploy %DATE% %TIME:~0,5%"
 git add -A
 git status --short
 git diff --cached --quiet
 if errorlevel 1 (
-    set /p MSG="Commit message [Deploy]: "
-    if "!MSG!"=="" set MSG=Deploy
+    echo Committing: !MSG!
     git commit -m "!MSG!"
     if errorlevel 1 ( echo Commit failed. & pause & exit /b 1 )
 ) else (
@@ -130,4 +140,8 @@ echo  .env.example set for Production, and the production
 echo  /auth/callback URL added to the Google / Microsoft
 echo  OAuth client, or sign-in will fail.
 echo ========================================
-pause
+echo.
+REM Not a prompt - the window just stays up long enough to read. It closes on
+REM its own, or on any key. Only FAILURES pause and wait, because those you
+REM have to read.
+timeout /t 20

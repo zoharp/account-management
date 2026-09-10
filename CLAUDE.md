@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.5.0`
+- **App:** `0.6.0`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v0.md`](docs/changelog/CHANGELOG-v0.md) (long form) and
@@ -204,7 +204,7 @@ the server need it, while `src/lib/orcanos.ts` reaches `decryptSecret`.
 | File | What it does |
 |---|---|
 | `run_dev.bat` | Frees port 3100, creates + opens `.env.local` if absent (and stops — the app cannot start without it), installs deps on first run, `npm run dev` in the foreground so Ctrl+C works |
-| `deploy.bat` | typecheck → `next build` → commit → fetch → push. The build gate runs **before** the commit prompt, so a broken build never reaches a red Vercel deploy. **There is no confirmation prompt** — running the script is the approval. If the remote is ahead it rebases first and then **re-runs typecheck and build**, because after a rebase the thing being deployed is no longer what was built; a conflict aborts cleanly and pushes nothing. |
+| `deploy.bat` | typecheck → `next build` → commit → fetch → push. **It asks nothing at all** — running the script is the approval, and the typecheck/build gates are what protect production. The commit message comes from the command line (`deploy.bat "Fix audit filter"`) or defaults to `Deploy <date> <time>`. Only a *failure* stops and waits; success ends on a 20-second `timeout` so a double-clicked window stays readable without blocking. If the remote is ahead it rebases first and then **re-runs typecheck and build**, because after a rebase the thing being deployed is no longer what was built; a conflict aborts cleanly and pushes nothing. |
 
 Same shape as the `run_dev.bat` / `deploy.bat` pair in the traceability-matrix
 project. Don't add scripts for things `npm` already does — the `.bat` files
@@ -414,6 +414,14 @@ it saves you:
 - **A write follows the row it was read from.** `listTraceAccounts()` tags every row with its
   region and `saveTraceAccount()` routes on that tag — callers never pass a region, so they
   cannot pass the wrong one. A row with no tag is refused.
+- **`POST /api/accounts/move` has two response shapes, and `res.ok` is not the verdict.** Anything
+  decidable before the first write is ordinary JSON with a status code; once the move starts the
+  response is **NDJSON** (`Content-Type: application/x-ndjson`) streaming one line per step, and the
+  result is the terminal `done`/`failed` line — the transport is 200 either way, because a status
+  code cannot be changed after the first byte is flushed. A caller that checks `res.ok` and returns
+  will report a failed move as a success. A stream that ends with **no** terminal line is the
+  timeout case and must not be re-run blindly: that is how a tenant ends up in both regions. Step
+  keys live in `lib/move-steps.ts` (client-safe) and must match the ones the route emits.
 - **The value is immutable.** `PATCH /api/accounts/:id` answers 400. Changing it moves no data; it
   only records the account as living somewhere it does not, which is worse than the original error.
 
@@ -490,8 +498,11 @@ calls. Until `TRACE_API_URL_EU` is set, `POST /api/accounts` refuses `region: 'e
     licensed, so blocking its save would lock the dialog for most tenants.
     Combined with `running_schema` being unusable from Vercel (see
     *Provisioning* above), Ask Paul currently **cannot be licensed at creation
-    time**: create the account, add the DB under Edit → Vector DB, then use the
-    pill.
+    time**: create the account, add the DB on the account window's **Ask Paul**
+    tab (*Vector DB*), then use the pill. Since 0.6.0 all four Ask Paul controls —
+    licence, kill switch, database, delete — are on that one tab; before it, the
+    licence was inside the Traceability dialog and the database under
+    *Account & databases*, which is why this note used to name two screens.
 12. **The traceability `account_access` row is what makes a tenant exist**, and a
     module licence is just a column on it. No row means the tenant cannot sign in
     to traceability at all — the list renders that as a dash, which is *no answer
@@ -511,7 +522,8 @@ calls. Until `TRACE_API_URL_EU` is set, `POST /api/accounts` refuses `region: 'e
     `traceTenantForAccount()` (`lib/orcanos-url.ts`, client-safe) returns how it
     decided; the create form shows it and the audit event records `tenant_from`.
     An account with **no** Orcanos API URL therefore has no tenant and its
-    Traceability/Training pills stay disabled — set the URL under Edit. The real
+    Traceability/Training pills stay disabled — set the URL on the **Orcanos**
+    tab, which shows the tenant it derives and flags the fallback. The real
     fix is an `accounts.orcanos_tenant` column (flagged in `lib/modules.ts`).
 
 13. **The login screen's failure message is deliberately useless.** Every path

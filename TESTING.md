@@ -174,7 +174,8 @@ tenant*, which means it cannot sign in to traceability at all. It is not "off".
    created (check `/admin`).
 4. **No tenant, no licence.** An account with no `orcanos_api_url` shows `–` and
    both pills stay **disabled**, tooltip *"No Orcanos tenant on this
-   account"*. Set the Orcanos REST URL under Edit, reload — the pills become
+   account"*. Set the Orcanos REST URL on the account window's **Orcanos** tab,
+   reload — the pills become
    clickable. (This is the covaris case that prompted 0.3.3.)
 5. **Creation always writes the row.** Create an account with **every module
    unticked**. A row must appear on the trace `/admin` page with all three

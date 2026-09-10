@@ -1,5 +1,32 @@
 [
   {
+    "version": "0.6.0",
+    "date": "2026-09-10",
+    "changes": [
+      "✨ **The account window is now one tab per system, not one per table.** Ask Paul and traceability are two different applications, and their settings were interleaved by where each value happened to be stored — Ask Paul's licence sat inside Traceability, while its database and on/off switch sat under “Account & databases”. There are now six tabs: Overview, Orcanos, Traceability, **Ask Paul**, **LLM** and Spend, each one thing you can think about without knowing the storage layout.",
+      "✨ **A new LLM tab shows both AI configurations together** — traceability's own provider, model and key, and the Ask Paul key that drives QMS AI's chat. They were at opposite ends of the window, which made it easy to miss that a customer runs one model in one app and something else in the other.",
+      "✨ **Spend now holds both ledgers.** The traceability AI cost used to be at the bottom of a settings dialog, where nobody looks for a number. The two stay listed separately rather than summed — one is a lifetime counter, the other a total over the events shown, so a combined figure would mean nothing.",
+      "✨ **Moving an account to another region is behind a button.** It happens once in an account's life, if ever, and it was the largest block on the first tab you land on — a red warning and a type-the-name box, making a routine screen look dangerous and the actual danger look ordinary.",
+      "✨ **Delete moved to the Ask Paul tab, where it says what it destroys**, and is collapsed until asked for. It removes the master account record — the Ask Paul account, its database credentials, its key and its sign-in methods — and never touches the traceability tenant, a distinction the old Danger zone on Overview did not draw.",
+      "📝 **The direct SQL Server section now says what it is for.** It is a read-only connection to the customer's own Orcanos database, and nothing on the platform reads it — both apps go through the Orcanos REST API instead. It is collapsed when empty and labelled, rather than looking like a required step that was skipped.",
+      "📝 **The Orcanos tab shows which tenant the API URL resolves to**, and warns when there is no URL and the tenant is being guessed from the account name — that tenant is what every module licence is keyed on."
+    ]
+  },
+  {
+    "version": "0.5.2",
+    "date": "2026-09-10",
+    "changes": [
+      "✨ **A region move now shows its progress while it runs.** The seven steps appear as soon as the confirmation is typed — so the plan is readable before the move is authorised — and each one is ticked off as the server passes it, with the row counts it actually moved. Previously the button said \"Moving…\" for several minutes and reported everything only at the end. There is no percentage bar: the export, import and purge are each a single call to a regional instance that reports no fraction, and an invented bar on an operation that ends in a delete invites someone to decide it is stuck and reload."
+    ]
+  },
+  {
+    "version": "0.5.1",
+    "date": "2026-09-10",
+    "changes": [
+      "🐛 **The account window's tabs are no longer clipped.** On a tab whose content was taller than the window, the tab strip was squeezed to a sliver — labels cut in half, with a scrollbar of their own. The strip now keeps its height and the tab content scrolls, as intended."
+    ]
+  },
+  {
     "version": "0.5.0",
     "date": "2026-09-10",
     "changes": [
