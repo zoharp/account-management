@@ -1,6 +1,6 @@
 # `docs/platform/` — wider than this app
 
-Five documents that are **not about `account-management` specifically**. They describe the
+Six documents that are **not about `account-management` specifically**. They describe the
 platform the four Orcanos projects are being consolidated into, and they live here because this
 repo is the consolidation's first landing point — and because the folder above it is not a git
 repo, so anything left there was tracked by nothing.
@@ -14,6 +14,7 @@ used to read `../PLATFORM_AUTH.md` now read `docs/platform/PLATFORM_AUTH.md`.
 | [`CHANGES-2026-09-09-REGIONS.md`](CHANGES-2026-09-09-REGIONS.md) | **Change file — data residency (EU / US).** What changed across all three repos on 2026-09-09/10 and why: one Traceability deployment per region, the `account_region` signpost, the automatic login hand-off, tenant migration between regions, region-aware Ask Paul provisioning, the admin-console hardening that came with it — and, most importantly, the list of what is **not** residency yet. The handbook was updated from this file | Before telling any customer or auditor what our EU story is; before standing up a new region |
 | [`PLATFORM_AUTH.md`](PLATFORM_AUTH.md) | **As-built.** How authentication actually works across all five projects — the master `users` table, the shared HS256 JWT, where `QW_Login` is and isn't used — plus the proposal to add tenant membership and fold Orcanos login into one session model. §5 carries the decisions taken 2026-08-28 | Before touching `lib/session.ts`, `lib/login.ts` or anything under `api/auth/` |
 | [`PLATFORM_MODULES_PROPOSAL.md`](PLATFORM_MODULES_PROPOSAL.md) | **Proposal — nothing implemented.** The module portal: per-module licensing, and adding Training Management to traceability-matrix as a module rather than a panel type. §3.3 and D4 depend on `PLATFORM_AUTH.md`. Its intended destination is the `traceability-matrix` repo, not this one | Consolidation and licensing questions |
+| [`PLATFORM_ONE_LLM_PROPOSAL.md`](PLATFORM_ONE_LLM_PROPOSAL.md) | **Proposal — nothing implemented.** One chat LLM per account, obeyed by both Traceability and Ask Paul, managed from this console with each app's own admin page kept as a co-equal writer. Carries the `engine` → `(provider, model)` map, the master schema migration, the endpoint contracts including traceability's write-back, and the reasons the embedding model and the two lower override layers stay out of it. Spans all three repos, so none of them owns it | Before touching `LlmPanel.tsx`, `account_llm_keys`, `ai_config` or `account_keys.py`; when asked why the two apps can run different models |
 | [`SOURCE_PROJECTS.md`](SOURCE_PROJECTS.md) | **Reference snapshot.** What each of the four source projects is, how it is built, what they have in common, and the consolidation questions still open. Was the workspace `CLAUDE.md` | Getting oriented across the four projects |
 
 ## A caution about the last one

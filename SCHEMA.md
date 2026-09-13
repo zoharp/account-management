@@ -35,7 +35,7 @@ One row per customer. The column groups matter more than the individual names:
 
 | Group | Columns | Purpose |
 |---|---|---|
-| Identity | `id` (uuid), `account_name`, `is_active`, `created_at`, `updated_at` | `account_name` is matched **case-insensitively** everywhere — `accountCiFilter()` in `lib/supabase.ts`, a PostgREST `ilike` with `%`, `_` and `\` escaped. |
+| Identity | `id` (uuid), `account_name`, `is_active`, `created_at`, `updated_at` | `account_name` is matched **case-insensitively** everywhere — `accountCiFilter()` in `lib/supabase.ts`, a PostgREST `ilike` with `%`, `_` and `\` escaped — and is **unique on `lower(account_name)`**, `sql/004_account_name_unique.sql`. See below. |
 | **Residency** | `region` | `'us'` or `'eu'`, `not null default 'us'`, CHECK-constrained. **Owned by this app** — `sql/003_account_region.sql`. See below. |
 | Legacy DB pair | `db_type`, `db_host`, `db_name`, `db_user`, `db_password_encrypted`, `connection_string` | Still read on some QMS paths. Kept in sync with the vector pair. **Four of these are NOT NULL — see below.** |
 | Vector DB | `vector_db_type`, `vector_db_host`, `vector_db_name`, `vector_db_user`, `vector_db_password_encrypted`, `vector_connection_string` | The account's own provisioned Supabase project. `vector_db_password_encrypted` holds its `service_role` key. |
@@ -65,6 +65,34 @@ Three rules that are easy to break:
    is a hand-run transaction. Worked example, with what was and was not updated:
    [CLAUDE.md](CLAUDE.md) → *Current state* (2026-08-29) and
    [INTERNAL_TRACE_MERGE.md §6.1](INTERNAL_TRACE_MERGE.md#61-account_name-was-renamed-to-the-tenant-2026-08-29).
+
+### `account_name` is unique, and the index is the only check that counts
+
+`accounts_account_name_lower_key` — a unique index on `lower(account_name)`,
+`sql/004_account_name_unique.sql`. Three checks refuse a duplicate name and only
+this one cannot race:
+
+| Where | What it does |
+|---|---|
+| `CreateAccountModal` | Greys out **Create** and explains, matching master account names *and* traceability tenants. A convenience — it is comparing a list the browser loaded some time ago. |
+| `POST /api/accounts` | 409 on an existing `accounts` row, and 409 on an **in-flight `account_provisioning` job** for the same name. |
+| The index | Refuses the INSERT. |
+
+The API checks then inserts, and on the provisioning path those two are *minutes*
+apart — the name is checked when the job starts, the row is written by
+`tickSavingAccount` once the Supabase project is healthy. That is why the
+in-flight-job check exists (nothing else marks the name as taken during the gap)
+and why the index exists (the gap cannot be closed in application code). Both
+insert sites treat a `23505` as "already exists": the route answers 409, and
+`tickSavingAccount` fails the job with a message naming the orphaned Supabase
+project, because that project is real and billed and only an operator can decide
+what happens to it. `isUniqueViolation()` in `lib/supabase.ts` is the detector.
+
+Uniqueness is *case-insensitive* because every reader is. Two rows differing only
+in case would be indistinguishable to `accountCiFilter()`, and since
+`account_name` is an FK-less text key in five tables (rule 3 above), every one of
+those lookups takes `rows[0]` — arbitrarily one tenant's LLM key, auth config or
+usage read against the other's account.
 
 `GET /api/accounts/:id` returns an explicit column allow-list containing **zero**
 `*_encrypted` columns. Check any column you add against that list.

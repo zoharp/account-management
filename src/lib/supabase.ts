@@ -92,6 +92,18 @@ export async function pgRpc<T = unknown[]>(fn: string, args: unknown = {}): Prom
 }
 
 /**
+ * Did this failure come from a unique index?
+ *
+ * PostgREST answers 409 and puts the Postgres SQLSTATE in the JSON body, which
+ * `PostgrestError` carries verbatim in its message. Used to turn the race that
+ * `accounts_account_name_lower_key` catches (sql/004) into the same "already
+ * exists" answer the pre-check gives, instead of a raw 409 from the database.
+ */
+export function isUniqueViolation(e: unknown): boolean {
+  return e instanceof PostgrestError && e.status === 409 && /23505/.test(e.message);
+}
+
+/**
  * Case-insensitive `account_name` filter — port of `account_ci_filter()` in
  * `backend/account_keys.py`. Escapes the LIKE metacharacters so an account
  * named `a_b` cannot match `axb`.

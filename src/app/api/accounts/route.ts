@@ -7,7 +7,7 @@
  */
 
 import { requirePlatformStaff } from '@/lib/session';
-import { accountCiFilter, pgGet, pgPost, pgRpc } from '@/lib/supabase';
+import { accountCiFilter, isUniqueViolation, pgGet, pgPost, pgRpc } from '@/lib/supabase';
 import { encryptSecret } from '@/lib/crypto';
 import { normalizeOrcanosUrl } from '@/lib/orcanos';
 import { traceTenantForAccount } from '@/lib/orcanos-url';
@@ -127,6 +127,35 @@ export async function POST(req: Request) {
     return Response.json({ detail: `Account '${accountName}' already exists` }, { status: 409 });
   }
 
+  // A name being free in `accounts` is not the same as it being free. On the
+  // provisioning path the `accounts` row is written by `tickSavingAccount`
+  // minutes later, once the Supabase project is healthy — until then the name
+  // is spoken for by a job row and by nothing else. Two operators creating
+  // 'acme' a minute apart would both pass the check above, and the second one
+  // bills a second Supabase project for a row that
+  // `accounts_account_name_lower_key` will then refuse to insert.
+  const inFlight = await pgGet<Array<{ id: string; state: string }>>(
+    `account_provisioning?account_name=${accountCiFilter(accountName)}` +
+      `&state=not.in.(done,error)&select=id,state`,
+  ).catch((e) => {
+    // The table is optional-ish — it postdates the QMS schema and the migration
+    // may not be applied. Losing this check degrades to the old behaviour; it
+    // must not block a create that would otherwise succeed.
+    console.error('[POST /api/accounts] in-flight job lookup failed:', e);
+    return [] as Array<{ id: string; state: string }>;
+  });
+  if (inFlight.length) {
+    return Response.json(
+      {
+        detail:
+          `An account named '${accountName}' is already being provisioned ` +
+          `(job ${inFlight[0].id}, at '${inFlight[0].state}'). Wait for it to finish or fail, ` +
+          `then create the account again if it did not land.`,
+      },
+      { status: 409 },
+    );
+  }
+
   // ── Data residency ──────────────────────────────────────────────────────
   //
   // Absent means 'us', matching the column default and where every account
@@ -240,6 +269,15 @@ export async function POST(req: Request) {
       const inserted = await pgPost<Array<{ id: string; account_name: string }>>('accounts', row);
       created = inserted[0];
     } catch (e) {
+      // The unique index caught what the check above raced with — another
+      // create for the same name landed in between. Same answer as the
+      // pre-check, so the operator sees "already exists" either way.
+      if (isUniqueViolation(e)) {
+        return Response.json(
+          { detail: `Account '${accountName}' already exists` },
+          { status: 409 },
+        );
+      }
       return Response.json(
         { detail: `Could not create the account: ${e instanceof Error ? e.message : String(e)}` },
         { status: 500 },

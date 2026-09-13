@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.6.0`
+- **App:** `0.6.1`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v0.md`](docs/changelog/CHANGELOG-v0.md) (long form) and
@@ -30,7 +30,7 @@ in `release_notes.json` — it ships to the browser verbatim.
 | [`DEPLOYMENT.md`](DEPLOYMENT.md) | Vercel setup, env vars, OAuth redirect URIs, rollback, retiring the QMS panel | Deploying |
 | [`TESTING.md`](TESTING.md) | The manual test plan, and what has genuinely been verified | Before and after any change |
 | [`INTERNAL_TRACE_MERGE.md`](INTERNAL_TRACE_MERGE.md) | **Internal.** The traceability-matrix merge — decisions taken, what is built, every known gap and risk | Touching the merged list, `lib/trace.ts`, `lib/modules.ts` or `api/accounts/trace/*` |
-| [`docs/platform/`](docs/platform/README.md) | **Platform-wide, wider than this app.** [`ORCANOS_AI_INFRASTRUCTURE.md`](docs/platform/ORCANOS_AI_INFRASTRUCTURE.md) — the whole-platform handbook: apps, environments, tenancy, auth, Ask Paul's RAG, caching, cost, LLMs, security, ISO 27001, how we work with Claude Code, skills, CI/CD, IIS, the AWS decision; [`PLATFORM_AUTH.md`](docs/platform/PLATFORM_AUTH.md) — how auth works across all five projects and where it is going; [`PLATFORM_MODULES_PROPOSAL.md`](docs/platform/PLATFORM_MODULES_PROPOSAL.md) — the module portal and per-module licensing; [`SOURCE_PROJECTS.md`](docs/platform/SOURCE_PROJECTS.md) — what the four source projects are | `PLATFORM_AUTH.md` before touching `lib/session.ts`, `lib/login.ts` or `api/auth/*`; the others for consolidation questions |
+| [`docs/platform/`](docs/platform/README.md) | **Platform-wide, wider than this app.** [`ORCANOS_AI_INFRASTRUCTURE.md`](docs/platform/ORCANOS_AI_INFRASTRUCTURE.md) — the whole-platform handbook: apps, environments, tenancy, auth, Ask Paul's RAG, caching, cost, LLMs, security, ISO 27001, how we work with Claude Code, skills, CI/CD, IIS, the AWS decision; [`PLATFORM_AUTH.md`](docs/platform/PLATFORM_AUTH.md) — how auth works across all five projects and where it is going; [`PLATFORM_MODULES_PROPOSAL.md`](docs/platform/PLATFORM_MODULES_PROPOSAL.md) — the module portal and per-module licensing; [`PLATFORM_ONE_LLM_PROPOSAL.md`](docs/platform/PLATFORM_ONE_LLM_PROPOSAL.md) — **proposal**, one chat LLM per account shared by Traceability and Ask Paul, with the `engine` → `(provider, model)` map and why the embedding model stays out of it; [`SOURCE_PROJECTS.md`](docs/platform/SOURCE_PROJECTS.md) — what the four source projects are | `PLATFORM_AUTH.md` before touching `lib/session.ts`, `lib/login.ts` or `api/auth/*`; the others for consolidation questions |
 
 ---
 
@@ -73,7 +73,13 @@ that table first; the screen cannot tell you anything.
    `orcanos_api_url` — `orcanosdemo` — and this sign-in breaks again. The URL is still
    client-supplied to the route; a disabled input is not a boundary.
 
-**No migrations are outstanding.** The first three were applied on 2026-08-29;
+⚠️ **One migration IS outstanding: `sql/004_account_name_unique.sql`** (0.6.1) — the unique index
+on `lower(account_name)`. Until it is applied, duplicate account names are refused by the app but
+not by the database, and the provisioning path's check-then-insert gap stays open (SCHEMA.md §2).
+It **raises rather than half-applies** if master already holds duplicates, naming them; that is a
+hand-run merge across five FK-less tables, so read the migration's header before running it.
+
+**The other four are applied.** The first three were applied on 2026-08-29;
 `sql/003_account_region.sql` on **2026-09-10** — `accounts.region` is live, `text not null default
 'us'`, CHECK-constrained to `('us','eu')`, and all four existing accounts (`meesh`, `orca60`,
 `Orcanos`, `orcanosdemo`) read `us`, which is where their data actually is. None can go through

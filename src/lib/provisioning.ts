@@ -35,7 +35,7 @@ import { decryptSecret, encryptSecret, generateDbPassword } from './crypto';
 import { supabaseOrgAccessToken, supabaseOrgId } from './env';
 import { traceTenantForAccount } from './orcanos-url';
 import { coerceRegion, supabaseRegionFor } from './regions';
-import { pgGet, pgPatch, pgPost } from './supabase';
+import { isUniqueViolation, pgGet, pgPatch, pgPost } from './supabase';
 import { upsertRegionDirectory, upsertTraceModules } from './trace';
 import type { DataRegion, ModuleKey, ProvisionState } from './types';
 
@@ -419,8 +419,35 @@ async function tickSavingAccount(job: JobRow): Promise<JobRow> {
     row.orcanos_password_encrypted = body.orcanos_api_password_encrypted;
   }
 
-  const inserted = await pgPost<Array<{ id: string }>>('accounts', row);
-  const account = inserted[0];
+  // The name was checked when this job started — that was before the Supabase
+  // project existed, so minutes ago at least. A database-less create for the
+  // same name in the meantime would land first, and inserting here would give
+  // master two rows that every `account_name` lookup in five FK-less tables
+  // resolves between arbitrarily. `accounts_account_name_lower_key` (sql/004)
+  // refuses the insert; this turns that into a job the operator can read.
+  //
+  // The job fails rather than the account being force-written or silently
+  // merged into the existing row: the Supabase project this job created is real
+  // and billed, and the operator has to decide whether to point the existing
+  // account at it or delete it. Saying so beats either guess.
+  let account: { id: string };
+  try {
+    const inserted = await pgPost<Array<{ id: string }>>('accounts', row);
+    account = inserted[0];
+  } catch (e) {
+    if (isUniqueViolation(e)) {
+      return updateJob(job.id, {
+        state: 'error',
+        message:
+          `An account named '${job.account_name}' was created by someone else while this ` +
+          `job was provisioning, so its row could not be written. The Supabase project ` +
+          `${job.project_ref} was created and is being billed — either attach it to the ` +
+          `existing account (edit it and set the vector database fields) or delete the ` +
+          `project in Supabase.`,
+      });
+    }
+    throw e;
+  }
 
   // The module licences the create form asked for, applied now that the account
   // and its database both exist. They live in the traceability instance, which

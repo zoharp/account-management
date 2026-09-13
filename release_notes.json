@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.6.1",
+    "date": "2026-09-10",
+    "changes": [
+      "🔒 **Two accounts can no longer end up with the same name.** The create form and the API already refused a duplicate, but both check the list and then write — and when a database is being provisioned those two moments are minutes apart, so a second create for the same name could slip through in between. The name is now reserved by the database itself, without regard to case, so the last word belongs to the one place that cannot be raced.",
+      "🔒 **Creating an account whose provisioning is already running is refused, and says so.** Previously the name looked free until the job finished, because the account row is only written at the very end — a second attempt would start a second database for a name that could then never be saved.",
+      "✨ **A provisioning job that loses the race now fails with an explanation instead of a database error**, naming the Supabase project it created so it can be attached to the existing account or removed rather than quietly billed."
+    ]
+  },
+  {
     "version": "0.6.0",
     "date": "2026-09-10",
     "changes": [

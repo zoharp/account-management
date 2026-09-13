@@ -9,6 +9,46 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.6.1** (2026-09-10) — **account names are unique in the database, not just in the code.**
+
+Three checks refused a duplicate account name before this release and every one of them was a
+read followed by a write. `CreateAccountModal` compares against a list the browser loaded at some
+earlier point; `POST /api/accounts` runs an `ilike` lookup and then inserts. Between the lookup
+and the insert there is a window, and **on the provisioning path that window is minutes wide** —
+the name is checked when `startProvisioning` accepts the job, and the `accounts` row is not
+written until `tickSavingAccount` runs, after the Supabase project reports healthy.
+
+So two operators creating `acme` a minute apart both passed. That is not a cosmetic collision.
+`account_name` is a text key with **no foreign key** in five tables — `auth_methods`,
+`account_llm_keys`, `account_usage_logs`, `account_provisioning`, `security_audit_log` — and every
+lookup against it takes `rows[0]`. With two rows, which one that is, is arbitrary: one tenant's
+LLM key, auth configuration and usage can be read against the other tenant's account.
+
+Three changes, one per layer of the gap:
+
+1. **`sql/004_account_name_unique.sql` — a unique index on `lower(account_name)`.** The only check
+   that cannot race. Case-insensitive because every reader already is (`accountCiFilter()` compares
+   with `ilike`), so the database now agrees with the code rather than permitting a pair the code
+   cannot tell apart. ⚠️ **Outstanding — not yet applied to master.** It deliberately `raise`s,
+   naming the offending names, if duplicates already exist: merging them is a hand-run write across
+   those five tables and must not be a migration's side effect.
+2. **`POST /api/accounts` also refuses a name with an in-flight provisioning job.** During that
+   minutes-wide window nothing in `accounts` marks the name as taken — only a job row does. Without
+   this the second operator starts a second Supabase project, is billed for it, and the row it was
+   created for is then refused by the index.
+3. **Both insert sites read `23505` as "already exists".** `isUniqueViolation()` in
+   `lib/supabase.ts` detects it (PostgREST puts the SQLSTATE in the body of its 409). The route
+   answers the same 409 the pre-check would have. `tickSavingAccount` fails the job with a message
+   **naming the orphaned Supabase project** rather than force-writing a row or silently adopting
+   the existing account — that project is real and billed, and only an operator can decide whether
+   to attach it to the account that won or delete it.
+
+The form's greyed-out **Create** button is unchanged and stays a convenience: it tells the operator
+while they are typing rather than after they have filled the whole form in, and it is the only one
+of the three that also compares against traceability tenant names.
+
+---
+
 **0.6.0** (2026-09-10) — **the account window is one tab per system, not one per table.**
 
 0.5.0 put everything about an account behind one door. It divided that door up by **where each
