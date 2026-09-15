@@ -24,7 +24,7 @@ export default function AppShell({
   version,
 }: {
   children: React.ReactNode;
-  active: 'accounts' | 'audit';
+  active: 'accounts' | 'audit' | 'disaster-recovery';
   userEmail: string;
   /** From `appVersion()`, read server-side — see `lib/version.ts`. */
   version: string;
@@ -111,6 +111,12 @@ export default function AppShell({
             className={`app-nav-item ${active === 'audit' ? 'app-nav-item--active' : ''}`}
           >
             Audit log
+          </Link>
+          <Link
+            href="/disaster-recovery"
+            className={`app-nav-item ${active === 'disaster-recovery' ? 'app-nav-item--active' : ''}`}
+          >
+            Disaster recovery
           </Link>
         </nav>
 

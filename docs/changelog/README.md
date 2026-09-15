@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `0.7.0` | 2026-09-15 | New Disaster recovery screen — per-account Supabase PITR/backup status, read live from the Management API. Status only; no backup/restore pipeline exists yet to act on it. |
 | `0.6.1` | 2026-09-10 | Account names are unique in the database (`lower(account_name)`, `sql/004` — **outstanding**), not only in the app's check-then-write; a create is refused while a job for that name is still provisioning; a job that loses the race fails with the orphaned Supabase project named. |
 | `0.6.0` | 2026-09-10 | The account window re-cut into one tab per system — Overview, Orcanos, Traceability, Ask Paul, LLM, Spend. Ask Paul's licence, switch, database and delete are together at last; both AI configs and both spend ledgers are each on one tab; the region move and delete are collapsed. |
 | `0.5.2` | 2026-09-10 | A region move streams its progress: the seven steps are shown before it is authorised and ticked off as the server passes them. NDJSON response — the verdict is the last line, not the HTTP status. |

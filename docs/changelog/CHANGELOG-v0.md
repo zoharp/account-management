@@ -9,6 +9,27 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.7.0** (2026-09-15) — **a Disaster recovery screen, status-only.**
+
+New nav item, `/disaster-recovery`. It calls the Supabase Management API's
+`GET /v1/projects/{ref}/database/backups` for every account's project (plus the master project,
+derived from `SUPABASE_URL`) and shows PITR enabled/off, the most recent completed backup, and a
+per-project health pill — a gap (PITR off, no backup ever recorded, or a backup older than 26h)
+reads as "Stale" or "At risk" rather than blending into a healthy list.
+
+Deliberately status-only. There is no backup pipeline of our own yet — see
+`Orcanos QMS/design/BACKUP_RECOVERY_PLAN.md`, which treats Supabase PITR as the primary, zero-code
+backup mechanism and a nightly logical dump to GCS as the belt-and-suspenders layer, neither of
+which is built. This screen exists so the gap is visible before anything is built to act on it. A
+restore control is intentionally not part of this cut — restoring is destructive and in-place, and
+needs its own confirmation flow (type the account name to confirm, matching this app's other
+destructive actions) once there is a real restore path to drive, not a mocked one.
+
+Concurrency-limited to 5 simultaneous Management API calls (`mapWithConcurrency` in the route
+handler) so an account list of any size doesn't fan out into a burst that gets rate-limited.
+Per-project failures (a bad ref, a Management API hiccup) are carried in the row rather than
+failing the whole screen — one broken project shows as "Check failed", the rest still render.
+
 **0.6.1** (2026-09-10) — **account names are unique in the database, not just in the code.**
 
 Three checks refused a duplicate account name before this release and every one of them was a

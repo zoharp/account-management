@@ -223,3 +223,21 @@ export interface ProvisionJob {
   created_at: string;
   updated_at: string;
 }
+
+/** One row of the disaster-recovery / backup status screen. See `lib/backups.ts`. */
+export interface BackupStatusRow {
+  /** Stable React key: the account uuid, or `'master'` for the platform project. */
+  key: string;
+  account_name: string;
+  /** True for the one row that is the platform/master Supabase project, not a tenant. */
+  is_master: boolean;
+  region: DataRegion | null;
+  project_ref: string | null;
+  /** False when this account has no Supabase project at all (no `vector_db_host`). */
+  has_project: boolean;
+  available: boolean;
+  pitr_enabled: boolean;
+  last_backup_at: string | null;
+  backup_count: number;
+  error: string | null;
+}

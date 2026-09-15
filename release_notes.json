@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.7.0",
+    "date": "2026-09-15",
+    "changes": [
+      "✨ **A new Disaster recovery screen shows backup status for every account's database**, read live from Supabase's own point-in-time recovery — whether it's enabled, when the last backup completed, and which projects need attention. Status only for now: nothing here triggers a backup or a restore yet."
+    ]
+  },
+  {
     "version": "0.6.1",
     "date": "2026-09-10",
     "changes": [
