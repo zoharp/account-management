@@ -307,7 +307,7 @@ Run once each, by hand, through the Supabase Management API `database/query` rou
 | `sql/003_account_region.sql` | applied 2026-09-10 |
 | `sql/004_account_name_unique.sql` | ⚠️ **outstanding** |
 | `sql/005_iso27001_controls.sql` | applied 2026-09-16 |
-| `sql/006_iso27001_history.sql` | ⚠️ **outstanding** — apply before deploying 0.9.0; saves on the ISO 27001 screen fail without it |
+| `sql/006_iso27001_history.sql` | applied 2026-09-16 |
 
 There is no migration runner here — unlike quiz-management's ledger-backed
 GitHub Actions runner. Revisit that before the next one; five hand-run files with two

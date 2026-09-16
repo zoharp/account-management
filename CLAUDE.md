@@ -77,9 +77,9 @@ that table first; the screen cannot tell you anything.
 
 ✅ **`sql/005_iso27001_controls.sql` applied 2026-09-16** (93 `orcanos-qms` rows verified).
 
-⚠️ **`sql/006_iso27001_history.sql` (0.9.0) is NOT applied yet — apply it BEFORE deploying 0.9.0.**
-Without it the ISO 27001 current view still loads, but run history is unavailable and *every*
-save on a control fails, because the answer is written to `iso27001_control_notes` first.
+✅ **`sql/006_iso27001_history.sql` (0.9.0) applied 2026-09-16** — verified: one `orcanos-qms`
+seed run (2026-09-15, 93 snapshot rows), zero notes. A save on the ISO 27001 screen writes
+`iso27001_control_notes` first, so a master restored to before this date breaks every save.
 
 ⚠️ **orca60 is `region='eu'` but its Supabase project `askpaul-orca60` is in us-east-1**
 (verified 2026-09-16). A region move changes the traceability row, not the Supabase project. Open

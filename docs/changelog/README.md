@@ -9,7 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
-| `0.9.0` | 2026-09-16 | ISO 27001 screen: system selector (Ask Paul, Traceability), saved audit runs with per-run snapshots and change-vs-previous, ledger import, append-only answer history. `sql/006` — **outstanding**. `compliance-audit` skill moved into this repo. |
+| `0.9.0` | 2026-09-16 | ISO 27001 screen: system selector (Ask Paul, Traceability), saved audit runs with per-run snapshots and change-vs-previous, ledger import, append-only answer history. `sql/006` applied 2026-09-16. `compliance-audit` skill moved into this repo. |
 | `0.8.0` | 2026-09-16 | BOM module licence (`account_access.allow_bom`, traceability-matrix 3.46.0) — pill, Traceability-tab tick, create-form tick, overview state. Opt-in: absent reads as OFF, the inverse of every other module; writes refused on an instance without the column. |
 | `0.7.0` | 2026-09-15 | New Disaster recovery screen — per-account Supabase PITR/backup status, read live from the Management API. Status only; no backup/restore pipeline exists yet to act on it. |
 | `0.6.1` | 2026-09-10 | Account names are unique in the database (`lower(account_name)`, `sql/004` — **outstanding**), not only in the app's check-then-write; a create is refused while a job for that name is still provisioning; a job that loses the race fails with the orphaned Supabase project named. |
