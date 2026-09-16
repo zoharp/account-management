@@ -720,6 +720,30 @@ button {
   color: var(--text-muted);
 }
 
+.acl-textarea {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s;
+  font-family: inherit;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  resize: vertical;
+}
+
+.acl-textarea:focus {
+  border-color: var(--accent-primary);
+}
+
+.acl-textarea:disabled {
+  background: var(--bg-subtle);
+  color: var(--text-muted);
+}
+
 /* A value that is rejected before it is submitted — a duplicate account name.
  * Kept on focus too, since the field is where the fix is made. */
 .acl-input[aria-invalid='true'],

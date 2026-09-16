@@ -72,6 +72,12 @@ export const AUDIT_EVENT_GROUPS: readonly AuditEventGroup[] = [
     hint: 'Platform users and repository membership. Written by QMS.',
     types: ['user_deleted', 'repo_member_added', 'repo_member_updated', 'repo_member_removed'],
   },
+  {
+    key: 'compliance',
+    label: 'Compliance',
+    hint: 'ISO 27001 control findings answered or closed out.',
+    types: ['iso27001_control_resolved'],
+  },
 ];
 
 /** Every catalogued type, flattened. */

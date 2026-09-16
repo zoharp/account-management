@@ -224,6 +224,41 @@ export interface ProvisionJob {
   updated_at: string;
 }
 
+/** ISO 27001 Annex A control status themes, in display order. */
+export type Iso27001Theme = 'Organizational' | 'People' | 'Physical' | 'Technological';
+
+/** Automated scan status, from the `compliance-audit` Claude skill's check registry. */
+export type Iso27001Status = 'pass' | 'partial' | 'fail' | 'blocked' | 'not_applicable';
+
+/** One row of `iso27001_controls` — see `sql/005_iso27001_controls.sql`. */
+export interface Iso27001ControlRow {
+  id: string;
+  system_name: string;
+  control_id: string;
+  title: string;
+  theme: Iso27001Theme;
+  status: Iso27001Status;
+  check_ids: string[];
+  evidence: string | null;
+  last_checked: string | null;
+
+  resolved: boolean;
+  resolution_answer: string | null;
+  resolution_evidence_link: string | null;
+  resolved_status: Iso27001Status | null;
+  resolved_by: number | null;
+  resolved_at: string | null;
+
+  created_at: string;
+  updated_at: string;
+}
+
+/** One system the ISO 27001 screen can show controls for. */
+export interface Iso27001System {
+  key: string;
+  label: string;
+}
+
 /** One row of the disaster-recovery / backup status screen. See `lib/backups.ts`. */
 export interface BackupStatusRow {
   /** Stable React key: the account uuid, or `'master'` for the platform project. */
