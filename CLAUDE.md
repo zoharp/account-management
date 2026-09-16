@@ -27,6 +27,8 @@ in `release_notes.json` — it ships to the browser verbatim.
 | [`SCHEMA.md`](SCHEMA.md) | Every table and column touched, with DDL and ownership | Touching the database |
 | [`SECURITY.md`](SECURITY.md) | The gate, encryption contract, SSRF, response headers, audit trail, config risks | Touching auth, secrets or an outbound call |
 | [`SECURITY_AUDIT_2026-08-29.md`](SECURITY_AUDIT_2026-08-29.md) | The last full security review — findings with evidence, what was verified sound, what is still open | Before shipping auth or secret-handling work; when asked what the security posture is |
+| [`docs/compliance/ISO27001.md`](docs/compliance/ISO27001.md) | This app's Annex A mapping, open gaps, evidence pack; how the ISO 27001 screen and `iso27001_controls` work | Asked about compliance posture; touching `/iso27001` or `api/iso27001/*` |
+| [`docs/compliance/DISASTER_RECOVERY.md`](docs/compliance/DISASTER_RECOVERY.md) | Asset inventory, **verified** backup posture, RPO/RTO, runbooks per failure, key escrow, drill log; how the DR screen decides its verdicts | Something is lost or corrupted; touching `/disaster-recovery` or `lib/backups.ts` |
 | [`DEPLOYMENT.md`](DEPLOYMENT.md) | Vercel setup, env vars, OAuth redirect URIs, rollback, retiring the QMS panel | Deploying |
 | [`TESTING.md`](TESTING.md) | The manual test plan, and what has genuinely been verified | Before and after any change |
 | [`INTERNAL_TRACE_MERGE.md`](INTERNAL_TRACE_MERGE.md) | **Internal.** The traceability-matrix merge — decisions taken, what is built, every known gap and risk | Touching the merged list, `lib/trace.ts`, `lib/modules.ts` or `api/accounts/trace/*` |
@@ -73,7 +75,18 @@ that table first; the screen cannot tell you anything.
    `orcanos_api_url` — `orcanosdemo` — and this sign-in breaks again. The URL is still
    client-supplied to the route; a disabled input is not a boundary.
 
-⚠️ **One migration IS outstanding: `sql/004_account_name_unique.sql`** (0.6.1) — the unique index
+⚠️ **`sql/005_iso27001_controls.sql` is NOT applied — verified 2026-09-16.** The ISO 27001
+screen was deployed (commit `400360d`) without it, so `/iso27001` shows *Could not load* in
+production. Apply it the same way as the others below.
+
+⚠️ **orca60 is `region='eu'` but its Supabase project `askpaul-orca60` is in us-east-1**
+(verified 2026-09-16). A region move changes the traceability row, not the Supabase project. Open
+decision, recorded in [DISASTER_RECOVERY.md §3.3](docs/compliance/DISASTER_RECOVERY.md#33-finding-orca60-is-eu-in-master-its-database-is-in-the-us).
+
+⚠️ **PITR is off on every Supabase project, including master** — daily backups only, never
+restored. The DR screen showing everything *At risk* is correct, not a bug.
+
+⚠️ **Another migration is outstanding: `sql/004_account_name_unique.sql`** (0.6.1) — the unique index
 on `lower(account_name)`. Until it is applied, duplicate account names are refused by the app but
 not by the database, and the provisioning path's check-then-insert gap stays open (SCHEMA.md §2).
 It **raises rather than half-applies** if master already holds duplicates, naming them; that is a

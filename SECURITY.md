@@ -11,6 +11,10 @@ of them are deliberately stricter than the QMS panel they were extracted from.
 - [SECURITY_AUDIT_2026-08-29.md](SECURITY_AUDIT_2026-08-29.md) — the last full review: findings,
   what was verified sound, what is still open. This file says what the controls *are*; that one
   says how well they held.
+- [docs/compliance/ISO27001.md](docs/compliance/ISO27001.md) — these controls mapped to Annex A,
+  with the gaps
+- [docs/compliance/DISASTER_RECOVERY.md](docs/compliance/DISASTER_RECOVERY.md) — backup, restore
+  and credential-compromise runbooks
 
 ---
 
@@ -242,6 +246,7 @@ too, since both apps append to the one table.
 | **Secrets & keys** | `account_credentials_tested` · `orcanos_login_tested` · `trace_ai_config_changed` · `trace_ai_key_tested` · `llm_key_set` · `llm_key_revealed` · `llm_key_deleted` · `auth_methods_updated` | both |
 | **Provisioning** | `account_provisioning_started` · `account_provisioning_failed` | this app |
 | **Users & access** | `user_deleted` · `repo_member_added` / `_updated` / `_removed` | QMS |
+| **Compliance** | `iso27001_control_resolved` | this app |
 
 Two properties worth preserving:
 

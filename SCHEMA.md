@@ -274,6 +274,7 @@ Events this app writes:
 | `orcanos_login_tested` | `POST /api/orcanos/test-login` — decrypts the saved Orcanos password when none is typed |
 | `account_credentials_tested` | `POST /api/accounts/[id]/test-connections` (stored, decrypted) and `POST /api/accounts/test-connection` (`stored: false`, typed) |
 | `trace_ai_key_tested` | `POST /api/accounts/trace/[tenant]/ai-config/test` — uses the tenant's stored AI key when the field is blank |
+| `iso27001_control_resolved` | `PATCH /api/iso27001/[id]` — group *Compliance* |
 
 Grouping for the Audit log page's filter is defined in `lib/audit-events.ts`,
 which also covers the event types QMS writes to this same table.
@@ -296,18 +297,51 @@ plain `bigint` holding the master `users.id`. See QMS `SCHEMA.md` §17.
 
 ## 7. Migrations
 
-Two files so far, each run once, by hand, in the master Supabase SQL editor:
+Run once each, by hand, through the Supabase Management API `database/query` route (see
+[CLAUDE.md](CLAUDE.md) → *Current state*). Every file is `if not exists` and safe to re-run.
 
-```
-sql/001_account_provisioning.sql
-sql/002_orcanos_identity.sql
-```
+| File | State in master |
+|---|---|
+| `sql/001_account_provisioning.sql` | applied 2026-08-29 |
+| `sql/002_orcanos_identity.sql` | applied 2026-08-29 |
+| `sql/003_account_region.sql` | applied 2026-09-10 |
+| `sql/004_account_name_unique.sql` | ⚠️ **outstanding** |
+| `sql/005_iso27001_controls.sql` | ⚠️ **outstanding — verified absent 2026-09-16** (`42P01`); the ISO 27001 screen 500s until it runs |
 
 There is no migration runner here — unlike quiz-management's ledger-backed
-GitHub Actions runner. A couple of additive changes didn't justify one. If a
-third migration ever appears, revisit that.
+GitHub Actions runner. Revisit that before the next one; five hand-run files with two
+forgotten is the argument.
 
-Account creation fails with a clear message until `001` is applied; everything
-else works without it. `POST /api/auth/local/login` 500s on every attempt until
-`002` is applied (the columns it filters on don't exist). A rollback is
+Account creation fails with a clear message until `001` is applied. `POST /api/auth/local/login`
+500s on every attempt until `002` is applied (the columns it filters on don't exist). A rollback is
 commented at the bottom of each file.
+
+After a **master restore** ([docs/compliance/DISASTER_RECOVERY.md §5.2](docs/compliance/DISASTER_RECOVERY.md#52-master-data-corruption-bad-migration-or-accidental-delete)),
+re-run every file applied after the backup's timestamp.
+
+## 8. `iso27001_controls`
+
+**Owned by this app** — `sql/005_iso27001_controls.sql`. ISO/IEC 27001:2022 Annex A status per
+*internal system* (not per customer), seeded from the `compliance-audit` skill's ledger. How the
+screen uses it: [docs/compliance/ISO27001.md §5](docs/compliance/ISO27001.md#5-the-iso-27001-audit-screen).
+
+| Column | Type | Written by | Notes |
+|---|---|---|---|
+| `id` | uuid pk | default | |
+| `system_name` | text not null | seed | Key from `lib/iso27001-systems.ts`, e.g. `orcanos-qms` |
+| `control_id` | text not null | seed | `A.5.1` … `A.8.34`. **Sorts lexically in PostgREST** — the route re-sorts numerically |
+| `title`, `theme` | text not null | seed | Theme: Organizational / People / Physical / Technological |
+| `status` | text not null | seed / import **only** | pass · partial · fail · blocked · not_applicable. Never written by the app |
+| `check_ids` | jsonb `[]` | seed | Skill check ids behind the status |
+| `evidence` | text | seed | Automated finding text |
+| `last_checked` | date | seed | |
+| `resolved` | bool not null default false | `PATCH /api/iso27001/[id]` | |
+| `resolution_answer` | text | PATCH | Required on resolve |
+| `resolution_evidence_link` | text | PATCH | http(s) only |
+| `resolved_status` | text | PATCH | Operator's asserted status, independent of `status` |
+| `resolved_by` | bigint | PATCH | master `users.id`, no FK |
+| `resolved_at`, `created_at`, `updated_at` | timestamptz | PATCH / default | |
+
+Unique on `(system_name, control_id)`; index on `(system_name, status)`. The seed uses
+`on conflict do nothing`, so **it cannot be used to load a newer skill run** — that needs an upsert
+that updates the automated columns and leaves the resolution columns alone.
