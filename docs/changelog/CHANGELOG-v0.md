@@ -9,6 +9,36 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.9.0** (2026-09-16) — **ISO 27001 audits per system, with history.**
+
+Also records the ISO 27001 screen itself (commit `400360d`), which shipped with no version or
+release note.
+
+**Two systems.** `ISO27001_SYSTEMS` gains `traceability-matrix`; `orcanos-qms` is labelled Ask Paul.
+The screen has a system selector. A system never audited shows how to get its first run in.
+
+**Runs are kept (`sql/006_iso27001_history.sql`).** `iso27001_audit_runs` + `iso27001_run_controls`
+hold each imported run and its full control list, immutable. `POST /api/iso27001/runs` validates a
+skill `ledger.json` all-or-nothing (`parseLedger`), writes the run and snapshot (deleting the run
+again if the snapshot fails), then upserts only the automated columns of `iso27001_controls`
+(`pgUpsert`, `merge-duplicates`) — a resolution column is never in the payload, so an import cannot
+touch an answer. `iso27001_run_imported` is audited. The screen can open any past run read-only and
+marks each control whose status differs from the run before.
+
+**Answers are kept.** `PATCH /api/iso27001/:id` appends to `iso27001_control_notes` *before*
+updating the current row, so the row can never hold an answer the history lacks. `resolved: false`
+is now sent by the dialog (*Save comment* / *Reopen with comment*). The migration backfills 005's
+seed as the first Ask Paul run.
+
+**The `compliance-audit` skill moved into this repo** (`.claude/skills/compliance-audit`), with
+per-system scope, ledger and report under `compliance/systems/<key>/`. The Ask Paul ledger was
+copied from `Orcanos QMS/compliance/` and given the `evidence` field the import needs.
+
+⚠️ **Deploy order: apply `sql/006` first.** Without it the current view still loads, but run
+history is unavailable and every save fails (the note insert is required).
+
+---
+
 **0.8.0** (2026-09-16) — **BOM, the fourth licensable module.**
 
 traceability-matrix 3.46.0 merged the standalone Covaris BOM viewer in as a module, licensed by a

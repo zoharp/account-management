@@ -1,0 +1,17 @@
+system_key: orcanos-qms
+system_name: "Ask Paul (Orcanos QMS)"
+repo_path: "C:/AI Projects/Orcanos QMS"
+github_repo: zoharp/orcanos_qms_AI
+frameworks: [iso27001-2022]
+connectors:
+  code: true
+  supabase: true
+  fly: false        # backend deploys to Cloud Run (cloudbuild.yaml), not Fly.io
+  vercel: true      # frontend host — blocked until VERCEL_API_TOKEN is set
+  pentest: true     # static/config only
+credentials:
+  supabase_management_token_env: SUPABASE_ORG_ACCESS_TOKEN
+  supabase_url_env: SUPABASE_URL          # project ref parsed from this
+  vercel_api_token_env: VERCEL_API_TOKEN
+# Moved from Orcanos QMS/compliance/ on 2026-09-16. The 2026-09-15 ledger there is the
+# run already loaded into the platform as this system's first run (sql/006 backfill).

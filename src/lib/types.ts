@@ -255,6 +255,46 @@ export interface Iso27001ControlRow {
   updated_at: string;
 }
 
+/** One imported `compliance-audit` run — `iso27001_audit_runs`, sql/006. Immutable. */
+export interface Iso27001AuditRun {
+  id: string;
+  system_name: string;
+  framework: string;
+  run_date: string;
+  source: 'seed' | 'import' | string;
+  imported_by: number | null;
+  imported_by_email: string | null;
+  control_count: number;
+  summary: Partial<Record<Iso27001Status, number>>;
+  created_at: string;
+}
+
+/** A control as one run saw it — `iso27001_run_controls`, sql/006. */
+export interface Iso27001RunControl {
+  run_id: string;
+  control_id: string;
+  title: string;
+  theme: Iso27001Theme;
+  status: Iso27001Status;
+  check_ids: string[];
+  evidence: string | null;
+}
+
+/** One saved operator answer — `iso27001_control_notes`, sql/006. Append-only. */
+export interface Iso27001ControlNote {
+  id: string;
+  system_name: string;
+  control_id: string;
+  run_id: string | null;
+  answer: string;
+  evidence_link: string | null;
+  asserted_status: Iso27001Status | null;
+  resolved: boolean;
+  author_id: number | null;
+  author_email: string | null;
+  created_at: string;
+}
+
 /** One system the ISO 27001 screen can show controls for. */
 export interface Iso27001System {
   key: string;

@@ -59,6 +59,23 @@ export async function pgPost<T = unknown[]>(path: string, body: unknown): Promis
   return parse<T>(res);
 }
 
+/**
+ * Upsert rows on the unique index named by `onConflict`. Only the columns
+ * present in `body` are written on conflict — every other column keeps its
+ * value, which is what lets an import refresh automated fields without
+ * touching a human's resolution.
+ */
+export async function pgUpsert(path: string, onConflict: string, body: unknown): Promise<void> {
+  const sep = path.includes('?') ? '&' : '?';
+  const res = await fetch(`${supabaseUrl()}/rest/v1/${path}${sep}on_conflict=${encodeURIComponent(onConflict)}`, {
+    method: 'POST',
+    headers: headers({ Prefer: 'resolution=merge-duplicates,return=minimal' }),
+    body: JSON.stringify(body),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new PostgrestError(res.status, await res.text());
+}
+
 /** PATCH rows matched by the filter in `path`. Returns the updated representation. */
 export async function pgPatch<T = unknown[]>(path: string, body: unknown): Promise<T> {
   const res = await fetch(`${supabaseUrl()}/rest/v1/${path}`, {

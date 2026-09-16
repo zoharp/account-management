@@ -1,0 +1,221 @@
+# Check catalog — the actual work items an audit run performs. Each check is
+# connector-scoped and framework-agnostic: it satisfies whichever controls list it
+# in controls/<framework>.yaml. Adding SOC2 later means adding soc2 control_ids to
+# these SAME checks, not duplicating the checks themselves.
+#
+# type:
+#   automated   — an agent can determine pass/fail directly from code/API/config
+#   attestation — no scan can answer this; the user must confirm or hand over evidence
+#
+# See ../connectors/<name>.md for exactly how each automated check is performed.
+
+code.secret_scanning:
+  connector: code
+  type: automated
+  summary: No live credentials committed to git (tracked files or history); .gitignore covers .env*/*.pem/*.key.
+
+code.dependency_vuln_scan:
+  connector: code
+  type: automated
+  summary: Dependency manifests pinned/lockfiled; known-vulnerable versions flagged (pip-audit/npm audit if available, manual CVE spot-check otherwise).
+
+code.static_authz_review:
+  connector: code
+  type: automated
+  summary: Every endpoint that reads/writes tenant or user-scoped data enforces an explicit ownership/membership check — no IDOR-shaped gaps.
+
+code.authentication_review:
+  connector: code
+  type: automated
+  summary: Password hashing algorithm, session/token mechanism and expiry, MFA presence, rate limiting / lockout on auth endpoints.
+
+code.crypto_review:
+  connector: code
+  type: automated
+  summary: Secrets at rest use a real algorithm (not reversible-encoding), keys come from env/secret-manager not hardcoded, TLS assumed/enforced in transit.
+
+code.audit_logging_review:
+  connector: code
+  type: automated
+  summary: Failed auth and admin/permission-changing actions are recorded somewhere queryable, not just stdout.
+
+code.secure_sdlc_review:
+  connector: code
+  type: automated
+  summary: PR review requirement, branch protection, CI gates (tests/build) exist and run on every change.
+
+code.source_code_access_review:
+  connector: code
+  type: attestation
+  summary: Who has read/write access to this repo (org/team membership) — needs a look at the actual GitHub/GitLab team, not just the code.
+
+code.env_separation_review:
+  connector: code
+  type: automated
+  summary: Dev/test/prod use separate credentials and data; no prod secrets reachable from a test config.
+
+code.data_deletion_review:
+  connector: code
+  type: automated
+  summary: Account/user/tenant deletion endpoints actually purge (or explicitly flag what they don't) — no silent orphaned PII.
+
+code.data_masking_review:
+  connector: code
+  type: automated
+  summary: Logs and error responses don't leak secrets, tokens, or PII (no raw exception bodies, no credential values in print/log statements).
+
+code.change_management_review:
+  connector: code
+  type: automated
+  summary: Deploys go through a defined pipeline (build/test/deploy steps in CI config), not ad hoc manual pushes to prod.
+
+supabase.rls_policies:
+  connector: supabase
+  type: automated
+  summary: Row Level Security enabled with real policies on every table reachable by a non-service-role key; service-role key never shipped to a browser client.
+
+supabase.auth_config:
+  connector: supabase
+  type: automated
+  summary: MFA availability/enforcement, password policy, session/JWT expiry, allowed auth providers, allowlist/signup restrictions.
+
+supabase.api_key_management:
+  connector: supabase
+  type: automated
+  summary: anon vs service_role key usage is correctly scoped; rotation is possible; no service key embedded in frontend bundles.
+
+supabase.network_restrictions:
+  connector: supabase
+  type: automated
+  summary: Network restrictions / SSL enforcement on the Postgres connection; public accessibility reviewed.
+
+supabase.backup_pitr:
+  connector: supabase
+  type: automated
+  summary: Backup schedule and/or point-in-time recovery enabled, retention period matches data-criticality.
+
+supabase.audit_logging:
+  connector: supabase
+  type: automated
+  summary: Supabase/Postgres-level audit logging (auth logs, Postgres logs) reviewed for retention and access.
+
+supabase.role_privilege_review:
+  connector: supabase
+  type: automated
+  summary: Database roles/grants follow least privilege — the backend's own service role isn't handed out more broadly than necessary.
+
+fly.secrets_management:
+  connector: fly
+  type: automated
+  status: blocked — needs a Fly.io API token
+  summary: Secrets are set via `fly secrets`, not baked into images or fly.toml; no plaintext secrets in deploy config.
+
+fly.network_firewall:
+  connector: fly
+  type: automated
+  status: blocked — needs a Fly.io API token
+  summary: Network/firewall rules, internal-only services not publicly exposed, TLS termination configured.
+
+fly.machine_image_currency:
+  connector: fly
+  type: automated
+  status: blocked — needs a Fly.io API token
+  summary: Base images/machine sizes reasonably current; no long-unpatched images in production.
+
+vercel.env_var_scoping:
+  connector: vercel
+  type: automated
+  status: blocked — needs a Vercel API token
+  summary: Production vs preview env vars correctly scoped; no server-only secret exposed to client bundles.
+
+vercel.deployment_protection:
+  connector: vercel
+  type: automated
+  status: blocked — needs a Vercel API token
+  summary: Preview deployments gated (password/SSO/Vercel Authentication), team 2FA enforced, domain TLS configured.
+
+vercel.domain_tls:
+  connector: vercel
+  type: automated
+  status: blocked — needs a Vercel API token
+  summary: Custom domains enforce HTTPS/HSTS; no plaintext HTTP fallback.
+
+pentest.auth_flow_abuse:
+  connector: pentest
+  type: automated
+  summary: Login/password-reset/OAuth flows reviewed for rate limiting, lockout, CSRF state param, session fixation — static/config review, not live traffic.
+
+pentest.idor_review:
+  connector: pentest
+  type: automated
+  summary: Cross-tenant/cross-user object reference checks — same method as code.static_authz_review, run adversarially (assume a malicious caller).
+
+pentest.ssrf_review:
+  connector: pentest
+  type: automated
+  summary: Any server-side "fetch this URL" feature guards against private/loopback/link-local/metadata-endpoint targets.
+
+pentest.injection_review:
+  connector: pentest
+  type: automated
+  summary: SQL/command/template injection review on any hand-built query or shell call; XSS review on any raw-HTML-rendering path.
+
+pentest.security_headers:
+  connector: pentest
+  type: automated
+  summary: CORS policy, CSP, HSTS, cookie flags (HttpOnly/Secure/SameSite) reviewed against what's actually served.
+
+pentest.input_validation:
+  connector: pentest
+  type: automated
+  summary: File upload size/type limits, archive-bomb guards, request size limits.
+
+org.policy_coverage:
+  connector: org
+  type: attestation
+  summary: This system is explicitly covered by the org's existing information security policy set (not just covered "in general").
+
+org.roles_responsibilities:
+  connector: org
+  type: attestation
+  summary: Named owner/responsible person for this system's security exists and is documented.
+
+org.asset_inventory:
+  connector: org
+  type: attestation
+  summary: This system (and its data classification) is entered in the org's asset inventory / Statement of Applicability.
+
+org.access_review_cadence:
+  connector: org
+  type: attestation
+  summary: A periodic (e.g. quarterly) access review is scheduled for this system's admin/privileged roles.
+
+org.subprocessor_dpa:
+  connector: org
+  type: attestation
+  summary: DPAs/agreements exist with every third party this system sends customer data to.
+
+org.incident_response_plan:
+  connector: org
+  type: attestation
+  summary: The org's incident response plan explicitly names this system (on-call path, escalation, who gets notified).
+
+org.business_continuity:
+  connector: org
+  type: attestation
+  summary: This system's backup/DR approach has been tested at least once, with evidence (not just configured).
+
+org.legal_regulatory_requirements:
+  connector: org
+  type: attestation
+  summary: Applicable regulatory regimes for this system's data (GDPR/HIPAA/etc.) have been identified and mapped to specific controls.
+
+org.employee_screening_training:
+  connector: org
+  type: attestation
+  summary: Staff with access to this system are covered by the org's existing screening/training/NDA program (inherited pass — just confirm coverage, don't re-derive).
+
+org.physical_security:
+  connector: org
+  type: attestation
+  summary: This system's hosting subprocessor(s) hold current ISO 27001/SOC2 certification covering physical security of their data centers — request the certificate/report as evidence.

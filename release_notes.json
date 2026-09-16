@@ -1,5 +1,14 @@
 [
   {
+    "version": "0.9.0",
+    "date": "2026-09-16",
+    "changes": [
+      "✨ **The ISO 27001 screen now covers Ask Paul and Traceability separately** — pick the system at the top; each has its own controls, runs and answers.",
+      "✨ **Every audit run is kept.** Import a run's ledger file from the screen, then switch between past runs to see what each one found, with the controls that changed since the run before marked.",
+      "✨ **Your answers have a history.** Save a comment without closing a control, or mark it resolved; every save is kept with who wrote it and when, and shown in the control's dialog."
+    ]
+  },
+  {
     "version": "0.8.0",
     "date": "2026-09-16",
     "changes": [

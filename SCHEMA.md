@@ -306,7 +306,8 @@ Run once each, by hand, through the Supabase Management API `database/query` rou
 | `sql/002_orcanos_identity.sql` | applied 2026-08-29 |
 | `sql/003_account_region.sql` | applied 2026-09-10 |
 | `sql/004_account_name_unique.sql` | ⚠️ **outstanding** |
-| `sql/005_iso27001_controls.sql` | ⚠️ **outstanding — verified absent 2026-09-16** (`42P01`); the ISO 27001 screen 500s until it runs |
+| `sql/005_iso27001_controls.sql` | applied 2026-09-16 |
+| `sql/006_iso27001_history.sql` | ⚠️ **outstanding** — apply before deploying 0.9.0; saves on the ISO 27001 screen fail without it |
 
 There is no migration runner here — unlike quiz-management's ledger-backed
 GitHub Actions runner. Revisit that before the next one; five hand-run files with two
@@ -342,6 +343,22 @@ screen uses it: [docs/compliance/ISO27001.md §5](docs/compliance/ISO27001.md#5-
 | `resolved_by` | bigint | PATCH | master `users.id`, no FK |
 | `resolved_at`, `created_at`, `updated_at` | timestamptz | PATCH / default | |
 
-Unique on `(system_name, control_id)`; index on `(system_name, status)`. The seed uses
-`on conflict do nothing`, so **it cannot be used to load a newer skill run** — that needs an upsert
-that updates the automated columns and leaves the resolution columns alone.
+Unique on `(system_name, control_id)`; index on `(system_name, status)`. This is the **current**
+view only. Newer runs arrive through `POST /api/iso27001/runs`, which upserts the automated columns
+(`title`, `theme`, `status`, `check_ids`, `evidence`, `last_checked`) on that unique index and sends
+no resolution column. The `resolution_*`/`resolved*` columns mirror the latest entry of
+`iso27001_control_notes`.
+
+## 9. ISO 27001 history — `iso27001_audit_runs`, `iso27001_run_controls`, `iso27001_control_notes`
+
+**Owned by this app** — `sql/006_iso27001_history.sql`. Nothing in the app updates or deletes a row
+in any of the three.
+
+| Table | One row per | Key columns |
+|---|---|---|
+| `iso27001_audit_runs` | imported skill run, per system | `id` uuid pk · `system_name` · `framework` · `run_date` date (ledger `last_run`) · `source` `seed`/`import` · `imported_by` (users.id, no FK), `imported_by_email` · `control_count` · `summary` jsonb `{status: n}` · `created_at`. Index `(system_name, run_date desc, created_at desc)` |
+| `iso27001_run_controls` | control in a run | pk `(run_id, control_id)`, `run_id` FK → runs **on delete cascade** · `title`, `theme`, `status`, `check_ids`, `evidence` as that run saw them |
+| `iso27001_control_notes` | save in the resolve dialog | `id` uuid pk · `system_name`, `control_id` (not the controls row id) · `run_id` FK → runs on delete set null (current run when written) · `answer` not null · `evidence_link` · `asserted_status` · `resolved` bool · `author_id`, `author_email` · `created_at`. Index `(system_name, control_id, created_at desc)` |
+
+Backfill: 005's `orcanos-qms` seed becomes a `source='seed'` run, and any existing resolution its
+first note. The rollback at the bottom of the file drops all three — export first.

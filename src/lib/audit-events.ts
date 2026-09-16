@@ -75,8 +75,8 @@ export const AUDIT_EVENT_GROUPS: readonly AuditEventGroup[] = [
   {
     key: 'compliance',
     label: 'Compliance',
-    hint: 'ISO 27001 control findings answered or closed out.',
-    types: ['iso27001_control_resolved'],
+    hint: 'ISO 27001 audit runs imported, and control findings answered or closed out.',
+    types: ['iso27001_run_imported', 'iso27001_control_resolved'],
   },
 ];
 

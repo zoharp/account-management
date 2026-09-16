@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.8.0`
+- **App:** `0.9.0`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v0.md`](docs/changelog/CHANGELOG-v0.md) (long form) and
@@ -75,9 +75,11 @@ that table first; the screen cannot tell you anything.
    `orcanos_api_url` — `orcanosdemo` — and this sign-in breaks again. The URL is still
    client-supplied to the route; a disabled input is not a boundary.
 
-⚠️ **`sql/005_iso27001_controls.sql` is NOT applied — verified 2026-09-16.** The ISO 27001
-screen was deployed (commit `400360d`) without it, so `/iso27001` shows *Could not load* in
-production. Apply it the same way as the others below.
+✅ **`sql/005_iso27001_controls.sql` applied 2026-09-16** (93 `orcanos-qms` rows verified).
+
+⚠️ **`sql/006_iso27001_history.sql` (0.9.0) is NOT applied yet — apply it BEFORE deploying 0.9.0.**
+Without it the ISO 27001 current view still loads, but run history is unavailable and *every*
+save on a control fails, because the answer is written to `iso27001_control_notes` first.
 
 ⚠️ **orca60 is `region='eu'` but its Supabase project `askpaul-orca60` is in us-east-1**
 (verified 2026-09-16). A region move changes the traceability row, not the Supabase project. Open

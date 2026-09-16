@@ -1,0 +1,15 @@
+system_key: traceability-matrix
+system_name: "Traceability"
+repo_path: "C:/AI Projects/traceability-matrix"
+github_repo: zoharp/traceability-matrix
+frameworks: [iso27001-2022]
+connectors:
+  code: true
+  supabase: false   # no Supabase — one SQLite file per instance, replicated by Litestream
+  fly: true         # apps traceability-matrix (iad) and traceability-matrix-eu (fra)
+  vercel: false
+  pentest: true     # static/config only
+credentials:
+  fly_api_token_env: FLY_API_TOKEN
+# Also shipped for on-prem Windows/IIS installs (setup_iis.ps1) — those are customer-operated
+# and out of scope for this audit unless the user says otherwise. Never audited yet.
