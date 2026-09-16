@@ -9,6 +9,39 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.8.0** (2026-09-16) — **BOM, the fourth licensable module.**
+
+traceability-matrix 3.46.0 merged the standalone Covaris BOM viewer in as a module, licensed by a
+new `account_access.allow_bom` column. This release manages it here, where module licences now
+live — the same four surfaces as Training: the list pill (`MODULES` in `lib/module-catalog.ts`),
+the Traceability tab tick, the create form tick, and the overview summary.
+
+**It inverts the absent-column rule.** Every other module reads an absent flag as licensed
+(`moduleFlag()`, matching `_modules_of`), because every tenant already had those modules when their
+columns were added. Nobody had BOM, so `moduleFlag(row, 'bom')` is `Boolean(row.allow_bom)` —
+absent is OFF, and the Traceability tab reads it with `on(v, false)`. Reading it the usual way
+would show a licence on every account and, because the trace API rewrites the whole row, the next
+unrelated save from this console would *write* it. Mirrors `MODULE_DEFAULTS` in the trace app's
+`access_control.py`; the new-row defaults (`newTraceAccountRow`, the trace-tab fallback row) carry
+`allow_bom: 0` explicitly.
+
+**Silent discard refused, again.** `supportsBom(rows)` (does any row carry `allow_bom`?) gates
+every write — `PUT /api/accounts/modules`, `PUT /api/accounts/trace/:tenant`, and
+`upsertTraceModules` (create + provisioning) — with a 409 naming 3.46.0. On an older instance the
+pill is disabled with that reason and the Traceability tab shows a note instead of the tick.
+`TraceSourceStatus.supports_bom` carries it to the list.
+
+**"At least one module" now counts BOM** (`hasReachableModule()` in `lib/trace.ts`, used by both
+routes): a BOM-only tenant is a real licence. Ask Paul still does not count.
+
+Existing `allow_bom` values survive edits made elsewhere in the console: `saveTraceAccount` spreads
+the whole stored row, so the column round-trips even through paths that never mention it.
+
+**Verified:** `tsc --noEmit` clean. Not run against a live instance — the US/EU traceability apps
+are not on 3.46.0 yet, so every BOM control currently shows the "deploy 3.46.0 first" state.
+
+---
+
 **0.7.0** (2026-09-15) — **a Disaster recovery screen, status-only.**
 
 New nav item, `/disaster-recovery`. It calls the Supabase Management API's

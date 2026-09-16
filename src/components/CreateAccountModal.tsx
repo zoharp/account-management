@@ -79,6 +79,8 @@ export default function CreateAccountModal({
   // licences live — see lib/module-catalog.ts.
   const [modTrace, setModTrace] = useState(true);
   const [modTraining, setModTraining] = useState(false);
+  // Opt-in like everywhere else — never pre-ticked.
+  const [modBom, setModBom] = useState(false);
   const [modAskPaul, setModAskPaul] = useState(false);
 
   // Off by default. Only Ask Paul needs a per-tenant database, and provisioning
@@ -217,7 +219,7 @@ export default function CreateAccountModal({
           ...body,
           region,
           provision: provisionDb,
-          modules: { trace: modTrace, training: modTraining, ask_paul: modAskPaul },
+          modules: { trace: modTrace, training: modTraining, bom: modBom, ask_paul: modAskPaul },
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -392,6 +394,18 @@ export default function CreateAccountModal({
               />
               <span>
                 <strong>Training</strong> — who owes training on which document revision.
+              </span>
+            </label>
+            <label className="acl-check">
+              <input
+                type="checkbox"
+                checked={modBom}
+                onChange={(e) => setModBom(e.target.checked)}
+                disabled={creating || done}
+              />
+              <span>
+                <strong>BOM</strong> — Bill-of-Materials viewer: trees, where-used, costs.{' '}
+                <em>Needs traceability 3.46.0.</em>
               </span>
             </label>
             <label

@@ -286,6 +286,9 @@ function Overview({
             Training: <ModuleState value={row.modules.training} />
           </li>
           <li>
+            BOM: <ModuleState value={row.modules.bom} />
+          </li>
+          <li>
             Ask Paul: <ModuleState value={row.modules.ask_paul} />
           </li>
         </ul>

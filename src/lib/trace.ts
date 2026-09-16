@@ -66,6 +66,11 @@ export interface TraceAccountRow {
    */
   allow_trace?: number;
   allow_training?: number;
+  /**
+   * BOM viewer licence, added in 3.46.0. OPT-IN: the column defaults to 0, and
+   * `undefined` (an instance that predates it) reads as NOT licensed.
+   */
+  allow_bom?: number;
   /** Ask Paul (QMS AI) licence and name override, added in 3.27.0. */
   allow_ask_paul?: number;
   /**
@@ -95,6 +100,12 @@ export interface TraceAccountRow {
  */
 export function moduleFlag(row: TraceAccountRow | undefined, key: ModuleKey): boolean {
   if (!row) return false;
+  // ⚠️ BOM inverts the rule. Fail-open exists so a column added around a feature
+  // every tenant already had does not take it away; nobody had BOM, so absent
+  // means "never granted". Reading it as ON would show — and, on the next save
+  // of a pre-3.46.0 row, write — a licence nobody gave. Mirrors
+  // `MODULE_DEFAULTS` in the trace app's access_control.py.
+  if (key === 'bom') return Boolean(row.allow_bom);
   const value =
     key === 'trace' ? row.allow_trace : key === 'training' ? row.allow_training : row.allow_ask_paul;
   return value === undefined || value === null ? true : Boolean(value);
@@ -112,6 +123,24 @@ export function supportsModules(rows: TraceAccountRow[]): boolean {
  */
 export function supportsAskPaul(rows: TraceAccountRow[]): boolean {
   return rows.some((r) => r.allow_ask_paul !== undefined);
+}
+
+/**
+ * Does it carry `allow_bom`? (3.46.0) Checked separately again: an older instance
+ * rewrites the row from a model with no such field, so a BOM tick would be
+ * dropped and reported as saved.
+ */
+export function supportsBom(rows: TraceAccountRow[]): boolean {
+  return rows.some((r) => r.allow_bom !== undefined);
+}
+
+/**
+ * Does this row hold at least one module a user can actually sign in to?
+ * Ask Paul does not count (separate app). Trace/training absent = ON, BOM absent
+ * = OFF — the same reading as `moduleFlag()`.
+ */
+export function hasReachableModule(row: Partial<TraceAccountRow>): boolean {
+  return Boolean(row.allow_trace ?? 1) || Boolean(row.allow_training ?? 1) || Boolean(row.allow_bom ?? 0);
 }
 
 export class TraceApiError extends Error {
@@ -362,6 +391,7 @@ export function newTraceAccountRow(tenant: string, region: DataRegion): TraceAcc
     allow_add: 1,
     allow_trace: 0,
     allow_training: 0,
+    allow_bom: 0,
     allow_ask_paul: 0,
   };
 }
@@ -413,6 +443,17 @@ export async function upsertTraceModules(
   if (modules.ask_paul !== undefined) changes.allow_ask_paul = modules.ask_paul ? 1 : 0;
   if (modules.trace !== undefined) changes.allow_trace = modules.trace ? 1 : 0;
   if (modules.training !== undefined) changes.allow_training = modules.training ? 1 : 0;
+  if (modules.bom !== undefined) {
+    // Refuse rather than let an older instance drop the flag and report success.
+    if (modules.bom && !supportsBom(rows)) {
+      throw new TraceApiError(
+        'this traceability instance predates the BOM licence (needs 3.46.0) and would have ' +
+          'silently discarded it',
+        409,
+      );
+    }
+    changes.allow_bom = modules.bom ? 1 : 0;
+  }
 
   await saveTraceAccount(base, changes);
   return { created: !current };

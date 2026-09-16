@@ -30,7 +30,9 @@ import {
   getTraceEngine,
   listTraceAccounts,
   saveTraceAccount,
+  supportsBom,
   supportsModules,
+  hasReachableModule,
   traceConfigured,
   traceRegionOf,
   TraceApiError,
@@ -116,6 +118,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ tenant: string
       master_account_name: masterAccountName,
       master_has_database: masterHasDatabase,
       supports_modules: supportsModules(rows),
+      supports_bom: supportsBom(rows),
     });
   } catch (e) {
     return failed(e);
@@ -156,6 +159,18 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       );
     }
 
+    if (!supportsBom(rows) && body.allow_bom !== undefined) {
+      // Same silent-discard shape as above, for the column added in 3.46.0.
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the BOM licence and would silently discard ' +
+            'the change. Deploy traceability-matrix 3.46.0 first.',
+        },
+        { status: 409 },
+      );
+    }
+
     // A row this app has never seen starts from the trace API's own defaults,
     // which are the fail-open ones. Everything else starts from what is stored.
     //
@@ -170,6 +185,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       allow_add: 1,
       allow_trace: 1,
       allow_training: 1,
+      // The trace API's own default for this column is 0 — BOM is opt-in.
+      allow_bom: 0,
       allow_ask_paul: 1,
       ask_paul_account: '',
       note: '',
@@ -181,6 +198,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       allow_add: flag('allow_add', base.allow_add ?? 1),
       allow_trace: flag('allow_trace', base.allow_trace ?? 1),
       allow_training: flag('allow_training', base.allow_training ?? 1),
+      // Absent → keep what is stored, and absent-and-unstored → 0 (opt-in).
+      allow_bom: flag('allow_bom', base.allow_bom ?? 0),
       allow_ask_paul: flag('allow_ask_paul', base.allow_ask_paul ?? 1),
       note: typeof body.note === 'string' ? body.note : (base.note ?? ''),
     };
@@ -205,9 +224,9 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
     // check it at all, so it has to be enforced here too: an account with no
     // module can sign in and reach nothing, which looks like a broken app
     // rather than a licensing decision.
-    if (!next.allow_trace && !next.allow_training) {
+    if (!hasReachableModule(next)) {
       return Response.json(
-        { detail: 'An account needs at least one module — Traceability or Training.' },
+        { detail: 'An account needs at least one module — Traceability, Training or BOM.' },
         { status: 400 },
       );
     }

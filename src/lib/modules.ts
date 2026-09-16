@@ -186,6 +186,8 @@ function buildRow(args: {
   const unknown = !traceAvailable || !trace;
   const traceModule = unknown ? null : signedIn && moduleFlag(trace, 'trace');
   const trainingModule = unknown ? null : signedIn && moduleFlag(trace, 'training');
+  // Opt-in: `moduleFlag` reads an absent `allow_bom` as OFF (pre-3.46.0 instance).
+  const bomModule = unknown ? null : signedIn && moduleFlag(trace, 'bom');
 
   // Ask Paul has two halves and is licensed only when BOTH say yes — `is_active`
   // (the app itself) and `allow_ask_paul` (the door in from traceability). Off in
@@ -237,6 +239,7 @@ function buildRow(args: {
       ask_paul: askPaulModule,
       trace: traceModule,
       training: trainingModule,
+      bom: bomModule,
     },
   };
 }

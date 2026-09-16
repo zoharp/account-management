@@ -5,6 +5,7 @@
  *
  *   trace     → trace `account_access.allow_trace`
  *   training  → trace `account_access.allow_training`
+ *   bom       → trace `account_access.allow_bom` (opt-in; absent reads as OFF, needs 3.46.0)
  *   ask_paul  → BOTH master `accounts.is_active` AND trace `allow_ask_paul`
  *
  * ## Why Ask Paul writes two systems
@@ -41,7 +42,9 @@ import {
   newTraceAccountRow,
   saveTraceAccount,
   supportsAskPaul,
+  supportsBom,
   supportsModules,
+  hasReachableModule,
   traceConfigured,
   TraceApiError,
 } from '@/lib/trace';
@@ -68,13 +71,17 @@ async function regionForNewRow(accountId: string | null | undefined): Promise<Da
   return coerceRegion(rows[0]?.region);
 }
 
-const MODULE_KEYS: ModuleKey[] = ['ask_paul', 'trace', 'training'];
+const MODULE_KEYS: ModuleKey[] = ['ask_paul', 'trace', 'training', 'bom'];
 
 /** The `account_access` column each module is licensed by. */
-const MODULE_COLUMN: Record<ModuleKey, 'allow_ask_paul' | 'allow_trace' | 'allow_training'> = {
+const MODULE_COLUMN: Record<
+  ModuleKey,
+  'allow_ask_paul' | 'allow_trace' | 'allow_training' | 'allow_bom'
+> = {
   ask_paul: 'allow_ask_paul',
   trace: 'allow_trace',
   training: 'allow_training',
+  bom: 'allow_bom',
 };
 
 export async function PUT(req: Request) {
@@ -238,6 +245,20 @@ export async function PUT(req: Request) {
     // Unlicensing is still a 404: there is no row, so the tenant already reaches
     // nothing and there is nothing to revoke. It is not reachable from the UI
     // either — a dash toggles to ON.
+    // BOM's column landed in 3.46.0. An older instance would accept the write,
+    // rebuild the row without it, and answer 200 — a licence reported as granted
+    // that no user can reach.
+    if (module === 'bom' && !supportsBom(rows)) {
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the BOM licence and would silently discard ' +
+            'the change. Deploy traceability-matrix 3.46.0 first.',
+        },
+        { status: 409 },
+      );
+    }
+
     const current = rows.find((r) => r.account.toLowerCase() === tenant);
     if (!current && !enabled) {
       return Response.json(
@@ -263,15 +284,16 @@ export async function PUT(req: Request) {
     // does not enforce at all: an account with no module can sign in and reach
     // nothing. Turning the last one off is two clicks from here, so it is
     // checked on this path too, not only in the settings dialog.
-    // An absent column reads as licensed, matching `_modules_of`. Ask Paul is
-    // not part of this: it is a separate app, so holding it alone is still not
-    // a module anyone can sign in to.
-    if (!(next.allow_trace ?? 1) && !(next.allow_training ?? 1)) {
+    // An absent trace/training column reads as licensed, matching `_modules_of`;
+    // an absent BOM column reads as NOT licensed. A BOM-only tenant is a real
+    // licence. Ask Paul is not part of this: it is a separate app, so holding it
+    // alone is still not a module anyone can sign in to.
+    if (!hasReachableModule(next)) {
       return Response.json(
         {
           detail:
             `'${tenant}' would be left with no module and could sign in to nothing. ` +
-            'License Traceability or Training first.',
+            'License Traceability, Training or BOM first.',
         },
         { status: 400 },
       );

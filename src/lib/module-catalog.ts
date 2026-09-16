@@ -27,4 +27,8 @@ export const MODULES: readonly ModuleDef[] = [
   { key: 'ask_paul', label: 'Ask Paul', source: 'trace' },
   { key: 'trace', label: 'Traceability', source: 'trace' },
   { key: 'training', label: 'Training', source: 'trace' },
+  // BOM viewer (traceability-matrix 3.46.0), `account_access.allow_bom`. The one
+  // OPT-IN module: its column defaults to 0 and an absent value reads as OFF —
+  // see `moduleFlag()` in lib/trace.ts. Hidden from a customer until ticked here.
+  { key: 'bom', label: 'BOM', source: 'trace' },
 ];

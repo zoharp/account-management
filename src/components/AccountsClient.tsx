@@ -389,6 +389,11 @@ function disabledReason(
   if (!trace.supports_modules) {
     return 'This traceability instance predates per-module licences — deploy 3.23.0 first.';
   }
+  // Only turning BOM ON needs the column; an instance without it already reads
+  // as off everywhere, so there is nothing to turn off.
+  if (key === 'bom' && !trace.supports_bom && row.modules.bom !== true) {
+    return 'This traceability instance predates the BOM licence — deploy 3.46.0 first.';
+  }
   if (!row.tenant) return 'No Orcanos tenant on this account — set its Orcanos API URL first.';
   // A tenant with no allowlist row is NOT a dead end any more: licensing either
   // traceability-owned module creates the row (api/accounts/modules). It stays

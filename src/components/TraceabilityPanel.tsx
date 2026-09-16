@@ -22,8 +22,9 @@ import { on, type TraceRow, type TraceSettingsResponse } from '@/lib/trace-ui';
  *  1. **An absent flag means ON** (`on()` in `lib/trace-ui.ts`). A row written
  *     before a column existed must not lose a capability because the column was
  *     added around it.
- *  2. **At least one module.** An account with neither Traceability nor Training
- *     can sign in and reach nothing, which reads as a broken app rather than a
+ *     **Except BOM**, which is opt-in: absent means OFF (`on(v, false)`).
+ *  2. **At least one module.** An account with none of Traceability, Training
+ *     or BOM can sign in and reach nothing, which reads as a broken app rather than a
  *     licensing decision. Refused here and again by the route.
  *
  * The PUT is partial by design — it falls back to the stored row for every field
@@ -42,6 +43,7 @@ export default function TraceabilityPanel({
   const [error, setError] = useState('');
   const [row, setRow] = useState<TraceRow | null>(null);
   const [supportsModules, setSupportsModules] = useState(false);
+  const [supportsBom, setSupportsBom] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ kind: 'ok' | 'bad' | ''; text: string }>({
     kind: '',
@@ -53,6 +55,7 @@ export default function TraceabilityPanel({
   const [allowAdd, setAllowAdd] = useState(true);
   const [allowTrace, setAllowTrace] = useState(true);
   const [allowTraining, setAllowTraining] = useState(true);
+  const [allowBom, setAllowBom] = useState(false);
   const [note, setNote] = useState('');
 
   const load = useCallback(async () => {
@@ -67,12 +70,14 @@ export default function TraceabilityPanel({
 
       setRow(data.row);
       setSupportsModules(data.supports_modules);
+      setSupportsBom(Boolean(data.supports_bom));
       const r = data.row;
       setAllowAccess(r ? Boolean(r.allow_access) : true);
       setAllowAi(r ? Boolean(r.allow_ai) : false);
       setAllowAdd(on(r?.allow_add));
       setAllowTrace(on(r?.allow_trace));
       setAllowTraining(on(r?.allow_training));
+      setAllowBom(on(r?.allow_bom, false));
       setNote(r?.note ?? '');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -84,7 +89,7 @@ export default function TraceabilityPanel({
     void load();
   }, [load]);
 
-  const noModule = !allowTrace && !allowTraining;
+  const noModule = !allowTrace && !allowTraining && !(supportsBom && allowBom);
 
   async function save() {
     if (noModule) {
@@ -103,6 +108,7 @@ export default function TraceabilityPanel({
           // Omitted entirely on an instance without the columns — sending them
           // there succeeds and silently drops them, so the route refuses it.
           ...(supportsModules ? { allow_trace: allowTrace, allow_training: allowTraining } : {}),
+          ...(supportsBom ? { allow_bom: allowBom } : {}),
           note,
         }),
       });
@@ -173,6 +179,19 @@ export default function TraceabilityPanel({
               checked={allowTraining}
               onChange={setAllowTraining}
             />
+            {supportsBom ? (
+              <Check
+                label="BOM"
+                hint="The BOM viewer — Bill-of-Materials trees, where-used, costs. Off by default; customers do not see it until this is ticked. Its Orcanos filters are then set inside the module by an Orcanos administrator."
+                checked={allowBom}
+                onChange={setAllowBom}
+              />
+            ) : (
+              <p className="acl-hint">
+                BOM needs traceability-matrix 3.46.0 on this tenant&apos;s instance before it can be
+                licensed.
+              </p>
+            )}
             {noModule && (
               <p className="acl-hint acl-hint--warn">
                 An account needs at least one module — with none it can sign in and reach nothing.

@@ -18,6 +18,7 @@ import { DEFAULT_REGION, parseRegion, traceApiUrlFor } from '@/lib/regions';
 import {
   listTraceAccounts,
   supportsAskPaul,
+  supportsBom,
   supportsModules,
   traceConfigured,
   upsertRegionDirectory,
@@ -72,6 +73,7 @@ export async function GET() {
     available: false,
     supports_modules: false,
     supports_ask_paul: false,
+    supports_bom: false,
     url: process.env.TRACE_API_URL ?? null,
     message: '',
   };
@@ -85,6 +87,7 @@ export async function GET() {
       trace.available = true;
       trace.supports_modules = supportsModules(traceRows);
       trace.supports_ask_paul = supportsAskPaul(traceRows);
+      trace.supports_bom = supportsBom(traceRows);
       if (!trace.supports_modules) {
         // Production Fly is 3.21.0 and has no allow_trace / allow_training.
         // `moduleFlag()` reads their absence as licensed (fail-open, matching
@@ -98,6 +101,12 @@ export async function GET() {
         trace.message =
           'This traceability instance predates the Ask Paul licence (needs 3.27.0) — ' +
           'Ask Paul shows as licensed for every listed account.';
+      } else if (!trace.supports_bom) {
+        // 3.27–3.45: every other column is real, allow_bom is not. BOM is opt-in,
+        // so it reads as off everywhere — correct, but not yet switchable.
+        trace.message =
+          'This traceability instance predates the BOM licence (needs 3.46.0) — BOM cannot be ' +
+          'licensed until it is deployed.';
       }
     } catch (e) {
       trace.message = e instanceof Error ? e.message : String(e);

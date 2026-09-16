@@ -18,6 +18,8 @@ export interface TraceRow {
   allow_add?: number;
   allow_trace?: number;
   allow_training?: number;
+  /** BOM licence (3.46.0) — OPT-IN: read with `on(v, false)`, never plain `on(v)`. */
+  allow_bom?: number;
   allow_ask_paul?: number;
   ask_paul_account?: string;
   note?: string;
@@ -55,6 +57,8 @@ export interface TraceSettingsResponse {
   row: TraceRow | null;
   engine: TraceEngine | null;
   supports_modules: boolean;
+  /** False on an instance older than 3.46.0 — the BOM tick is hidden rather than silently dropped. */
+  supports_bom: boolean;
   master_account_name: string | null;
   master_has_database: boolean;
   detail?: string;

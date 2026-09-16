@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.8.0",
+    "date": "2026-09-16",
+    "changes": [
+      "✨ **BOM is a new module you can license per account** — a BOM pill on the accounts list, a BOM tick on the Traceability tab and on the create form, and its state on the account overview. It is off for every account until you turn it on, so customers do not see it.",
+      "🔒 **A BOM licence is never reported as saved when it was not** — on a traceability instance older than 3.46.0 the BOM switch is disabled and the server refuses the write, instead of the instance quietly dropping it."
+    ]
+  },
+  {
     "version": "0.7.0",
     "date": "2026-09-15",
     "changes": [
