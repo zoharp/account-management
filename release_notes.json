@@ -1,5 +1,13 @@
 [
   {
+    "version": "0.9.1",
+    "date": "2026-09-24",
+    "changes": [
+      "🐛 **A brief network hiccup between the console and Traceability no longer blanks its columns.** A dropped or timed-out connection is retried once before the accounts list gives up on the Traceability half.",
+      "🐛 **When Traceability really cannot be reached, the warning says which region and why** — for example \"the connection timed out\" on the EU instance — instead of a bare \"fetch failed\" that always showed the US address."
+    ]
+  },
+  {
     "version": "0.9.0",
     "date": "2026-09-16",
     "changes": [

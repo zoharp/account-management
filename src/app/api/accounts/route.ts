@@ -20,6 +20,7 @@ import {
   supportsAskPaul,
   supportsBom,
   supportsModules,
+  TraceApiError,
   traceConfigured,
   upsertRegionDirectory,
   upsertTraceModules,
@@ -110,6 +111,9 @@ export async function GET() {
       }
     } catch (e) {
       trace.message = e instanceof Error ? e.message : String(e);
+      // Name the instance that actually failed — the default is the US URL,
+      // which mislabelled an EU outage on 2026-09-24.
+      if (e instanceof TraceApiError && e.url) trace.url = e.url;
       console.error('[GET /api/accounts] traceability lookup failed:', e);
     }
   }

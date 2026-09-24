@@ -147,9 +147,84 @@ export class TraceApiError extends Error {
   constructor(
     message: string,
     readonly status: number,
+    /** The instance that failed, when known — so a banner names the right one. */
+    readonly url?: string,
   ) {
     super(message);
     this.name = 'TraceApiError';
+  }
+}
+
+/**
+ * Transport failures worth one more try. Undici reports them all as a bare
+ * `TypeError: fetch failed` with the real reason on `cause.code`.
+ *
+ * Seen 2026-09-24 during a Fly incident: Vercel → Fly connect timeouts and
+ * resets, on BOTH regions, intermittently, while both machines were healthy and
+ * answering everyone else in 0.2s. One retry absorbs that; a persistent outage
+ * still fails, just with a message that says what happened.
+ *
+ * CONNECT_ONLY codes mean the request never left, so retrying any method is
+ * safe. A reset can land after the server acted, so it is retried only for GET
+ * and for the login POST (which writes nothing).
+ */
+const CONNECT_ONLY = new Set(['UND_ERR_CONNECT_TIMEOUT', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN']);
+const MID_REQUEST = new Set(['ECONNRESET', 'UND_ERR_SOCKET', 'EPIPE']);
+
+function networkCode(e: unknown): string | undefined {
+  const cause = (e as { cause?: { code?: string } })?.cause;
+  return e instanceof TypeError ? cause?.code : undefined;
+}
+
+function describeNetworkError(code: string | undefined): string {
+  switch (code) {
+    case 'UND_ERR_CONNECT_TIMEOUT':
+      return 'the connection timed out';
+    case 'ECONNRESET':
+    case 'UND_ERR_SOCKET':
+    case 'EPIPE':
+      return 'the connection was reset';
+    case 'ECONNREFUSED':
+      return 'the connection was refused';
+    case 'ENOTFOUND':
+    case 'EAI_AGAIN':
+      return 'its hostname did not resolve';
+    default:
+      return code ? `network error ${code}` : 'network error';
+  }
+}
+
+/**
+ * `fetch` against one region's instance, retried once on a transient transport
+ * failure and otherwise turned into a TraceApiError that names the region, the
+ * host and the cause — never a bare "fetch failed".
+ */
+async function traceFetch(
+  region: DataRegion,
+  url: string,
+  init: RequestInit,
+  retrySafe: boolean,
+): Promise<Response> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await fetch(url, init);
+    } catch (e) {
+      const code = networkCode(e);
+      const retryable = code !== undefined && (CONNECT_ONLY.has(code) || (retrySafe && MID_REQUEST.has(code)));
+      if (retryable && attempt === 1) {
+        console.warn(`[trace] ${region} ${code} on ${url} — retrying once`);
+        await new Promise((r) => setTimeout(r, 500));
+        continue;
+      }
+      if (!(e instanceof TypeError)) throw e;
+      const base = baseUrl(region);
+      throw new TraceApiError(
+        `Could not reach the ${region.toUpperCase()} traceability instance: ` +
+          `${describeNetworkError(code)}${attempt > 1 ? ' (twice)' : ''}.`,
+        503,
+        base,
+      );
+    }
   }
 }
 
@@ -181,12 +256,17 @@ function baseUrl(region: DataRegion): string {
 const cachedTokens = new Map<DataRegion, string>();
 
 async function login(region: DataRegion): Promise<string> {
-  const res = await fetch(`${baseUrl(region)}/api/admin/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ password: traceAdminPasswordFor(region) }),
-    cache: 'no-store',
-  });
+  const res = await traceFetch(
+    region,
+    `${baseUrl(region)}/api/admin/login`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: traceAdminPasswordFor(region) }),
+      cache: 'no-store',
+    },
+    true,
+  );
   if (!res.ok) {
     throw new TraceApiError(
       res.status === 401
@@ -213,15 +293,21 @@ async function call<T>(
     cachedTokens.set(region, token);
   }
 
-  const res = await fetch(`${baseUrl(region)}${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Admin-Token': token,
-      ...(init.headers ?? {}),
+  const method = (init.method ?? 'GET').toUpperCase();
+  const res = await traceFetch(
+    region,
+    `${baseUrl(region)}${path}`,
+    {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Admin-Token': token,
+        ...(init.headers ?? {}),
+      },
+      cache: 'no-store',
     },
-    cache: 'no-store',
-  });
+    method === 'GET',
+  );
 
   // A 401 here means the password changed under us. Drop the token and try once.
   if (res.status === 401 && retry) {
