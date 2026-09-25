@@ -9,6 +9,31 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.12.0** (2026-09-25) — **The infrastructure handbook, inside the console.**
+
+New sidebar item **Handbook** (`/handbook`) framing the slide-deck version of
+`docs/platform/ORCANOS_AI_INFRASTRUCTURE.md`, which was brought up to date in the same change
+(Traceability 4.7.0, Ask Paul 2.65.0, this app 0.12.0 — see the handbook's *Latest change* row).
+
+- `GET /api/handbook` (`src/app/api/handbook/route.ts`) — `requirePlatformStaff()` first, then
+  reads `docs/platform/orcanos-ai-infrastructure.html` from disk and returns it with
+  `Cache-Control: private, no-store`. Deliberately **not** a `public/` file: this app has no
+  middleware, so anything in `public/` would bypass the staff gate, and the deck names hosts,
+  secrets-by-name and open risks.
+- `next.config.mjs` — `outputFileTracingIncludes` ships the HTML into the Vercel function
+  (nothing imports it, so the tracer would drop it); and a second `headers()` entry for
+  `/api/handbook` only, **after** the catch-all, relaxing `frame-ancestors 'none'` /
+  `X-Frame-Options: DENY` to `'self'` / `SAMEORIGIN`. Next keeps the later entry when two set the
+  same key. The deck has no controls that act on data, so being framable by this origin adds no
+  clickjacking surface. **Nothing that writes may ever get this relaxation.**
+- `src/app/handbook/page.tsx` — the usual server-side staff check, `AppShell active="handbook"`,
+  an iframe (the deck's global CSS — `body{overflow:hidden}`, fixed chrome — would take over the
+  console if inlined) and an *Open full screen* link to the same route.
+
+To update the deck: edit the HTML (and the markdown), deploy. No build step.
+
+---
+
 **0.11.0** (2026-09-25) — **Open Ask Paul / Traceability from each account row.**
 
 The accounts list's Actions column gains two links beside *Manage…*: **Ask Paul ↗** and

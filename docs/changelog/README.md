@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `0.12.0` | 2026-09-25 | *Handbook* screen: the infrastructure deck served staff-only from `GET /api/handbook` and framed at `/handbook` (frame headers relaxed to same-origin for that one route). Handbook md + deck updated for everything shipped 09-10 → 09-25. |
 | `0.11.0` | 2026-09-25 | Accounts list: per-row *Ask Paul ↗* and *Traceability ↗* links opening the product at the row's region (`APP_URLS` in `lib/regions.ts`). EU Ask Paul disabled — no deployment, no fallback to US. |
 | `0.10.0` | 2026-09-24 | ISO 27001 screen: priority per open control (procedure = Low; security = Low–Critical by check and finding) and a recommendation per open check. Computed client-side from `check_ids` + evidence (`lib/iso27001-guidance.ts`); no migration. |
 | `0.9.0` | 2026-09-16 | ISO 27001 screen: system selector (Ask Paul, Traceability), saved audit runs with per-run snapshots and change-vs-previous, ledger import, append-only answer history. `sql/006` applied 2026-09-16. `compliance-audit` skill moved into this repo. |

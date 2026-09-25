@@ -215,10 +215,10 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
   <div class="part-n">ORCANOS&nbsp;AI · INFRASTRUCTURE HANDBOOK · 2026</div>
   <h1>Everything we run,<br>and why it runs<br>the way it does.</h1>
   <div class="part-rule"></div>
-  <p class="sub">Three applications, five hosting platforms, two tenancy models, <strong>two data regions</strong>, one shared login token. This deck is the whole picture &mdash; for IT, for developers, for auditors, and for anyone joining this week.</p>
+  <p class="sub">Three applications, five modules, five hosting platforms, two tenancy models, <strong>two data regions</strong>, one shared login token. This deck is the whole picture &mdash; for IT, for developers, for auditors, and for anyone joining this week.</p>
   <div class="row">
-    <span class="pill or">8 parts</span><span class="pill">82 slides</span>
-    <span class="pill or">Updated 2026-09-10 — Part 3 is new</span>
+    <span class="pill or">8 parts</span><span class="pill">91 slides</span>
+    <span class="pill or">Updated 2026-09-25 — slides marked 🆕 are new</span>
     <span class="pill dim">Next ▶ or → to move</span>
     <span class="pill dim">☰ Index for everything at once</span>
   </div>
@@ -238,13 +238,13 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
   <p class="sub">Every slide stands on its own. The eight parts answer eight different questions, and you can jump straight to the one you came for.</p>
   <div class="g3">
     <div class="card"><div class="kicker">Parts 1&ndash;2</div><h3>The map</h3><p class="small">What the applications are, where each one runs, and why one customer means a whole database in one app and a single row in another.</p></div>
-    <div class="card or"><div class="kicker">Part 3 &mdash; new</div><h3>Data residency</h3><p class="small">EU and US. Two deployments that share nothing, the automatic hand-off at sign-in, moving a customer between regions &mdash; and, most importantly, <strong>what is not residency yet</strong>.</p></div>
+    <div class="card or"><div class="kicker">Part 3</div><h3>Data residency</h3><p class="small">EU and US. Two deployments that share nothing, the automatic hand-off at sign-in, moving a customer between regions &mdash; and, most importantly, <strong>what is not residency yet</strong>.</p></div>
     <div class="card"><div class="kicker">Parts 4&ndash;6</div><h3>How it works</h3><p class="small">The Orcanos API, sign-in, the RAG pipeline, caching, cost, the LLM routing, and how we handle security.</p></div>
   </div>
   <div class="g3">
     <div class="card"><div class="kicker">Parts 7&ndash;8</div><h3>How we build &amp; where it goes</h3><p class="small">Working with Claude Code, skills, CI/CD, the IIS install &mdash; then the AWS question and the next steps.</p></div>
-    <div class="card or"><h3>⚠ Must know &mdash; 33 slides</h3><p class="small">A trap that <strong>fails silently</strong>. Nothing crashes; the screen looks right; the answer is wrong. Each one has already cost us a release. Read these before touching the thing they describe.</p></div>
-    <div class="card"><h3>★ Core &mdash; 24 &nbsp;·&nbsp; ○ Reference &mdash; 21</h3><p class="small"><strong>Core</strong> is how the platform actually works &mdash; if you are new, read these in order. <strong>Reference</strong> is tables, addresses and procedures: look them up when you need them, do not memorise them.</p></div>
+    <div class="card or"><h3>⚠ Must know &mdash; 35 slides</h3><p class="small">A trap that <strong>fails silently</strong>. Nothing crashes; the screen looks right; the answer is wrong. Each one has already cost us a release. Read these before touching the thing they describe.</p></div>
+    <div class="card"><h3>★ Core &mdash; 26 &nbsp;·&nbsp; ○ Reference &mdash; 20</h3><p class="small"><strong>Core</strong> is how the platform actually works &mdash; if you are new, read these in order. <strong>Reference</strong> is tables, addresses and procedures: look them up when you need them, do not memorise them.</p></div>
   </div>
   <div class="trap">
     <span class="tag">⚠ The recurring theme</span>
@@ -264,7 +264,8 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
   <div class="part-list">
     <span class="pill">The big picture</span><span class="pill">The three shared things</span>
     <span class="pill">Ask Paul</span><span class="pill">Traceability Matrix</span>
-    <span class="pill">Account Management</span><span class="pill">The other two</span>
+    <span class="pill">Account Management</span><span class="pill or">Training</span><span class="pill or">BOM Viewer</span>
+    <span class="pill or">Agents &amp; automation</span><span class="pill or">510(k)</span><span class="pill">The other two</span>
   </div>
 </div>
 </section>
@@ -274,23 +275,23 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
   <div class="eyebrow">The big picture</div>
   <h2>Three apps, three data stores, one Orcanos.</h2>
   <div class="g3">
-    <div class="card or"><div class="kicker">askpaul.orcanos.ai</div><h3>Ask Paul</h3><p class="small">RAG compliance assistant + IEC 62304 pipeline. FastAPI on Cloud Run, React on Vercel.</p></div>
-    <div class="card or"><div class="kicker">traceability.orcanos.ai</div><h3>Traceability Matrix</h3><p class="small">Requirement→test L1→L6, plus Training. One container on Fly.io.</p></div>
-    <div class="card or"><div class="kicker">accounts.orcanos.ai</div><h3>Account Management</h3><p class="small">The control plane: tenants, credentials, licences, spend, audit. Next.js on Vercel.</p></div>
+    <div class="card or"><div class="kicker">askpaul.orcanos.ai</div><h3>Ask Paul</h3><p class="small">RAG compliance assistant, IEC 62304 pipeline, <strong>agents that propose writes to Orcanos</strong>, scheduled automation, 510(k)/DHF. FastAPI on Cloud Run, React on Vercel.</p></div>
+    <div class="card or"><div class="kicker">traceability.orcanos.ai · eu.traceability.orcanos.ai</div><h3>Traceability Matrix</h3><p class="small">Three modules &mdash; <strong>Traceability</strong> L1→L6, <strong>Training</strong>, <strong>BOM Viewer</strong> &mdash; plus presence and chat. One container per region on Fly.io.</p></div>
+    <div class="card or"><div class="kicker">accounts.orcanos.ai</div><h3>Account Management</h3><p class="small">The control plane: tenants, credentials, licences, region, spend, audit, DR status, ISO 27001 &mdash; and this deck. Next.js on Vercel.</p></div>
   </div>
   <div class="flow">
-    <div class="fbox db"><b>Master Supabase</b><span>accounts · users · audit · spend</span></div>
+    <div class="fbox db"><b>Master Supabase</b><span>accounts · users · audit · spend · ISO 27001</span></div>
     <div class="arrow">·</div>
-    <div class="fbox db"><b>Per-tenant Supabase</b><span>one project per customer · pgvector</span></div>
+    <div class="fbox db"><b>Per-tenant Supabase</b><span>one project per customer · pgvector · agents · 510(k)</span></div>
     <div class="arrow">·</div>
-    <div class="fbox db"><b>SQLite on Fly</b><span>15 tables · one volume · Litestream</span></div>
+    <div class="fbox db"><b>SQLite on Fly</b><span>30 tables · one per region · Litestream</span></div>
   </div>
   <div class="flow">
-    <div class="fbox"><b>All three apps</b><span>→ Orcanos QMS REST API</span></div>
+    <div class="fbox"><b>All three apps</b><span>→ Orcanos REST API, and now the web UI too</span></div>
     <div class="arrow">→</div>
-    <div class="fbox or"><b>app.orcanos.com/&lt;tenant&gt;</b><span>QW_Login · QW_Get_Filter_Results · …</span></div>
+    <div class="fbox or"><b>app.orcanos.com/&lt;tenant&gt;</b><span>QW_Login · QW_Get_Filter_Results · ViewAttachment · …</span></div>
   </div>
-  <p class="small">Traceability also opens Ask Paul with a <strong>silent SSO handoff</strong>, and reads its module licences from Account Management.</p>
+  <p class="small">Traceability opens Ask Paul with a <strong>silent SSO handoff</strong> and reads its module licences from Account Management. New in the path since 2026-09-10: <strong>Intercom</strong> (support chat, both products), <strong>openFDA</strong> (510(k), opt-in), and Google speech behind Chrome's voice input.</p>
 </div>
 </section>
 
@@ -317,7 +318,7 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
       <div class="tw"><table>
         <tr><th>URL</th><td>askpaul.orcanos.ai</td></tr>
         <tr><th>Repo</th><td><code>zoharp/orcanos_qms_AI</code></td></tr>
-        <tr><th>Version</th><td>backend <code>2.38.5</code> · frontend <code>1.39.0</code></td></tr>
+        <tr><th>Version</th><td>backend <code>2.65.0</code> · frontend <code>1.68.0</code></td></tr>
         <tr><th>Runtime</th><td>FastAPI (Py 3.11) on <strong>Cloud Run</strong> + React/Vite on <strong>Vercel</strong></td></tr>
         <tr><th>Data</th><td>Master Supabase + <strong>one Supabase project per customer</strong> (pgvector) + customer SQL Server, read-only</td></tr>
         <tr><th>Auth</th><td>Platform JWT in <code>localStorage</code>. Google / O365 / Orcanos</td></tr>
@@ -325,8 +326,9 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
       </table></div>
     </div>
     <div class="stack">
-      <div class="card"><h3>What it does</h3><p class="small">Multi-tenant <strong>RAG</strong> compliance assistant over ISO 27001 / 13485 / 14971, plus an IEC 62304 requirements pipeline.</p></div>
-      <div class="card"><h3>Why it is the complex one</h3><p class="small">A document ETL, a vector index, a two-stage query router, streaming answers, and per-account LLM routing &mdash; all of it multiplied by a database per customer. Part 3 walks the whole pipeline.</p></div>
+      <div class="card"><h3>What it does</h3><p class="small">Multi-tenant <strong>RAG</strong> compliance assistant over ISO 27001 / 13485 / 14971 and the tenant's own controlled documents (latest Approved revision), plus an IEC 62304 pipeline, <strong>agents</strong>, scheduled <strong>automation</strong>, <strong>510(k)/DHF</strong>, SOP rules, revision diffs and voice input.</p></div>
+      <div class="card"><h3>Why it is the complex one</h3><p class="small">A document ETL, a vector index, a two-stage query router, streaming answers, per-account LLM routing &mdash; and now tool-using agents and a background scheduler &mdash; all multiplied by a database per customer. Part 4 walks the RAG pipeline.</p></div>
+      <div class="card bad"><h3>⚠ Not everything has a release note</h3><p class="small">The Initiator agents, Action Items Drafter, RLS migration 032 and the Intercom widget shipped silently. The release notes are not a complete record of what runs.</p></div>
     </div>
   </div>
 </div>
@@ -335,22 +337,24 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
 <section class="slide" data-part="1" data-title="Traceability Matrix" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">Application 2</div>
-  <h2>Traceability Matrix &mdash; and the Training module.</h2>
+  <h2>Traceability Matrix &mdash; three modules, one container.</h2>
   <div class="g46">
     <div class="stack">
       <div class="tw"><table>
-        <tr><th>URL</th><td>traceability.orcanos.ai &mdash; <em>also installable on customer IIS</em></td></tr>
+        <tr><th>URL</th><td>US <code>traceability.orcanos.ai</code> · EU <code>eu.traceability.orcanos.ai</code> &mdash; <em>also installable on customer IIS</em></td></tr>
         <tr><th>Repo</th><td><code>zoharp/traceability-matrix</code></td></tr>
-        <tr><th>Version</th><td><code>3.42.1</code> · 158 releases</td></tr>
-        <tr><th>Runtime</th><td>FastAPI + React in <strong>one container on Fly.io</strong> &mdash; single machine, 1&nbsp;GB volume, Litestream</td></tr>
-        <tr><th>Data</th><td><strong>SQLite</strong> on the Fly volume, 15 tables</td></tr>
+        <tr><th>Version</th><td><code>4.7.0</code> &mdash; both regions verified 2026-09-25</td></tr>
+        <tr><th>Runtime</th><td>FastAPI + React in <strong>one container per region on Fly.io</strong> &mdash; single machine, 1&nbsp;GB RAM, 1&nbsp;GB volume, Litestream</td></tr>
+        <tr><th>Data</th><td><strong>SQLite</strong> on the Fly volume, <strong>30 tables</strong> (was 15)</td></tr>
         <tr><th>Auth</th><td>Proxies <code>QW_Login</code>, then its <strong>own</strong> session row + httpOnly cookie + CSRF</td></tr>
-        <tr><th>Help</th><td>orcanos.gitbook.io/traceability-marix</td></tr>
+        <tr><th>Time</th><td>Every stamp it writes is <strong>UTC, labelled UTC</strong> (3.47.2)</td></tr>
+        <tr><th>Help</th><td>orcanos.gitbook.io/traceability-marix &mdash; five modules</td></tr>
       </table></div>
     </div>
     <div class="stack">
-      <div class="card"><h3>What it does</h3><p class="small">Requirement→test traceability across levels L1→L6, gap detection, funnels, a graph view, HTML/Excel export &mdash; plus the <strong>Training</strong> module: training traceability panels and quizzes.</p></div>
-      <div class="card or"><h3>55 documented traps</h3><p class="small"><code>docs/notes/</code> holds 55 numbered notes, each one a mistake that produced a clean, plausible, wrong result. The numbering is global and stable, so <code>See Critical Note #19</code> resolves forever.</p></div>
+      <div class="card"><h3>What it does</h3><p class="small">A left-hand nav (3.46.0) over three licensed modules: <strong>Traceability</strong> (L1→L6, gaps, funnels, graph, export), <strong>Training</strong> and <strong>BOM Viewer</strong>. Across all three: <strong>presence and 1:1 chat</strong> (4.0), <strong>invite a colleague</strong> (4.2), an <strong>Intercom</strong> support widget (4.6), an <strong>AI usage disclaimer</strong>, and a DR page in <code>/admin</code>.</p></div>
+      <div class="card bad"><h3>⚠ Why 4.0 was a major</h3><p class="small">Until 3.x the database was cache and config &mdash; rebuildable from Orcanos. 4.0 added <code>users</code> and <code>chat_messages</code>: people and what they said. <strong>Nothing can rebuild them</strong>, and chat carries a retention duty. A lost volume now costs real data.</p></div>
+      <div class="card or"><h3>79 documented traps</h3><p class="small"><code>docs/notes/</code>, globally numbered so <code>See Critical Note #19</code> resolves forever. ⚠ #68 and #69 are each used twice (<code>SECURITY.md</code> and <code>COLLAB.md</code>) &mdash; renumber.</p></div>
     </div>
   </div>
 </div>
@@ -365,16 +369,101 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
       <div class="tw"><table>
         <tr><th>URL</th><td>accounts.orcanos.ai</td></tr>
         <tr><th>Repo</th><td><code>zoharp/account-management</code></td></tr>
-        <tr><th>Version</th><td><code>0.3.4</code></td></tr>
+        <tr><th>Version</th><td><code>0.12.0</code></td></tr>
         <tr><th>Runtime</th><td>Next.js 15 + React 19 + TS on <strong>Vercel</strong>, route handlers only &mdash; no backend of our own</td></tr>
         <tr><th>Data</th><td>Master Supabase, via PostgREST</td></tr>
         <tr><th>Auth</th><td>Platform JWT in an <strong>httpOnly cookie</strong></td></tr>
       </table></div>
     </div>
     <div class="stack">
-      <div class="card"><h3>What it manages</h3><p class="small">Tenant <strong>accounts</strong> &mdash; their databases, credentials, module licences, status and spend &mdash; plus the shared security audit trail.</p></div>
+      <div class="card"><h3>What it manages</h3><p class="small">Tenant <strong>accounts</strong> &mdash; databases, credentials, <strong>four module licences</strong> (Traceability, Training, BOM, Ask Paul), data region, status and spend &mdash; plus the shared audit trail. New screens: <strong>Disaster recovery</strong>, <strong>ISO 27001 audit</strong>, and <strong>Handbook</strong> (this deck). Each account row opens Ask Paul or Traceability at its region's address.</p></div>
       <div class="card"><h3>Where it came from</h3><p class="small">Extracted from the Accounts panel inside Ask Paul. <strong>Both still run, on the same data</strong>, so they can be compared before the old panel is retired.</p></div>
       <div class="card bad"><h3>⚠ Mostly unverified</h3><p class="small">Sign-in and the accounts list are verified. <strong>Nothing that writes has been exercised</strong> &mdash; account detail, provisioning, billing. That is written down honestly in <code>TESTING.md</code>, and it is a gap.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="1" data-title="🆕 The Training module" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Module · inside Traceability</div>
+  <h2>Training &mdash; who holds a role but has no training task at all?</h2>
+  <p class="sub">Orcanos cannot report a task that was never created. That gap is invisible inside Orcanos and is exactly what an auditor finds. Training reads what Orcanos runs, and adds the quiz layer Orcanos does not have.</p>
+  <div class="g2">
+    <div class="tw"><table>
+      <tr><th>Routes</th><td><code>/training</code> · panels (Matrix / Funnel / Reports) · People · 12 instant reports · <code>/training/quizzes</code> (Orcanos admins) · <code>/training/my</code> trainee to-do</td></tr>
+      <tr><th>Licence</th><td><code>allow_training</code> &mdash; ⚠ <strong>fail-open</strong> for old rows</td></tr>
+      <tr><th>Sources</th><td>Four saved filters: <strong>DMS</strong>, <strong>USRP</strong>, <strong>TRN_TSK</strong>, <strong>TRN</strong> (optional), read whole</td></tr>
+      <tr><th>LLM</th><td>Quiz generation only &mdash; revision diff + questions from ≤120k chars of the document</td></tr>
+      <tr><th>Jobs</th><td><strong>No scheduler, on purpose.</strong> User-triggered threads, one per user</td></tr>
+    </table></div>
+    <div class="stack">
+      <div class="card bad"><h3>⚠ Quiz records cannot be rebuilt</h3><p class="small"><code>quizzes</code>, <code>quiz_attempts</code>, <code>quiz_answers</code>&hellip; are the first data we hold that Orcanos cannot recreate. Never evict them; they travel in a region move; they are why a restore now matters.</p></div>
+      <div class="card"><h3>Deliberately not there</h3><p class="small"><strong>No e-signatures</strong> (signing is in Orcanos; a pass is not a signature). <strong>No write-back yet</strong> &mdash; a pass waits as <code>write_state='pending'</code> and nothing sends it. <strong>No email.</strong></p></div>
+    </div>
+  </div>
+  <div class="trap"><span class="tag">⚠ Setup trap</span>The four filters must <b>select</b> the needed columns (the save is blocked otherwise), and <b>USRP <code>Assigned To</code> must equal the task's <code>Assigned To</code></b> character for character &mdash; or every person reads as untrained. A clean, plausible, wrong report.</div>
+</div>
+</section>
+
+<section class="slide" data-part="1" data-title="🆕 The BOM Viewer module" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">Module · inside Traceability · 3.46.0</div>
+  <h2>BOM Viewer &mdash; covaris-bom, rebuilt on the server.</h2>
+  <div class="g2">
+    <div class="tw"><table>
+      <tr><th>Routes</th><td><code>/bom/boms</code>, <code>/assemblies</code>, <code>/parts</code>, <code>/dms</code>, <code>/ecos</code>; settings at Admin → Settings → BOM Viewer</td></tr>
+      <tr><th>Licence</th><td><code>allow_bom</code>, <strong>default 0 &mdash; the only opt-in module, fail-CLOSED</strong>, re-read on every request</td></tr>
+      <tr><th>Does</th><td>Trees (part instance / hierarchy / <strong>assembly</strong>), where-used, cost roll-up, ECOs, revision compare, export</td></tr>
+      <tr><th>SQL</th><td><strong>Built on the server</strong> (<code>bom_api.py</code>). The browser sends intent and digits only</td></tr>
+      <tr><th>Storage</th><td><code>bom_settings</code>, one row per tenant. No server cache</td></tr>
+      <tr><th>LLM · secrets</th><td>None · <strong>none new</strong> &mdash; nothing extra for the EU app</td></tr>
+    </table></div>
+    <div class="stack">
+      <div class="card or"><div class="kicker">4.5.0 · 2026-09-25</div><h3>Export with files</h3><p class="small">A server-built zip: latest Approved DMS files, every part's attachments (STEP models&hellip;), and an index in HTML, XLSX, CSV, JSON or PDF. Up to 300 files, 500 attachments, <strong>1&nbsp;GB</strong>.</p></div>
+      <div class="card bad"><h3>⚠ Capacity</h3><p class="small">Over 64&nbsp;MB the zip spills to temp disk. A 1&nbsp;GB package on a <strong>1&nbsp;GB-RAM, 1&nbsp;GB-disk</strong> machine, held open as one long request.</p></div>
+    </div>
+  </div>
+  <div class="trap"><span class="tag">⚠ Downloads sign in as the user</span>File downloads go through the Orcanos <b>web UI</b>, which ignores Basic auth &mdash; so the server decodes the <b>password</b> from the session row and logs in with a form. Every file lands in that document's Orcanos history as <em>downloaded</em> by the user. And a large ECO export once <b>exhausted Orcanos' SQL connection pool</b> (one Revisions call per document) &mdash; not fixed yet.</div>
+</div>
+</section>
+
+<section class="slide" data-part="1" data-title="🆕 Ask Paul agents and automation" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Ask Paul · 2.40 → 2.57</div>
+  <h2>The first time our AI writes into a customer's QMS.</h2>
+  <div class="flow">
+    <div class="fbox"><b>Trigger</b><span>Run · chat · another agent · schedule</span></div>
+    <div class="arrow">→</div>
+    <div class="fbox or"><b>Tool-use loop</b><span>≤ 12 rounds · NDJSON steps</span></div>
+    <div class="arrow">→</div>
+    <div class="fbox"><b>Proposal</b><span>CAPA · action items · field update</span></div>
+    <div class="arrow">→</div>
+    <div class="fbox db"><b>Orcanos write</b><span>QW_Add_Object · QW_Update_Object</span></div>
+  </div>
+  <div class="g2">
+    <div class="card"><h3>The catalogue</h3><p class="small">QA Manager; CAPA / Complaint / NC agent, <strong>Initiators</strong> and <strong>Record Reviewers</strong>; Action Items Drafter; four 510(k) agents; Doc↔eForm check; plus an <strong>Agent Builder</strong>. Tools and data sources are enforced <strong>on the server</strong>. Bedrock now does native tool-calling.</p></div>
+    <div class="card"><h3>Automation (2.57)</h3><p class="small">Agent + plain-English trigger + approval mode. The trigger becomes an Orcanos filter and a <strong>watermark</strong>. Results go to an <strong>approval queue</strong> &mdash; or, with <code>approval_mode='auto'</code>, straight into Orcanos with nobody looking. Auto-pauses after 3 failures.</p></div>
+  </div>
+  <div class="trap"><span class="tag">⚠ A scheduler inside Cloud Run</span>APScheduler runs <b>in the web process</b>, ticking every 30&nbsp;s and setting each account's ContextVars <b>outside any request</b>. So: it <b>stops when traffic stops</b> (no min-instances), <b>runs twice when Cloud Run scales out</b> (no cross-instance claim), and its LLM calls are <b>neither billed nor logged</b>. None of these shows as an error.</div>
+</div>
+</section>
+
+<section class="slide" data-part="1" data-title="🆕 Ask Paul: 510(k) and the DHF" data-imp="ref">
+<div class="pad">
+  <div class="eyebrow">Ask Paul · 2.52 → 2.56</div>
+  <h2>510(k) &mdash; a submission built from what the tenant already has.</h2>
+  <div class="g46">
+    <div class="tw"><table>
+      <tr><th>Model</th><td>A <strong>device dossier</strong> &mdash; setup answers, an <strong>eSTAR checklist</strong> (44 items, by device category), documents, references &mdash; with <strong>submissions</strong> under it (K-number, FDA status, comments)</td></tr>
+      <tr><th>DHF</th><td>Evidence mapped to design-history categories, <strong>pinned to a document revision</strong></td></tr>
+      <tr><th>Sources</th><td>Indexed documents (verbatim quotes), company profile, <strong>openFDA</strong> &mdash; off until an admin enables it</td></tr>
+      <tr><th>Export</th><td>DOCX, Markdown, PDF (PyMuPDF, server-side)</td></tr>
+      <tr><th>Code</th><td><code>fda_510k.py</code> (~2.2k lines), 41 routes, migrations 027&ndash;031</td></tr>
+    </table></div>
+    <div class="stack">
+      <div class="card"><h3>Also new in Ask Paul</h3><p class="small"><strong>DMS revisions</strong> &mdash; only the current revision is searched; <em>Obsolete</em> badges; Word-style diffs with <em>Analyze with AI</em>. <strong>SOP rules</strong> and a compliance-gap dashboard. <strong>In-app viewers</strong> &mdash; controlled documents cannot be downloaded or printed; viewer URLs carry a 120&nbsp;s document token, never the JWT.</p></div>
+      <div class="card bad"><h3>⚠ Voice input</h3><p class="small">Browser Web Speech API only &mdash; but in Chrome the <strong>audio goes to Google</strong>. A processor for whatever a user dictates.</p></div>
     </div>
   </div>
 </div>
@@ -383,10 +472,10 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
 <section class="slide" data-part="1" data-title="The other two, and the portal" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">Context</div>
-  <h2>Two more apps, and one that does not exist yet.</h2>
+  <h2>Two more apps &mdash; both now absorbed &mdash; and one that does not exist yet.</h2>
   <div class="g2">
-    <div class="card"><div class="kicker">covaris-bom</div><h3>BOM tree browser</h3><p class="small">Read-only, one customer. Static React on Vercel, <strong>no backend, no database</strong>, logs in to Orcanos <strong>client-side</strong>.</p><p class="small">Simultaneously the <strong>cheapest to absorb</strong> into a portal and the one that <strong>gains the least</strong>. Its real value is as a pilot: if it breaks, one customer loses a read-only view.</p></div>
-    <div class="card"><div class="kicker">quiz-management</div><h3>Training quizzes</h3><p class="small">Next.js on Vercel + Supabase <strong>queried from the browser</strong>. Supabase Auth + RLS, so its security boundary <em>is</em> the database.</p><p class="small">The plan: <strong>absorb the domain, discard the code.</strong> Its 14 migrations and schema are the asset; its architecture conflicts directly with the platform session.</p></div>
+    <div class="card"><div class="kicker">covaris-bom · legacy</div><h3>BOM tree browser</h3><p class="small">Static React on Vercel, no backend, logged in to Orcanos <strong>client-side</strong>. Deployed by <code>vercel --prod</code>, not by a push.</p><p class="small"><strong>Superseded</strong> by the BOM Viewer module in Traceability 3.46.0, with passwords and SQL moved to the server. Kept as a fallback; to be retired. ⚠ Its git <code>main</code> is at 1.3.0 while the deployed copy is 1.8.0, uncommitted.</p></div>
+    <div class="card"><div class="kicker">quiz-management · legacy</div><h3>Training quizzes</h3><p class="small">Next.js on Vercel + Supabase queried from the browser.</p><p class="small"><strong>Domain absorbed, code discarded</strong>, as planned: quizzes, attempts and <em>My to-do</em> now live in Traceability's Training module, in FastAPI + SQLite. Catalog and assignment were not ported.</p></div>
   </div>
   <div class="note">
     <strong><code>zoharp/ai-portal</code> is an empty repo with a plan</strong> &mdash; one front door, one login, a module launcher. Read <code>ai-portal/CLAUDE.md</code> before proposing any consolidation work; it already records the decisions taken and the recommended order. That order is <strong>identity → domain → data → hosting</strong>, deliberately the reverse of the intuitive one.
@@ -415,9 +504,9 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
   <h2>What each one is good at &mdash; and what it cannot do.</h2>
   <div class="tw"><table>
   <tr><th style="width:13%">Platform</th><th style="width:22%">We use it for</th><th style="width:32%">Good at</th><th>Cannot do</th></tr>
-  <tr><td><strong>Vercel</strong></td><td>Account Management, Ask Paul frontend, covaris-bom, quiz-management</td><td>Push to <code>main</code> = deployed. Free SSL, global CDN, preview deploys per branch. Zero servers.</td><td><strong>No long-running work.</strong> <strong>IPv4 only</strong> &mdash; cannot reach <code>db.&lt;ref&gt;.supabase.co</code>. No ODBC driver. No disk.</td></tr>
-  <tr><td><strong>Fly.io</strong></td><td>Traceability Matrix &mdash; one container: FastAPI + React + SQLite</td><td>A real always-on machine with a <strong>persistent volume</strong>. Multi-minute background jobs survive. Litestream replicates continuously.</td><td>One machine only. <strong>Never <code>fly scale count 2</code></strong> &mdash; the second machine gets its own volume.</td></tr>
-  <tr><td><strong>Cloud Run</strong></td><td>Ask Paul backend</td><td>Containers, autoscaling, Secret Manager, Cloud Build. Handles streaming well.</td><td>Cold starts. Config split across build triggers and Secret Manager, so it is easy to set something that the next build erases.</td></tr>
+  <tr><td><strong>Vercel</strong></td><td>Account Management, Ask Paul frontend; legacy covaris-bom and quiz-management</td><td>Push to <code>main</code> = deployed. Free SSL, global CDN, preview deploys per branch. Zero servers.</td><td><strong>No long-running work.</strong> <strong>IPv4 only</strong> &mdash; cannot reach <code>db.&lt;ref&gt;.supabase.co</code>. No ODBC driver. No disk.</td></tr>
+  <tr><td><strong>Fly.io</strong></td><td>Traceability Matrix &mdash; one app per region, each one container: FastAPI + React + SQLite</td><td>A real always-on machine with a <strong>persistent volume</strong>. Multi-minute background jobs survive. Litestream replicates continuously.</td><td>One machine only. <strong>Never <code>fly scale count 2</code></strong> &mdash; the second machine gets its own volume.</td></tr>
+  <tr><td><strong>Cloud Run</strong></td><td>Ask Paul backend &mdash; and its automation scheduler</td><td>Containers, autoscaling, Secret Manager, Cloud Build. Handles streaming well.</td><td>Cold starts. Config split across build triggers and Secret Manager. <strong>Not a home for background work</strong> &mdash; scales to zero and out to many.</td></tr>
   <tr><td><strong>Supabase</strong></td><td>Master DB + one project per Ask Paul tenant</td><td>Postgres + <strong>pgvector</strong> + PostgREST + a Management API that can <strong>create projects by API</strong>.</td><td>PostgREST cannot run DDL. Direct-connection hostnames are IPv6-only.</td></tr>
   <tr><td><strong>IIS</strong></td><td>Traceability on the customer's own Windows Server</td><td>All data stays on-premises. No internet dependency.</td><td>Manual install and upgrade. Needs URL Rewrite + ARR. <code>/admin</code> only reachable on the server itself.</td></tr>
   </table></div>
@@ -427,10 +516,11 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
 <section class="slide" data-part="2" data-title="The differences that bite" data-imp="crit">
 <div class="pad">
   <div class="eyebrow">Operational reality</div>
-  <h2>Five differences that have actually cost us time.</h2>
+  <h2>Six differences that have actually cost us time.</h2>
   <div class="stack">
     <div class="trap"><span class="tag">⚠ Vercel</span><b>An environment variable change does nothing until you redeploy.</b> Vercel snapshots variables into each deployment. Change the value, reload the site, and you still see the old one &mdash; then an unrelated code push picks it up and it looks like the code fixed it. <b>Order is always: change the variable, then redeploy.</b> Cost on 2026-08-30: two deploys to change one string.</div>
     <div class="trap"><span class="tag">⚠ Cloud Run</span><b>Secrets must be in <code>cloudbuild.yaml</code>, not just on the running service.</b> <code>gcloud run services update</code> works immediately &mdash; and is erased by the next build.</div>
+    <div class="trap"><span class="tag">⚠ Cloud Run · new</span><b>A background job stops when the traffic does.</b> Ask Paul's automation scheduler lives in the web process: no requests, no instance, no scheduler; many requests, many schedulers. Neither shows as an error.</div>
     <div class="trap"><span class="tag">⚠ Supabase + Vercel</span><b>Vercel cannot open a direct Postgres connection.</b> <code>db.&lt;ref&gt;.supabase.co</code> publishes only an AAAA record; Vercel functions are IPv4. The error is <code>getaddrinfo ENOTFOUND</code>, which reads like a typo in the hostname. The fix is the <b>pooler</b>: <code>aws-0-&lt;region&gt;.pooler.supabase.com:5432</code>, user <code>postgres.&lt;ref&gt;</code>.</div>
     <div class="g2">
       <div class="card"><h3>Fly restarts on <code>fly secrets set</code></h3><p class="small">Which invalidates every issued admin token. Usually fine &mdash; know it before doing it mid-day.</p></div>
@@ -448,14 +538,19 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
   <tr><th style="width:26%">Thing</th><th style="width:20%">Host</th><th>Address</th></tr>
   <tr><td>Ask Paul frontend</td><td>Vercel</td><td><code>https://askpaul.orcanos.ai</code></td></tr>
   <tr><td>Ask Paul backend</td><td>Cloud Run <span class="pill dim">us-east4</span></td><td>service <code>orcanos-qms</code></td></tr>
-  <tr><td>Traceability Matrix</td><td>Fly.io <span class="pill dim">iad</span></td><td><code>https://traceability.orcanos.ai</code> · <code>traceability-matrix.fly.dev</code></td></tr>
-  <tr><td>Account Management</td><td>Vercel</td><td><code>https://accounts.orcanos.ai</code></td></tr>
+  <tr><td>Traceability Matrix &mdash; US</td><td>Fly.io <span class="pill dim">iad</span></td><td><code>https://traceability.orcanos.ai</code> · <code>traceability-matrix.fly.dev</code></td></tr>
+  <tr><td>Traceability Matrix &mdash; EU</td><td>Fly.io <span class="pill dim">fra</span></td><td><code>https://eu.traceability.orcanos.ai</code> · app <code>traceability-matrix-eu</code></td></tr>
+  <tr><td>Account Management</td><td>Vercel</td><td><code>https://accounts.orcanos.ai</code> &mdash; this deck at <code>/handbook</code></td></tr>
+  <tr><td>covaris-bom <span class="pill dim">legacy</span></td><td>Vercel</td><td>project <code>covaris-bom</code>, deployed by CLI</td></tr>
   <tr><td>Master database</td><td>Supabase</td><td>project <code>jjiavhexvfahboiodomv</code></td></tr>
   <tr><td>Per-tenant vector DBs</td><td>Supabase</td><td>one project per account, created on demand</td></tr>
   <tr><td>Orcanos QMS itself</td><td>Orcanos hosting</td><td><code>https://app.orcanos.com/&lt;tenant&gt;</code></td></tr>
   <tr><td>Bedrock LLM gateway</td><td>Orcanos AWS</td><td><code>https://br.orcanos.com/ext/chat</code></td></tr>
+  <tr><td>Support chat</td><td>Intercom <span class="pill dim">US</span></td><td>app id <code>y9ldbtxq</code>, loaded in the browser by both products</td></tr>
+  <tr><td>FDA data</td><td>openFDA</td><td><code>api.fda.gov/device/510k.json</code> &mdash; Ask Paul 510(k), opt-in</td></tr>
   <tr><td>Help sites</td><td>GitBook</td><td><code>orcanos.gitbook.io</code></td></tr>
   </table></div>
+  <div class="trap"><span class="tag">⚠ Three names, one works</span><code>fly.toml</code> calls <code>us.traceability.orcanos.ai</code> an alias &mdash; it does not resolve. <code>.env.example</code> says <code>trace.orcanos.ai</code>. The real one is <b><code>traceability.orcanos.ai</code></b>; use it for <code>APP_BASE_URL</code> or invitation links point nowhere.</div>
 </div>
 </section>
 
@@ -512,6 +607,7 @@ pre .k{color:var(--purl)} pre .s{color:var(--ok)} pre .c{color:var(--dim)} pre .
     <div class="stack">
       <div class="card"><h3>Cache is budgeted per account</h3><p class="small"><code>DB_CACHE_BUDGET_MB</code> evicts an account's oldest pages, so one busy tenant cannot fill the disk. Eviction only costs speed &mdash; the page rebuilds.</p></div>
       <div class="card ok"><h3>What this buys</h3><p class="small">Cheap and fast. It started as an on-premises IIS app, where per-customer databases made no sense.</p></div>
+      <div class="card"><h3>People live here now (4.0)</h3><p class="small"><code>users</code> (a mirror of the Orcanos user &mdash; never an authorisation source), <code>chat_messages</code>, <code>invites</code>: all account-scoped. Presence comes from <code>sessions.last_seen</code> within 90&nbsp;s, per tenant.</p></div>
     </div>
   </div>
   <div class="trap"><span class="tag">⚠ Two silent failures</span><b>Isolation is enforced by code, not by the database</b> &mdash; every query must be account-scoped, and a missed scope is a data leak. And <b>an empty allowlist table means the access gate is OFF</b>, not that nobody is allowed in.</div>
@@ -575,7 +671,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
     <div class="card"><div class="kicker">EU</div><h3><code>traceability-matrix-eu</code></h3><p class="small"><code>fly.eu.toml</code> &middot; region <code>fra</code> (Frankfurt) &middot; its own volume, SQLite file and Litestream bucket.</p><pre>fly deploy -c fly.eu.toml</pre></div>
   </div>
   <div class="trap"><span class="tag">⚠ Why not one app, two machines</span><b>A Fly volume is pinned to one region and is never shared between machines.</b> <code>fly scale count 2</code> does not give you a region &mdash; it gives you <b>two divergent databases with nothing reporting the split</b>. Nothing replicates between the two apps. <b>That is the feature, not an omission.</b></div>
-  <div class="trap"><span class="tag">⚠ Half-shipped releases</span><b><code>deploy.bat</code> deploys the US app only.</b> A release is not shipped until both commands have run &mdash; and because both regions serve real customers off the same build, a version drift produces <b>no error anywhere</b>. Only a customer in one region seeing something the other cannot.</div>
+  <div class="card ok"><h3>✅ Fixed 2026-09-16 &mdash; half-shipped releases</h3><p class="small"><code>deploy.bat</code> now deploys <strong>both</strong> regions and then checks that both hosts serve the released version. An EU failure prints <em>&ldquo;EU is now BEHIND&rdquo;</em>. Before that it deployed the US only, and a version drift produced no error anywhere.</p></div>
   <div class="note"><code>SELF_REGION</code> is the whole of an instance's identity. Two apps sharing one value is a deployment mistake nothing else would catch, so <code>GET /api/admin/regions</code> returns <code>self_region</code> and the console checks it.</div>
 </div>
 </section>
@@ -603,6 +699,7 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
   </div>
   <div class="trap"><span class="tag">⚠ Before the password</span><b>Credentials POSTed to the wrong region are themselves a cross-border transfer</b> of personal data &mdash; even though that instance refuses them and stores nothing. So the check hangs off <code>POST /api/auth/check-account</code>, which already fired on URL blur, and <code>/login</code> answers <b>409 with the correct URL</b>, not 403: nothing is wrong with the account, the request arrived at the wrong deployment.</div>
   <div class="trap"><span class="tag">⚠ <code>rr=1</code> is not theoretical</span><b>The two instances hold separate copies of the directory.</b> If they ever disagree &mdash; a half-finished move, a directory write that failed on one side &mdash; an automatic redirect bounces the browser between two servers <b>forever</b>, each certain the customer belongs to the other. The loop guard means &ldquo;you have been sent once already&rdquo;: fall back to a panel with a link and let a person decide.</div>
+  <div class="note"><strong>Changed in 4.4.1:</strong> only the URL check hands off &mdash; simply loading the page no longer forwards anyone. Saved accounts from the other region carry an <strong>EU/US badge</strong>; the badge is a label, and <code>check-account</code> still decides.</div>
 </div>
 </section>
 
@@ -636,9 +733,13 @@ id = <span class="s">'8ecbef88-c056-47da-…'</span></pre></div>
   <tr><td>Ask Paul FastAPI backend</td><td>❌ <strong>one Cloud Run service, <code>us-east4</code></strong> &mdash; every EU customer's questions and document text are processed in the US</td></tr>
   <tr><td>Embeddings</td><td>❌ <strong>always OpenAI on the platform key</strong>, no per-account override</td></tr>
   <tr><td>Chat LLM</td><td>⚠ per-account engine; only <code>bedrock_claude</code> uses an EU inference profile &mdash; the Anthropic / OpenAI / Gemini branches are US</td></tr>
-  <tr><td>Traceability's own AI calls</td><td>❌ <strong>not region-routed</strong> &mdash; panel-describe, trace-build and quiz-generation send requirement text and trainee names to the US Anthropic API</td></tr>
-  <tr><td>SSO into Ask Paul from the EU app</td><td>❌ deliberately unconfigured &mdash; next slide</td></tr>
-  <tr><td>EU Litestream bucket restriction</td><td>⚠ <strong>unverified from the CLI</strong></td></tr>
+  <tr><td>Traceability's own AI calls</td><td>❌ <strong>not region-routed by default</strong> &mdash; requirement text and trainee names go to the US Anthropic API unless an admin points the account at Bedrock <code>eu.</code></td></tr>
+  <tr><td>SSO into Ask Paul from the EU app</td><td>🔴 <strong>meant to be unconfigured &mdash; now SET</strong>. Next slide</td></tr>
+  <tr><td><strong>Intercom</strong> 🆕</td><td>❌ a US processor in the <strong>browser</strong> of EU users too, login page included</td></tr>
+  <tr><td>Voice input 🆕</td><td>❌ Chrome sends dictated audio to Google</td></tr>
+  <tr><td><code>orca60</code> 🆕</td><td>❌ EU in master, its Ask Paul project is in <code>us-east-1</code></td></tr>
+  <tr><td>Chat, users, invites 🆕</td><td>✅ in the regional database</td></tr>
+  <tr><td>EU Litestream bucket restriction</td><td>⚠ <strong>still unverified from the CLI</strong></td></tr>
   </table></div>
   <div class="trap"><span class="tag">⚠ The invisible bug this replaced</span><code>provision_account()</code> declared <code>region="us-east-1"</code> and <b>its only caller never passed it</b>, so <b>every customer ever provisioned landed in Virginia</b>, whatever they had contracted for. A database in the wrong region works perfectly. The default was <b>removed rather than corrected</b> &mdash; a correct default is still a default, and refusing the request is the only failure visible at the moment the mistake is made.</div>
 </div>
@@ -659,10 +760,13 @@ ask_paul_enabled = allow_ask_paul        <span class="c"># the ACCOUNT's licence
   <tr><td><code>ADMIN_PASSWORD</code>, <code>SECRET_KEY</code></td><td>set</td><td>set</td><td><strong>Different per region.</strong> One leak must not open both</td></tr>
   <tr><td><code>SESSION_ENC_KEY</code></td><td>set</td><td>set</td><td><strong>Must differ</strong> &mdash; the databases never travel together</td></tr>
   <tr><td><code>AWS_*</code>, <code>BUCKET_NAME</code></td><td>set</td><td>set</td><td><strong>Must differ</strong> &mdash; and the EU bucket must be EU-restricted</td></tr>
-  <tr><td><code>ASK_PAUL_APP_URL</code> / <code>_SSO_SECRET</code></td><td>set</td><td><strong>unset</strong></td><td>⚠ Needs an <strong>EU Ask Paul</strong> first. Do <strong>not</strong> point EU at the US app</td></tr>
+  <tr><td><code>ASK_PAUL_APP_URL</code> / <code>_SSO_SECRET</code></td><td>set</td><td>🔴 <strong>SET</strong></td><td>Intended: <strong>unset</strong> until an EU Ask Paul exists. Do <strong>not</strong> point EU at the US app</td></tr>
   <tr><td><code>ANTHROPIC_API_KEY</code></td><td>set</td><td><strong>unset</strong></td><td>⚠ Regional Bedrock endpoint &mdash; not the US key</td></tr>
+  <tr><td><code>SMTP_*</code>, <code>MAIL_FROM</code>, <code>APP_BASE_URL</code> 🆕</td><td>unset</td><td>unset</td><td>Invite is off in both. If set: different credentials, each region's own URL</td></tr>
+  <tr><td><code>ADMIN_DB_DOWNLOAD</code>, <code>ALLOW_INSECURE_ORCANOS_URL</code> 🆕</td><td>&mdash;</td><td>&mdash;</td><td>Flags. Keep both off unless in use</td></tr>
   </table></div>
-  <div class="trap"><span class="tag">⚠ Do not &ldquo;fix&rdquo; the blanks</span><b>The two unset rows are a residency decision, not an oversight.</b> An operator who finds them blank at 2 a.m. will fix them by copying, because copying is what parity means everywhere else. Wiring either in sends EU personal data to the US <b>through a deployment whose entire purpose is that it does not</b> &mdash; a breach that looks like a feature working. <b>Check <code>fly secrets list</code> before touching a licence.</b></div>
+  <div class="trap" style="border-color:var(--bad)"><span class="tag">🔴 Open finding · 2026-09-25</span><b><code>fly secrets list -a traceability-matrix-eu</code> shows both Ask Paul secrets are set.</b> There is no EU Ask Paul &mdash; so unless the URL points somewhere unexpected, EU users are now handed, <b>with their Orcanos credentials in the SSO token</b>, to the US one. Secrets are write-only: find out who set them and why, then unset or record the decision.</div>
+  <div class="trap"><span class="tag">⚠ Do not &ldquo;fix&rdquo; the blanks</span><b>The unset rows are a residency decision, not an oversight.</b> An operator who finds them blank at 2 a.m. will fix them by copying, because copying is what parity means everywhere else. Wiring either in sends EU personal data to the US <b>through a deployment whose entire purpose is that it does not</b> &mdash; a breach that looks like a feature working. <b>Check <code>fly secrets list</code> before touching a licence.</b></div>
 </div>
 </section>
 
@@ -715,14 +819,29 @@ ask_paul_enabled = allow_ask_paul        <span class="c"># the ACCOUNT's licence
 <section class="slide" data-part="4" data-title="Three Orcanos clients" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">Duplication</div>
-  <h2>We have written the same client three times.</h2>
+  <h2>We have written the same client three times &mdash; and now a second kind.</h2>
   <div class="g3">
-    <div class="card"><div class="kicker">JavaScript</div><h3>covaris-bom</h3><p class="small"><code>src/api/orcanosClient.js</code></p></div>
+    <div class="card"><div class="kicker">JavaScript · legacy</div><h3>covaris-bom</h3><p class="small"><code>src/api/orcanosClient.js</code> &mdash; superseded, but Traceability's <code>bom_api.py</code> is a fresh fourth copy of the filter logic</p></div>
     <div class="card"><div class="kicker">Python</div><h3>Ask Paul</h3><p class="small"><code>backend/api.py</code></p></div>
     <div class="card"><div class="kicker">Python</div><h3>Traceability</h3><p class="small"><code>src/backend/orcanos_client.py</code></p></div>
   </div>
   <p class="sub">Each one independently rediscovered the same quirks: Basic auth with an empty body, XML-wrapped arrays, <code>Display_text</code> vs <code>Text</code>, the <code>"46584 (42195)"</code> id shape, and no CORS headers so a proxy is mandatory.</p>
   <div class="note"><strong>One shared client is the highest-value piece of de-duplication available to us.</strong> The skill documents the quirks; the code does not share them. The open question is which language wins &mdash; one Python client behind a backend, or a JS client per frontend.</div>
+</div>
+</section>
+
+<section class="slide" data-part="4" data-title="🆕 A second way in — the Orcanos web UI" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Orcanos · beyond the API</div>
+  <h2>Some things the API does not offer, so we sign in to the web UI.</h2>
+  <p class="sub">Document <strong>file bytes</strong> (<code>/web/Download/ViewAttachment</code>) and the <strong>Process Flow chart</strong> (<code>/web/&lt;Ver_Id&gt;/items/workflowchart</code>) are reached by a <strong>form login + session cookie</strong> &mdash; Basic auth is ignored there. Traceability uses it for quiz generation and BOM export; Ask Paul for DMS indexing and for agents reading an item's workflow.</p>
+  <div class="g2">
+    <div class="trap"><span class="tag">⚠ It needs the real password</span>Traceability decodes it from the session's stored Basic header; Ask Paul uses the account credential. <b>A session row is therefore a usable credential</b>, not just a token.</div>
+    <div class="trap"><span class="tag">⚠ Failure is HTTP 200</span>A failed login returns <b>the login page's HTML with status 200</b>. Code that checks only the status will index a login page as a document.</div>
+    <div class="trap"><span class="tag">⚠ It can lock the account</span>Repeated failed logins lock the Orcanos user &mdash; ours or the customer's.</div>
+    <div class="trap"><span class="tag">⚠ Customers can see it</span>Every download writes <em>downloaded</em> into that document's Orcanos history under the signed-in user &mdash; visible to the customer's auditors.</div>
+  </div>
+  <div class="note">It is also <strong>scraping</strong>: an Orcanos UI change can break it, and there is no API version to pin.</div>
 </div>
 </section>
 
@@ -1006,7 +1125,7 @@ ask_paul_enabled = allow_ask_paul        <span class="c"># the ACCOUNT's licence
     </div>
     <div class="stack">
       <div class="card"><h3>A background job outlives its page</h3><p class="small">Closing the tab kills the <strong>polling</strong>, not the job. <code>GET /api/matrix/{id}/active-job</code> is how a returning page re-attaches. One job per user; exports have their own slot so a download cannot block a rebuild.</p></div>
-      <div class="card ok"><h3>Cache is disposable</h3><p class="small"><code>matrix_cache</code>, <code>funnel_cache</code>, <code>export_jobs</code>, <code>ai_jobs</code>, <code>pending_traces</code> can all be deleted &mdash; they rebuild. Which is exactly why they are also the tables we would <strong>not</strong> migrate to Postgres.</p></div>
+      <div class="card ok"><h3>Cache is disposable &mdash; the cache, not the database</h3><p class="small"><code>matrix_cache</code>, <code>funnel_cache</code>, <code>export_jobs</code>, <code>ai_jobs</code>, <code>pending_traces</code> can all be deleted &mdash; they rebuild. But quiz records, chat, users and invites <strong>exist nowhere else</strong>. The BOM Viewer has no server cache at all.</p></div>
     </div>
   </div>
   <div class="trap"><span class="tag">⚠ When someone says "the data is wrong"</span>Ask in this order: <b>1</b> When was it last refreshed? <b>2</b> Is the change inside the panel's filters? <b>3</b> Was the change a <b>deletion</b> &mdash; those only surface via the count mismatch. <b>4</b> Only then look for a bug.</div>
@@ -1020,8 +1139,8 @@ ask_paul_enabled = allow_ask_paul        <span class="c"># the ACCOUNT's licence
   <div class="tw"><table>
   <tr><th style="width:26%">Store</th><th style="width:22%">Used by</th><th>Notes</th></tr>
   <tr><td><strong>Supabase Postgres (master)</strong></td><td>all apps</td><td>Identity, tenant registry, encrypted secrets, spend, audit</td></tr>
-  <tr><td><strong>Supabase per tenant</strong> <span class="pill">pgvector</span></td><td>Ask Paul</td><td>Documents, embeddings, conversations. <strong>No <code>users</code> table by design</strong></td></tr>
-  <tr><td><strong>SQLite on a Fly volume</strong></td><td>Traceability</td><td>15 tables, WAL, single writer, Litestream replication</td></tr>
+  <tr><td><strong>Supabase per tenant</strong> <span class="pill">pgvector</span></td><td>Ask Paul</td><td>Documents, embeddings, conversations, <strong>agents, proposals, automation jobs, 510(k)</strong> (migrations 010&ndash;036). RLS on, no policies. <strong>No <code>users</code> table by design</strong></td></tr>
+  <tr><td><strong>SQLite on a Fly volume</strong></td><td>Traceability</td><td><strong>30 tables</strong>, one file per region, WAL, single writer, Litestream replication</td></tr>
   <tr><td><strong>Customer SQL Server</strong></td><td>Ask Paul, read-only</td><td>Reached with <code>mssql</code>/tedious, because Vercel has no ODBC driver</td></tr>
   </table></div>
   <div class="g46">
@@ -1029,7 +1148,7 @@ ask_paul_enabled = allow_ask_paul        <span class="c"># the ACCOUNT's licence
       <div class="card or"><h3>Changing schema on Supabase</h3><p class="small">PostgREST <strong>cannot run DDL</strong>. Do not hand-edit in the SQL editor &mdash; you lose the record of what was run. Use the Management API and keep the <code>.sql</code> file as the source of truth.</p><pre>POST https://api.supabase.com/v1/projects/
      &lt;ref&gt;/database/query
 <span class="k">Authorization:</span> Bearer $SUPABASE_ORG_ACCESS_TOKEN
-<span class="k">body:</span> {<span class="s">"query"</span>: <span class="s">"&lt;the .sql file&gt;"</span>}</pre><p class="small">Write every migration as <code>create table if not exists</code> / <code>add column if not exists</code>, so re-running one is a no-op.</p></div>
+<span class="k">body:</span> {<span class="s">"query"</span>: <span class="s">"&lt;the .sql file&gt;"</span>}</pre><p class="small">Write every migration as <code>create table if not exists</code> / <code>add column if not exists</code>, so re-running one is a no-op.</p><p class="small"><strong>Ask Paul now does this on every deploy</strong> &mdash; a Cloud Build step runs <code>run_missing_migrations.py</code>, tracked in <code>schema_migrations</code>. It runs <em>after</em> the deploy, so check the build log. ⚠ Account Management's <code>sql/004</code> is still unapplied.</p></div>
     </div>
     <div class="trap"><span class="tag">⚠ A constraint is invisible to the build</span><b><code>accounts</code> has five NOT NULL columns with no default</b>, four of them the legacy <code>db_*</code> pair. Nothing in the code hints at it, because until 0.3.0 every insert came from the provisioning job. Omit one and PostgREST answers <code>23502</code> with the column name usually truncated out of the message.<br><br><b><code>tsc</code> and <code>next build</code> cannot catch this.</b> Verify a new insert shape by actually running it against the live table and deleting the row &mdash; not by building.</div>
   </div>
@@ -1052,18 +1171,37 @@ sqlite3 -header -csv traceability.db \
       <div class="trap"><span class="tag">⚠ Stop the backend first</span>The database runs in <b>WAL</b> mode, so the newest writes may still be in a <code>traceability.db-wal</code> sidecar. A clean shutdown folds the WAL back in. If the process was killed and a <code>-wal</code> file is present, copy <b><code>-wal</code> and <code>-shm</code> alongside the <code>.db</code></b> &mdash; copying the <code>.db</code> alone <b>silently loses the most recent panels.</b></div>
     </div>
     <div class="stack">
-      <div class="card"><div class="kicker">(b)</div><h3>"Move it to Postgres"</h3><p class="small">Do <strong>not</strong> think of it as "port a database". The 15 tables are not equally precious &mdash; classify first.</p></div>
+      <div class="card"><div class="kicker">(b)</div><h3>"Move it to Postgres"</h3><p class="small">Do <strong>not</strong> think of it as "port a database". The 30 tables are not equally precious &mdash; classify first.</p></div>
       <div class="tw"><table>
       <tr><th>Class</th><th>What to do</th></tr>
       <tr><td><strong>Cache</strong> <span class="pill dim">5 tables</span></td><td><strong>Leave in SQLite indefinitely.</strong> Most of the write volume, and it <em>wants</em> to be node-local</td></tr>
-      <tr><td><strong>Config</strong> <span class="pill or">8 tables</span></td><td>The only data that genuinely must move. Small, low write rate</td></tr>
+      <tr><td><strong>Config</strong> <span class="pill or">9 tables</span></td><td>Must move. Small, low write rate. Now includes <code>bom_settings</code></td></tr>
+      <tr><td><strong>Records</strong> <span class="pill bad">🆕 10 tables</span></td><td>Quizzes, attempts, <code>users</code>, <code>chat_messages</code>, <code>invites</code>, disclaimer acceptances. <strong>Nothing can rebuild them</strong> &mdash; must move, and must be backed up today</td></tr>
       <tr><td><strong>Session</strong></td><td><strong>Do not migrate.</strong> It evaporates when Traceability adopts the platform JWT</td></tr>
       <tr><td><strong><code>ai_usage</code></strong></td><td>Already duplicated in master. Append-only &mdash; <strong>the safest first migration, and it proves the pipe</strong></td></tr>
       <tr><td><strong><code>accounts</code></strong></td><td>Must be <strong>reconciled</strong>, not copied &mdash; the two-tenant-id problem</td></tr>
       </table></div>
-      <div class="card bad"><h3>The honest cost</h3><p class="small"><code>db.py</code> is <strong>~1,800 lines of raw <code>sqlite3</code></strong> &mdash; no ORM, SQLite-specific SQL throughout. A wholesale port is a large, risky, <strong>zero-feature</strong> change.</p></div>
+      <div class="card bad"><h3>The honest cost</h3><p class="small"><code>db.py</code> is <strong>well past 1,800 lines of raw <code>sqlite3</code></strong> &mdash; no ORM, SQLite-specific SQL throughout. A wholesale port is a large, risky, <strong>zero-feature</strong> change.</p></div>
     </div>
   </div>
+</div>
+</section>
+
+<section class="slide" data-part="4" data-title="🆕 Backups and disaster recovery" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Data · recovery</div>
+  <h2>Two DR plans, two status screens, zero rehearsed restores.</h2>
+  <div class="g2">
+    <div class="stack">
+      <div class="card"><div class="kicker">Traceability · /admin → Disaster recovery (3.49)</div><h3>Three layers</h3><p class="small"><strong>Litestream → Tigris</strong> &mdash; loses seconds; snapshot every 6&nbsp;h, 72&nbsp;h retention; the entrypoint <strong>auto-restores onto an empty volume</strong>. <strong>Fly snapshot</strong> &mdash; daily. <strong>Local <code>VACUUM INTO</code> copies</strong> &mdash; newest 5, same disk, a safety net and not a backup.</p><p class="small">Downloading a copy is off unless <code>ADMIN_DB_DOWNLOAD=1</code>. Restoring over the live DB is deliberately not a button.</p></div>
+      <div class="trap"><span class="tag">⚠ The key is part of the backup</span>Restore without the same <code>SESSION_ENC_KEY</code> and everyone is <b>silently signed out</b> and every stored credential is unreadable. Run <b>Verify</b> in both regions after any schema, entrypoint or Litestream change.</div>
+    </div>
+    <div class="stack">
+      <div class="card"><div class="kicker">Supabase · Account Management → Disaster recovery (0.7)</div><h3>Every project reads &ldquo;At risk&rdquo; &mdash; correctly</h3><p class="small"><strong>PITR is off on all of them, master included.</strong> Daily backups only, restorable in place only, never restored. Worst case: a day of data. No off-platform copy.</p></div>
+      <div class="trap"><span class="tag">⚠ No key escrow</span><b>Lose <code>ENCRYPTION_KEY</code> or <code>JWT_SECRET</code> and every backup restores ciphertext nobody can read.</b> Neither is escrowed today. Nothing alerts on any of this &mdash; the screens are read on demand.</div>
+    </div>
+  </div>
+  <div class="note">Runbooks: <code>traceability-matrix/docs/DISASTER_RECOVERY.md</code> and <code>account-management/docs/compliance/DISASTER_RECOVERY.md</code>. Both drill logs are empty.</div>
 </div>
 </section>
 
@@ -1134,7 +1272,9 @@ sqlite3 -header -csv traceability.db \
   <tr><th style="width:34%">Cost</th><th>How it appears</th></tr>
   <tr><td><strong>A provisioned Supabase project per Ask Paul tenant</strong></td><td>Billable from the moment it is created. <strong>Deleting the account does not de-provision it.</strong> The warning is shown on screen &mdash; read it</td></tr>
   <tr><td><strong>Orphaned projects from failed provisioning</strong></td><td>A job that dies mid-run leaves a real, billable project with <strong>no account row</strong>. The finder query is at the bottom of <code>sql/001_account_provisioning.sql</code></td></tr>
-  <tr><td>Fly machine</td><td>Always-on by design (<code>min_machines_running = 1</code>), 1&nbsp;GB volume</td></tr>
+  <tr><td>Fly machines</td><td><strong>Two</strong> now &mdash; one per region &mdash; always-on by design (<code>min_machines_running = 1</code>), 1&nbsp;GB RAM + 1&nbsp;GB volume each. The BOM 1&nbsp;GB export is the first feature that presses on that</td></tr>
+  <tr><td><strong>Ask Paul automation runs</strong> 🆕</td><td>⚠ <strong>Not recorded at all</strong> &mdash; no user to attribute them to. Up to 12 LLM rounds per run, multiplied by delegation. The largest unmetered LLM path we have</td></tr>
+  <tr><td>Intercom 🆕</td><td>Per seat / plan</td></tr>
   <tr><td>Cloud Run</td><td>Per request, plus Artifact Registry storage</td></tr>
   <tr><td>Vercel · GitBook · domains</td><td>Per project · fixed</td></tr>
   </table></div>
@@ -1174,6 +1314,7 @@ sqlite3 -header -csv traceability.db \
       <div class="card"><h3>Verified model ids</h3><p class="small"><code>eu.anthropic.claude-sonnet-4-6</code><br><code>eu.anthropic.claude-opus-4-8</code><br><code>eu.anthropic.claude-haiku-4-5-20251001-v1:0</code><br><code>openai.gpt-oss-120b-1:0</code> · <code>openai.gpt-oss-20b-1:0</code></p></div>
       <div class="trap"><span class="tag">⚠ Three traps</span><b>No region prefix on the OpenAI ids</b> &mdash; <code>eu.</code>/<code>us.</code> are rejected. <b><code>gpt-4o</code> and <code>o3</code> are not on Bedrock at all.</b> And <b>the gpt-oss models emit their reasoning as <code>&lt;reasoning&gt;…&lt;/reasoning&gt;</code> before the answer</b> &mdash; strip it, or both the JSON parse and the free-text output are corrupted.</div>
       <p class="small">On Bedrock the JSON schema is only <strong>prompt-instructed</strong>, not enforced &mdash; so parsing there is defensive. On the Anthropic path it is <strong>enum-forced</strong> at the tool layer, so a hallucinated value is rejected before it reaches our code.</p>
+      <p class="small">🆕 <strong>Since 2026-09-17 the gateway forwards <code>tools</code></strong>, so Ask Paul's agents do native tool-calling on Bedrock. It still takes no <code>max_tokens</code>; 510(k) drafts need a 180&nbsp;s timeout. And when AI is off, Traceability now says <strong>which layer</strong> has no engine &mdash; account row, <code>'*'</code> row or env &mdash; instead of &ldquo;not enabled for this account&rdquo;.</p>
     </div>
     <div class="stack">
       <div class="card"><h3>Keys</h3><p class="small">A per-account key overrides; otherwise the provider's global env key (<code>ANTHROPIC_API_KEY</code> / <code>BEDROCK_API_KEY</code> &mdash; one shared gateway key today).</p><p class="small">Keys are <strong>write-only from the admin API</strong> &mdash; listing shows <code>has_key</code>, never the value. <code>''</code> clears it; <code>None</code> leaves it alone.</p></div>
@@ -1296,7 +1437,8 @@ claude --model claude-sonnet-5
     <div class="card"><h3>A staged per-IP throttle</h3><p class="small"><strong>10</strong> failures → 5 minutes · <strong>15</strong> more → an hour · <strong>25</strong> more → <strong>permanent block</strong>. Checked <em>before</em> the password is compared, so a correct password during a pause is still refused &mdash; which also stops the lockout being a <strong>timing oracle</strong> for "this guess was right".<br><br>The temporary stages are process memory; the permanent block is a database row, because a permanent block a restart clears is not permanent.</p></div>
     <div class="card"><h3>The escape hatch matters</h3><p class="small">A permanent block can lock out <strong>the only admin</strong>, and the Release button lives inside the console they can no longer reach. Starting the process once with <code>ADMIN_UNBLOCK_ALL=1</code> clears the table and logs loudly that it did.<br><br>Reading the blocked list <strong>fails open</strong>: a database hiccup must not be what locks an admin out.</p></div>
   </div>
-  <div class="trap"><span class="tag">⚠ The read-only table browser</span>Off unless <code>ADMIN_DB_BROWSER=1</code> &mdash; its blast radius is <em>every row in production</em>. <b>Injection is prevented by membership, not escaping</b>: no WHERE, no ORDER BY, no query box, and the table name is checked against what <code>sqlite_master</code> actually returns <b>before</b> it is interpolated. The connection runs <code>PRAGMA query_only = ON</code>. <code>sessions.session_id</code> <b>is</b> the bearer cookie, so it and <code>auth_header</code>, <code>csrf_token</code> and <code>ai_config.api_key</code> are redacted by name &mdash; plus any column whose <em>name</em> looks like a secret. <b>A missed entry is not a visible bug; it is a silent disclosure on a page reachable from the internet.</b> Add the column to the redaction list in the same commit that adds the table &mdash; and never add a filter box.</div>
+  <div class="trap"><span class="tag">⚠ The read-only table browser</span>Off unless <code>ADMIN_DB_BROWSER=1</code> &mdash; its blast radius is <em>every row in production</em>. <b>Injection is prevented by membership, not escaping</b>: no WHERE, no ORDER BY, no query box, and the table name is checked against what <code>sqlite_master</code> actually returns <b>before</b> it is interpolated. The connection runs <code>PRAGMA query_only = ON</code>. <code>sessions.session_id</code> <b>is</b> the bearer cookie, so it and <code>auth_header</code>, <code>csrf_token</code> and <code>ai_config.api_key</code> are redacted by name &mdash; plus any column whose <em>name</em> looks like a secret. <b>A missed entry is not a visible bug; it is a silent disclosure on a page reachable from the internet.</b> Add the column to the redaction list in the same commit that adds the table &mdash; and never add a filter box. Since 4.0 that means <code>chat_messages</code> and <code>invites</code> too.</div>
+  <div class="note">🆕 <code>/admin</code> also has a <strong>Disaster recovery</strong> page (3.49). Chat retention and BOM settings are <em>not</em> here &mdash; they live in the in-app <strong>Admin → Settings</strong>, written by each tenant's own Orcanos admins.</div>
 </div>
 </section>
 
@@ -1315,6 +1457,22 @@ claude --model claude-sonnet-5
 </div>
 </section>
 
+<section class="slide" data-part="6" data-title="🆕 New risks since 2026-09-10" data-imp="crit">
+<div class="pad">
+  <div class="eyebrow">Security · added 2026-09-25</div>
+  <h2>Two weeks of features, and what they opened.</h2>
+  <div class="g2">
+    <div class="card bad"><h3>🔴 EU app has the Ask Paul secrets set</h3><p class="small">No EU Ask Paul exists. Unexplained, and possibly EU credentials crossing to the US on every click. Part 3.</p></div>
+    <div class="card bad"><h3>AI writes to the customer's QMS</h3><p class="small">Ask Paul proposals become Orcanos records &mdash; and an automation job in <code>auto</code> mode does it with no human. Decide the control before a customer turns it on.</p></div>
+    <div class="card bad"><h3>No PITR, no escrow, no alerts</h3><p class="small">Every Supabase project, master included, can lose a day. <code>ENCRYPTION_KEY</code> / <code>JWT_SECRET</code> are not escrowed. Nothing pages anyone.</p></div>
+    <div class="card bad"><h3>A session row is a password</h3><p class="small">Web-UI downloads need the real password, so Traceability decodes it from the session. Protect <code>sessions</code> like a credential store.</p></div>
+    <div class="card bad"><h3>A scheduler that can double-run</h3><p class="small">Ask Paul's in-process scheduler on Cloud Run: stops with the traffic, runs twice on scale-out, and is unmetered.</p></div>
+    <div class="card bad"><h3>New processors, no DPAs</h3><p class="small"><strong>Intercom</strong> in both products and both regions (login page included), <strong>Google</strong> behind voice input. Not on any sub-processor list.</p></div>
+  </div>
+  <div class="note">Traceability also publishes its own open gaps for customers in <code>docs/SECURITY_CONTROLS.md</code>: plaintext <code>session_id</code> / <code>csrf_token</code>, no rate limit on <code>/api/auth/login</code>, no HSTS/CSP, <code>ai_config.api_key</code> unencrypted, no user-action audit log. On the plus side: <code>http://</code> Orcanos URLs are now refused before the password is sent, and Ask Paul's 2.61 release added security headers, 120&nbsp;s viewer tokens and prompt-injection wrapping.</div>
+</div>
+</section>
+
 <section class="slide" data-part="6" data-title="ISO 27001 — what we already have" data-imp="ref">
 <div class="pad">
   <div class="eyebrow">ISO 27001:2022</div>
@@ -1324,13 +1482,13 @@ claude --model claude-sonnet-5
   <tr><td><strong>A.5 / A.8 &mdash; Access control</strong></td><td>Platform staff gate; roles read live from the database; per-account allowlists; module licences; Orcanos permission letters gate write actions per type and per project</td></tr>
   <tr><td><strong>A.8.24 &mdash; Cryptography</strong></td><td>AES-256-GCM at rest for all customer secrets; HTTPS everywhere; <code>force_https</code> on Fly</td></tr>
   <tr><td><strong>A.8.15 &mdash; Logging</strong></td><td><code>security_audit_log</code> shared across apps; every sign-in records method, tenant and outcome reason</td></tr>
-  <tr><td><strong>A.8.16 &mdash; Monitoring</strong></td><td><code>/admin</code> dashboards, deploy verification scripts</td></tr>
+  <tr><td><strong>A.8.16 &mdash; Monitoring</strong></td><td><code>/admin</code> dashboards, deploy verification (both regions), Audit log and DR screens &mdash; ⚠ read on demand, <strong>nothing alerts</strong></td></tr>
   <tr><td><strong>A.8.32 &mdash; Change management</strong></td><td>Version bump + release note + changelog for every shippable change; a deploy gate requiring explicit approval</td></tr>
   <tr><td><strong>A.5.23 &mdash; Cloud services</strong></td><td>Documented per-environment configuration; secrets in Secret Manager / Fly secrets / Vercel env</td></tr>
-  <tr><td><strong>A.8.13 &mdash; Backup</strong></td><td>Litestream continuous replication for SQLite; Supabase managed backups</td></tr>
+  <tr><td><strong>A.8.13 &mdash; Backup</strong></td><td>Litestream + Fly snapshots + local copies for SQLite, with a DR console; Supabase <strong>daily only &mdash; PITR off</strong>, never restored. Two written DR plans</td></tr>
   <tr><td><strong>A.8.8 &mdash; Vulnerabilities</strong></td><td><code>/security-scan</code> + <code>/security-review</code> + tracked ledgers</td></tr>
   </table></div>
-  <div class="note"><code>/compliance-audit</code> is built for exactly this. Each audited repo gets a <code>compliance/scope.yaml</code> naming its frameworks, which connectors apply, and <strong>environment variable names only &mdash; never values</strong>. It produces a ledger plus a report, and the ledger is updated in place run over run.</div>
+  <div class="note"><code>/compliance-audit</code> writes <code>compliance/systems/&lt;key&gt;/{scope.yaml, ledger.json}</code> &mdash; <strong>environment variable names only, never values</strong>. 🆕 The ledger is then <strong>imported into Account Management → ISO 27001 audit</strong>: one screen per system, every run kept for comparison, an append-only answer history, and a priority and <em>How to fix</em> on every open control. The % compliant counts only the skill's own verdict &mdash; never an operator's &ldquo;resolved&rdquo;.</div>
 </div>
 </section>
 
@@ -1349,6 +1507,29 @@ claude --model claude-sonnet-5
       <div class="card or"><div class="kicker">5</div><h3>No sub-processor list</h3><p class="small">Anthropic, OpenAI, Google, AWS (via the gateway), Supabase, Vercel, Fly, GitBook, GitHub. Customers on ISO 27001 will ask for it &mdash; and for whether customer data reaches each one.</p></div>
       <div class="card or"><div class="kicker">6</div><h3>Data residency &mdash; now <em>partly</em> built</h3><p class="small">Since 2026-09-10 Traceability runs one deployment per region and Ask Paul provisions each vector DB in the matching Supabase region (Part 3). <strong>The remaining half is the risky half</strong> &mdash; the Ask Paul backend, embeddings, most LLM branches and Traceability's own AI calls are all still US. <strong>A half-true residency claim is worse than none.</strong></p></div>
       <div class="card or"><div class="kicker">7</div><h3>Two fail-opens are undocumented</h3><p class="small">The empty-allowlist gate and the module-licence default for old rows are both deliberate &mdash; but they need writing down as accepted risks, with compensating controls.</p></div>
+    </div>
+  </div>
+</div>
+</section>
+
+<section class="slide" data-part="6" data-title="🆕 ISO 27001 — where we stand now" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">ISO 27001:2022 · 2026-09-25</div>
+  <h2>One system scored, two never audited, five more gaps.</h2>
+  <div class="g3">
+    <div class="card bad"><div class="kicker">Ask Paul · 2026-09-15</div><div class="hero-num">22%</div><p class="small">19 pass · 39 partial · 28 gap</p></div>
+    <div class="card"><div class="kicker">Traceability</div><h3>Never audited</h3><p class="small">It now holds irreplaceable personal data. Run <code>/compliance-audit</code> and import it.</p></div>
+    <div class="card"><div class="kicker">Account Management</div><h3>Never audited</h3><p class="small">The control plane itself &mdash; same step.</p></div>
+  </div>
+  <div class="g2">
+    <div class="stack">
+      <div class="card or"><div class="kicker">8</div><h3>Key escrow and recovery targets</h3><p class="small">No escrow; PITR off; RPO/RTO proposed, not agreed.</p></div>
+      <div class="card or"><div class="kicker">9</div><h3>Retention for the new personal data</h3><p class="small">Chat has 90 days by default. Quiz records, users, invites have no rule.</p></div>
+      <div class="card or"><div class="kicker">10</div><h3>New processors, no DPAs</h3><p class="small">Intercom, Google speech, openFDA &mdash; add to the draft sub-processor table in <code>ISO27001.md</code> §2.1.</p></div>
+    </div>
+    <div class="stack">
+      <div class="card or"><div class="kicker">11</div><h3>AI that writes to the QMS</h3><p class="small">Who approves, what Orcanos records as the author, and whether <code>auto</code> is allowed at all.</p></div>
+      <div class="card or"><div class="kicker">12</div><h3>Asset inventory / SoA (A.5.9)</h3><p class="small">Our own systems are not in the company inventory.</p></div>
     </div>
   </div>
 </div>
@@ -1590,13 +1771,14 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
   <tr><th style="width:6%">#</th><th style="width:38%">What</th><th>Why it is a gate</th></tr>
   <tr><td class="num">1</td><td>Mirror <code>release_notes.json</code> into <code>src/frontend/public/</code>, then <strong>binary-compare the copy</strong></td><td>The app reads the <strong>copy</strong> at runtime. Skip this and the footer shows the previous version through any number of clean deploys, with nothing failing. <strong>⚠ This has drifted twice</strong></td></tr>
   <tr><td class="num">2</td><td>Rebuild the landing page</td><td>The public page ships the newest version number</td></tr>
-  <tr><td class="num">3</td><td><code>git add -A</code>, show status, prompt for a message, commit, push</td><td>One place, one confirmation</td></tr>
-  <tr><td class="num">4</td><td><code>flyctl deploy</code></td><td>The actual deploy</td></tr>
+  <tr><td class="num">3</td><td><code>git add -A</code>, show status, prompt for a message, commit, push &mdash; <strong>pushes whenever the branch is ahead</strong>, even with nothing new</td><td>One place, one confirmation, and an unpushed commit cannot slip through</td></tr>
+  <tr><td class="num">4</td><td><code>flyctl deploy</code> <strong>then</strong> <code>flyctl deploy -c fly.eu.toml</code></td><td>Both regions, every time. An EU failure prints <em>&ldquo;EU is now BEHIND&rdquo;</em></td></tr>
   <tr><td class="num">5</td><td>Build the IIS zip</td><td>The on-premises package never drifts from the cloud one</td></tr>
-  <tr><td class="num">6</td><td><code>curl</code> the live landing page, print HTTP status + byte size</td><td><strong>Proof it is actually live</strong> &mdash; expect 200 and ~700,000+ bytes</td></tr>
+  <tr><td class="num">6</td><td><code>curl</code> <code>/release_notes.json</code> on <strong>both</strong> hosts and compare with the version just released; landing page status + size</td><td><strong>Proof both regions are actually live on this version</strong></td></tr>
   </table></div>
+  <div class="trap"><span class="tag">⚠ Fly ships the working tree</span><code>flyctl deploy</code> uploads the folder, <b>not the commit</b> &mdash; any uncommitted change goes to production with it. The same is true of the in-progress <code>deploy_video.bat</code>.</div>
   <div class="g2">
-    <div class="card"><h3>Ask Paul &mdash; same idea, for Cloud Build</h3><p class="small">commit → push → then <code>git_scripts/verify_deploy.py</code>, <strong>because a push alone does not mean deployed</strong>. If the build fails you are told that production is still running old code.</p></div>
+    <div class="card"><h3>Ask Paul &mdash; same idea, for Cloud Build</h3><p class="small">commit → push → then <code>verify_deploy.py</code> (now at the repo root), <strong>because a push alone does not mean deployed</strong>. 🆕 Cloud Build also <strong>runs the database migrations</strong> after the deploy step.</p></div>
     <div class="card"><h3>Account Management</h3><p class="small">typecheck → <code>next build</code> → commit prompt → push. <strong>The build gate runs before the commit prompt</strong>, so a broken build never reaches a red Vercel deploy. Pushing requires typing <code>DEPLOY</code>.</p></div>
   </div>
 </div>
@@ -1615,7 +1797,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
   </div>
   <div class="g2">
     <div class="stack">
-      <div class="card"><h3>GitBook</h3><p class="small">One page per <code>##</code> section of <code>USER_MANUAL.md</code>, plus an auto-generated Release Notes page placed last.<br><br>Spaces: Traceability <code>DX08MS01eLeTOrEp4kod</code> · Ask Paul <code>Ywj8Iox1ZDfgLDr6wn6r</code> · org <code>1DKN3pu6aPQvXpFb3qPY</code>.<br><br>Pages are matched <strong>by title</strong>, so existing pages are <em>updated</em> and keep their URL and history. Content hashes are cached, so unchanged pages are skipped. <strong>The token is never in source control.</strong> Always <code>--validate-only</code> first.</p></div>
+      <div class="card"><h3>GitBook</h3><p class="small">One page per <code>##</code> section, plus an auto-generated Release Notes page placed last. 🆕 <strong>Traceability's manual is five modules</strong> (Getting Started, Traceability Matrix, Training, BOM Viewer, Help &amp; Reference), declared in <code>gitbook-config.json</code>. Titles must be unique across all five; cross-page links must be <code>[Text](page:Title)</code> or GitBook strips them.<br><br>Spaces: Traceability <code>DX08MS01eLeTOrEp4kod</code> · Ask Paul <code>Ywj8Iox1ZDfgLDr6wn6r</code> · org <code>1DKN3pu6aPQvXpFb3qPY</code>.<br><br>Pages are matched <strong>by title</strong>, so existing pages are <em>updated</em> and keep their URL and history. Content hashes are cached, so unchanged pages are skipped. <strong>The token is never in source control.</strong> Always <code>--validate-only</code> first.</p></div>
       <div class="trap"><span class="tag">⚠ Renaming an H2</span><b>It looks like delete + create</b> to the sync script, and that page's GitBook history is lost. Rename in the GitBook UI first, then in the markdown.</div>
     </div>
     <div class="stack">
@@ -1647,7 +1829,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
     <tr><td class="num">4</td><td><strong>Enable the reverse proxy</strong> &mdash; IIS Manager → server node → ARR Cache → Server Proxy Settings → tick <em>Enable proxy</em></td></tr>
     <tr><td class="num">5</td><td>Extract the zip into <code>C:\inetpub\wwwroot\traceability-matrix\</code></td></tr>
     <tr><td class="num">6</td><td>Copy <code>wwwroot_web.config</code> to <code>C:\inetpub\wwwroot\web.config</code> &mdash; this is what proxies <code>/api/*</code></td></tr>
-    <tr><td class="num">7</td><td>Configure <code>.env</code> &mdash; base URL, tenant, DB path, secret, timeout, <code>ADMIN_PASSWORD</code></td></tr>
+    <tr><td class="num">7</td><td>Configure <code>.env</code> &mdash; base URL, tenant, DB path, secret, timeout, <strong><code>ADMIN_PASSWORD</code> (required: <code>/admin</code> answers 503 without it)</strong>. Optional for Invite: <code>SMTP_*</code>, <code>MAIL_FROM</code>, and an <strong>https</strong> <code>APP_BASE_URL</code> &mdash; so Invite needs a certificate</td></tr>
     <tr><td class="num">8</td><td>Run the backend on <code>localhost:8000</code>, manually or as a Windows Service</td></tr>
     <tr><td class="num">9</td><td>Open <code>http://&lt;server&gt;/traceability-matrix/</code></td></tr>
     </table></div>
@@ -1666,7 +1848,8 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
   <div class="g2">
     <div class="stack">
       <div class="card"><h3>Signing in</h3><p class="small">To get in at all you need <strong>both</strong>: <code>role = 'admin'</code> on your master <code>users</code> row, <strong>and</strong> an <code>@orcanos.com</code> email. Everyone else gets a <strong>404</strong> on every route, by design.<br><br>For Orcanos email sign-in you also need <code>orcanos_user_name</code> set on your row &mdash; set by an admin, directly in the database; there is no self-service screen yet. The first field accepts that username <em>or</em> your email, and <strong><code>QW_Login</code> is always called with the stored username, never with what you typed.</strong></p></div>
-      <div class="card"><h3>The accounts list</h3><p class="small">Every tenant, one row: name, status, database, <strong>data region</strong>, module licences, spend. Module columns come <strong>live from the Traceability instance</strong> &mdash; a <strong>dash means "no answer from that source"</strong>, which is not the same as "off".<br><br>The region column is read from <strong>the instance that actually holds the data</strong>, not from what was recorded. When the two disagree the row is flagged as a <strong>conflict</strong> &mdash; one of them is wrong and nothing here can tell which. Since 0.6.0 the account name opens one window with <strong>six tabs</strong>: Overview, Orcanos, Traceability, Ask Paul, LLM, Spend.</p></div>
+      <div class="card"><h3>The accounts list</h3><p class="small">Every tenant, one row: name, status, database, <strong>data region</strong>, module licences, spend. Module columns come <strong>live from the Traceability instance</strong> &mdash; a <strong>dash means "no answer from that source"</strong>, which is not the same as "off".<br><br>The region column is read from <strong>the instance that actually holds the data</strong>, not from what was recorded. When the two disagree the row is flagged as a <strong>conflict</strong> &mdash; one of them is wrong and nothing here can tell which. Since 0.6.0 the account name opens one window with <strong>six tabs</strong>: Overview, Orcanos, Traceability, Ask Paul, LLM, Spend. 🆕 Each row also has <strong>Ask Paul ↗</strong> / <strong>Traceability ↗</strong> buttons that open the product at the account's regional address (Ask Paul disabled for EU). If Traceability is unreachable the warning now <strong>names the region</strong>.</p></div>
+      <div class="card"><h3>🆕 The BOM licence</h3><p class="small">A fourth module pill (0.8.0). <strong>Off by default</strong> &mdash; the only opt-in module; a BOM-only tenant is valid. Refused with a <strong>409</strong> against a Traceability older than 3.46.0.</p></div>
     </div>
     <div class="stack">
       <div class="card"><h3>Creating an account</h3><p class="small">The <strong>Orcanos tenant is parsed out of the API URL</strong>, and the form shows you which one it decided on. With no URL there is no tenant, and the licence pills stay disabled.<br><br>Since 0.3.3 <strong>every creation writes the Traceability <code>account_access</code> row</strong>, even with nothing ticked &mdash; without that row the tenant cannot sign in to Traceability at all. A database is optional since 0.3.0, and <strong>an account created without one is created inactive</strong>.<br><br><strong>The Data Region is required and has no pre-selected value</strong>, and it cannot be changed afterwards. Creating an EU account is <strong>refused</strong> while no EU Traceability instance is configured. The new account is then signposted in every region, best-effort.</p></div>
@@ -1701,6 +1884,18 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 </section>
 
 <!-- ============ PART 8 ============ -->
+<section class="slide" data-part="7" data-title="🆕 Admin manual — DR, ISO 27001, handbook" data-imp="key">
+<div class="pad">
+  <div class="eyebrow">User manual · Account Management · 0.7 → 0.12</div>
+  <h2>Three new screens in the sidebar.</h2>
+  <div class="g3">
+    <div class="card"><div class="kicker">Disaster recovery</div><h3>Is every database recoverable?</h3><p class="small">One row per Supabase project &mdash; master and every Ask Paul tenant &mdash; read live from the Management API: <strong>Healthy · At risk · Stale · Check failed · No database</strong>. A <em>What needs attention</em> panel says the risk and the steps. <strong>Status only</strong> &mdash; nothing here backs up or restores, and Traceability is not covered (its own <code>/admin</code> is).</p><p class="small">⚠ Everything reads <strong>At risk</strong> today. That is correct: PITR is off everywhere.</p></div>
+    <div class="card"><div class="kicker">ISO 27001 audit</div><h3>Pick a system, import a run, work the list</h3><p class="small">Ask Paul or Traceability. Import the <code>ledger.json</code> from <code>/compliance-audit</code>; every run is kept, so two audits compare. Filter by <strong>priority</strong>; open a control for <em>How to fix</em>. <em>Save comment</em> or <em>Resolve</em> with evidence &mdash; every answer is kept in its history.</p><p class="small">⚠ <strong>% compliant ignores your answers on purpose.</strong> To move it, fix the thing and re-run.</p></div>
+    <div class="card or"><div class="kicker">Handbook</div><h3>This deck</h3><p class="small">Served from behind the staff gate, framed in the console. Click in and use ← → or <strong>M</strong> for the index; <em>Open full screen</em> gives it its own tab.</p><p class="small">To change it: edit <code>docs/platform/orcanos-ai-infrastructure.html</code> and the long-form <code>ORCANOS_AI_INFRASTRUCTURE.md</code>, then deploy.</p></div>
+  </div>
+</div>
+</section>
+
 <section class="slide part" data-part="8" data-title="Part 8 — Where it goes">
 <div class="pad">
   <div class="part-n">PART EIGHT</div>
@@ -1806,7 +2001,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 <section class="slide" data-part="8" data-title="Next steps — ranked" data-imp="key">
 <div class="pad">
   <div class="eyebrow">The future · next steps</div>
-  <h2>Residency first. Then seventeen, ranked by value per unit of risk.</h2>
+  <h2>Residency first. Then the rest, ranked by value per unit of risk.</h2>
   <p class="sub"><strong>The R-list comes before everything else</strong>, because we now have EU customers on a guarantee that is only <em>partly</em> true &mdash; and each unfinished row is a compliance claim we cannot yet make.</p>
   <div class="tw"><table>
   <tr><th style="width:5%">#</th><th style="width:40%">Step</th><th style="width:37%">Why now</th><th>Risk</th></tr>
@@ -1815,11 +2010,15 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
   <tr><td class="num">R3</td><td><strong>Region-route Traceability's own AI calls</strong> to a regional endpoint</td><td>Requirement text and trainee names go to the US API today, and <strong>a US call for an EU tenant returns a normal answer</strong></td><td><span class="pill or">medium</span></td></tr>
   <tr><td class="num">R4</td><td><strong>Decide the Ask Paul EU story</strong> &mdash; an EU backend and embedding path, or a stated contractual limitation</td><td>The vector DB is in Frankfurt; the backend, embeddings and most LLM branches are not. <strong>Until this is answered, do not claim EU residency for Ask Paul</strong></td><td><span class="pill bad">high</span></td></tr>
   <tr><td class="num">R5&ndash;R6</td><td><strong>Only then</strong> set the EU Ask Paul SSO secrets · a <strong>secret-parity check on deploy</strong></td><td>Pointing EU at the US app is a breach that looks like a feature working · nothing detects the drift today</td><td><span class="pill ok">low</span></td></tr>
-  <tr><td class="num">R7&ndash;R9</td><td><strong>Make <code>deploy.bat</code> cover both regions</strong> · set <code>ADMIN_PASSWORD</code>/<code>SECRET_KEY</code> per region · <strong>rehearse a region move</strong> on a test tenant</td><td>A release is not shipped until both commands run · <code>/admin</code> is 503 until they are set · the purge is irreversible and the row-count comparison is the only safety</td><td><span class="pill ok">low</span></td></tr>
+  <tr><td class="num">R7</td><td>✅ <s><code>deploy.bat</code> covers both regions</s> &mdash; done 2026-09-16</td><td>&mdash;</td><td></td></tr>
+  <tr><td class="num">R8&ndash;R9</td><td>Set <code>ADMIN_PASSWORD</code>/<code>SECRET_KEY</code> per region · <strong>rehearse a region move</strong> on a test tenant</td><td><code>/admin</code> is 503 until they are set · the purge is irreversible and the row-count comparison is the only safety</td><td><span class="pill ok">low</span></td></tr>
+  <tr><td class="num">R10 🆕</td><td><strong>Explain the Ask Paul secrets on the EU app</strong> &mdash; unset them or record the decision</td><td>If they point at the US Ask Paul, EU credentials cross the border on every click</td><td><span class="pill bad">live</span></td></tr>
+  <tr><td class="num">R11&ndash;R12 🆕</td><td><strong>Decide orca60</strong> (EU account, US database) · <strong>decide Intercom for EU users</strong></td><td>Two residency claims that are currently false</td><td><span class="pill or">medium</span></td></tr>
   <tr><td class="num">1</td><td><strong>Fix the orphaned Supabase project</strong> <code>qms-pcure</code> and run the orphan-finder query</td><td>It is billing us today</td><td><span class="pill ok">none</span></td></tr>
   <tr><td class="num">2</td><td><strong>Fix provisioning to use the Supabase pooler host</strong>, and create the <code>accounts</code> row <em>before</em> the project</td><td>The DDL step cannot work from Vercel; failures are unrecoverable</td><td><span class="pill ok">low</span></td></tr>
   <tr><td class="num">3</td><td><strong>Test everything in Account Management that writes</strong></td><td>We are one save away from finding out the hard way</td><td><span class="pill ok">low</span></td></tr>
-  <tr><td class="num">4</td><td><strong>Rehearse a restore</strong> and write down how long it took</td><td>ISO 27001 evidence, and peace of mind</td><td><span class="pill ok">none</span></td></tr>
+  <tr><td class="num">4</td><td><strong>Rehearse a restore</strong> and write down how long it took &mdash; both runbooks now exist</td><td>ISO 27001 evidence &mdash; and Traceability now holds data nothing can rebuild</td><td><span class="pill ok">none</span></td></tr>
+  <tr><td class="num">4a&ndash;d 🆕</td><td><strong>Escrow the keys, PITR on master, off-platform dump</strong> · move Ask Paul's <strong>scheduler out of the web process</strong> · <strong>meter automation runs</strong> · <strong>decide <code>auto</code> approval mode</strong></td><td>Backups restore ciphertext without the keys · it stops with traffic and double-runs · unmetered LLM · AI writing to a QMS unseen</td><td><span class="pill or">medium</span></td></tr>
   <tr><td class="num">5</td><td><strong><code>user_accounts</code> membership table in master</strong></td><td>Every consolidation step needs it; nothing reads it at first</td><td><span class="pill ok">low</span></td></tr>
   <tr><td class="num">6</td><td><strong>One parent domain</strong>, session cookie scoped to it</td><td>Unlocks SSO with no app moving anywhere</td><td><span class="pill ok">low</span></td></tr>
   <tr><td class="num">7</td><td><strong>Portal shell + module registry</strong>; single-module tenants skip the launcher</td><td>Proves one login without absorbing any app</td><td><span class="pill ok">low</span></td></tr>
@@ -1830,6 +2029,8 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
   <tr><td class="num">12&ndash;13</td><td>Config tables to Postgres · hosting consolidation if still wanted</td><td>Only now is the shape known · optional, possibly never worth it</td><td><span class="pill or">medium</span></td></tr>
   <tr><td class="num">14&ndash;15</td><td><code>accounts.orcanos_tenant</code> column · retention policy, access reviews, sub-processor list</td><td>Removes a class of guessing · the remaining ISO 27001 gaps</td><td><span class="pill ok">low</span></td></tr>
   <tr><td class="num">16&ndash;17</td><td>Update the team deck and its model table · <strong>decide the cost-ledger boundary</strong>, then fix the stale price table</td><td>It is what new people are onboarded with · a wrong table writes a wrong ledger silently</td><td><span class="pill ok">low</span></td></tr>
+  <tr><td class="num">18&ndash;20 🆕</td><td><strong>Audit Traceability and Account Management</strong> with <code>/compliance-audit</code> · apply <code>sql/004</code> · configure SMTP (or keep Invite off)</td><td>Neither has ever been audited · duplicate names stopped by the app only · Invite is invisible in production</td><td><span class="pill ok">low</span></td></tr>
+  <tr><td class="num">21&ndash;23 🆕</td><td>Release notes for what shipped silently, renumber Notes #68/#69 · <strong>retire covaris-bom</strong> · fix the ECO export's Revisions fan-out</td><td>Auditors read release notes · two live copies of one product · it has exhausted Orcanos' connection pool once</td><td><span class="pill ok">low</span></td></tr>
   </table></div>
 </div>
 </section>
@@ -1837,7 +2038,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
 <section class="slide" data-part="8" data-title="The open decisions" data-imp="key">
 <div class="pad">
   <div class="eyebrow">The future · unsettled</div>
-  <h2>Five decisions, blocking step 9.</h2>
+  <h2>Five decisions blocking step 9 <h2>Five decisions, blocking step 9.</h2>mdash; one now answered.</h2>
   <div class="g2">
     <div class="stack">
       <div class="card or"><div class="kicker">D1</div><h3>The join key</h3><p class="small">What links an Orcanos user to a master <code>users</code> row? <code>QW_Login</code> returns a <code>User_name</code> that is <strong>unique per tenant, not globally</strong>. Today: <code>orcanos_user_name</code> + <code>orcanos_account</code>, unique on the pair &mdash; the honest option. Also: <strong>do we JIT-provision a user on first <code>QW_Login</code>?</strong></p></div>
@@ -1845,7 +2046,7 @@ git reset HEAD~1             <span class="c"># undo last commit</span></pre><p c
     </div>
     <div class="stack">
       <div class="card or"><div class="kicker">D3</div><h3>Is a module licence per tenant or per user?</h3><p class="small">Recommendation: <strong>tenant-level with optional per-user narrowing.</strong></p></div>
-      <div class="card or"><div class="kicker">D4</div><h3>Does covaris-bom join at all?</h3><p class="small">Cheapest to absorb, gains the least &mdash; but the lowest-stakes way to prove the portal end to end.</p></div>
+      <div class="card ok"><div class="kicker">D4 · answered 2026-09-16</div><h3>Does covaris-bom join at all?</h3><p class="small"><strong>Yes &mdash; by being absorbed</strong>, as Traceability's BOM Viewer module.</p></div>
       <div class="card or"><div class="kicker">D5</div><h3>CSRF</h3><p class="small">Account Management relies on <code>SameSite=Lax</code>; Traceability issues an explicit <code>X-CSRF-Token</code>. <strong>Pick one, apply it everywhere.</strong></p></div>
       <div class="note"><strong>Order of consolidation: identity → domain → data → hosting.</strong> Deliberately the reverse of the intuitive order &mdash; hosting is the most visible mess and the least valuable to fix.</div>
     </div>

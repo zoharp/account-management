@@ -24,7 +24,7 @@ export default function AppShell({
   version,
 }: {
   children: React.ReactNode;
-  active: 'accounts' | 'audit' | 'disaster-recovery' | 'iso27001';
+  active: 'accounts' | 'audit' | 'disaster-recovery' | 'iso27001' | 'handbook';
   userEmail: string;
   /** From `appVersion()`, read server-side — see `lib/version.ts`. */
   version: string;
@@ -123,6 +123,12 @@ export default function AppShell({
             className={`app-nav-item ${active === 'iso27001' ? 'app-nav-item--active' : ''}`}
           >
             ISO 27001 audit
+          </Link>
+          <Link
+            href="/handbook"
+            className={`app-nav-item ${active === 'handbook' ? 'app-nav-item--active' : ''}`}
+          >
+            Handbook
           </Link>
         </nav>
 

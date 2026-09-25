@@ -7,6 +7,12 @@ const nextConfig = {
   // (tedious' MSAL paths, pg-native) that are never used at runtime.
   serverExternalPackages: ['mssql', 'pg', 'bcryptjs'],
 
+  // The handbook deck is read from disk by `api/handbook/route.ts`. Nothing
+  // imports it, so the tracer would leave it out of the Vercel function.
+  outputFileTracingIncludes: {
+    '/api/handbook': ['./docs/platform/orcanos-ai-infrastructure.html'],
+  },
+
   /**
    * Response headers for every route.
    *
@@ -36,6 +42,17 @@ const nextConfig = {
             key: 'Strict-Transport-Security',
             value: 'max-age=63072000; includeSubDomains',
           },
+        ],
+      },
+      // The one exception: `/handbook` frames this read-only deck from the same
+      // origin. Must stay AFTER the catch-all — when two entries set the same
+      // key for a path, Next keeps the later one. Nothing that writes may ever
+      // be given this relaxation.
+      {
+        source: '/api/handbook',
+        headers: [
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
         ],
       },
     ];

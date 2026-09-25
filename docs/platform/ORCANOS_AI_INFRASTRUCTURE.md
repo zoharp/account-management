@@ -7,8 +7,9 @@ plan to do next.
 | | |
 |---|---|
 | **Audience** | IT, developers, auditors, new team members |
-| **Written** | 2026-09-09 · **last updated 2026-09-10** |
-| **Latest change** | **Data residency (EU / US)** — a new [chapter 5](#5-data-residency--eu-and-us), and updates through chapters 3, 4, 7, 8, 10, 13, 14, 19, 20, 22. The full account is in [`CHANGES-2026-09-09-REGIONS.md`](CHANGES-2026-09-09-REGIONS.md) |
+| **Written** | 2026-09-09 · **last updated 2026-09-25** |
+| **Latest change** | **Two weeks of product work, 2026-09-10 → 09-25.** Traceability 3.45 → **4.7** (BOM Viewer and Training as modules, presence and chat, invite, Intercom, AI disclaimer, a DR console); Ask Paul 2.39 → **2.65** (agents that write back to Orcanos, scheduled automation, 510(k)/DHF, DMS revisions); Account Management 0.5 → **0.12** (BOM licence, Disaster recovery, ISO 27001 console, this handbook in the console). New sections [2.7–2.10](#27-the-training-module), [6.4](#64-a-second-way-in--the-orcanos-web-ui), [10.4](#104-backups-and-disaster-recovery), [20.10–20.12](#2010-disaster-recovery); updates in almost every chapter. ⚠️ **Read [§5.8](#58--the-secret-parity-trap) first** — the EU app's secrets no longer match what this handbook said they must be. Previous change: data residency ([`CHANGES-2026-09-09-REGIONS.md`](CHANGES-2026-09-09-REGIONS.md)) |
+| **Also here** | The slide-deck version is served inside Account Management at **accounts.orcanos.ai/handbook** (staff only); its source is [`orcanos-ai-infrastructure.html`](orcanos-ai-infrastructure.html) |
 | **Owner** | Zohar Peretz |
 | **Status** | Living document — update it when infrastructure changes |
 | **Lives in** | `account-management/docs/platform/` (git repo `zoharp/account-management`) |
@@ -26,16 +27,22 @@ plan to do next.
 1. [The big picture](#1-the-big-picture)
 2. [The applications](#2-the-applications)
    · [2.6 Inside Ask Paul — the RAG architecture](#26-inside-ask-paul--the-rag-architecture)
+   · [2.7 The Training module](#27-the-training-module) 🆕
+   · [2.8 The BOM Viewer module](#28-the-bom-viewer-module) 🆕
+   · [2.9 Ask Paul agents and automation](#29-ask-paul-agents-and-automation) 🆕
+   · [2.10 Ask Paul: 510(k) and the Design History File](#210-ask-paul-510k-and-the-design-history-file) 🆕
 3. [Environments — Fly, Vercel, Supabase, Cloud Run, IIS](#3-environments--fly-vercel-supabase-cloud-run-iis)
 4. [Single-tenant vs multi-tenant](#4-single-tenant-vs-multi-tenant)
-5. [**Data residency — EU and US**](#5-data-residency--eu-and-us) 🆕
+5. [**Data residency — EU and US**](#5-data-residency--eu-and-us)
    · [5.7 ⚠️ What is NOT residency yet](#57--what-is-not-residency-yet)
    · [5.8 ⚠️ The secret-parity trap](#58--the-secret-parity-trap)
 6. [Working with Orcanos web services](#6-working-with-orcanos-web-services)
+   · [6.4 A second way in — the Orcanos web UI](#64-a-second-way-in--the-orcanos-web-ui) 🆕
 7. [Authentication](#7-authentication)
 8. [Silent login to Ask Paul (cross-app SSO)](#8-silent-login-to-ask-paul-cross-app-sso)
 9. [Caching — quick cache and slow cache](#9-caching--quick-cache-and-slow-cache)
 10. [Databases, and converting SQLite to Postgres](#10-databases-and-converting-sqlite-to-postgres)
+   · [10.4 Backups and disaster recovery](#104-backups-and-disaster-recovery) 🆕
 11. [Cost — how we record it and how we control it](#11-cost--how-we-record-it-and-how-we-control-it)
 12. [Managing the LLMs](#12-managing-the-llms)
 13. [Security — how we work](#13-security--how-we-work)
@@ -63,15 +70,15 @@ flowchart TB
     U([User])
 
     subgraph Apps["Orcanos AI applications"]
-      AP["Ask Paul<br/>askpaul.orcanos.ai<br/>RAG + IEC 62304"]
-      TR["Traceability Matrix<br/>traceability.orcanos.ai<br/>L1→L6 + Training"]
+      AP["Ask Paul<br/>askpaul.orcanos.ai<br/>RAG · agents · 510(k)"]
+      TR["Traceability Matrix<br/>traceability.orcanos.ai (US)<br/>eu.traceability.orcanos.ai (EU)<br/>Trace · Training · BOM"]
       AM["Account Management<br/>accounts.orcanos.ai<br/>control plane"]
     end
 
     subgraph Data["Data"]
       MS[("Master Supabase<br/>accounts · users · audit · spend")]
       TS[("Per-tenant Supabase<br/>one project per customer<br/>pgvector")]
-      SQ[("SQLite on Fly volume<br/>15 tables")]
+      SQ[("SQLite on Fly volume<br/>30 tables · one per region")]
     end
 
     ORC["Orcanos QMS<br/>app.orcanos.com/&lt;tenant&gt;<br/>REST API"]
@@ -84,11 +91,15 @@ flowchart TB
     TR --> SQ
     TR -.->|module licences| AM
     AM --> MS
-    AP --> ORC
+    AP -->|reads + proposed writes| ORC
     TR --> ORC
     AM --> ORC
     TR -->|silent SSO| AP
 ```
+
+Three external services now sit in the path as well, all new since 2026-09-10: **Intercom**
+(support chat in both products' browsers), **openFDA** (Ask Paul's 510(k) module, opt-in) and
+**Google speech recognition** (behind Chrome's Web Speech API when a user dictates to Ask Paul).
 
 **The three shared things.** Break any one of them and live customers break with it.
 
@@ -108,30 +119,68 @@ flowchart TB
 |---|---|
 | **URL** | https://askpaul.orcanos.ai |
 | **Repo / folder** | `zoharp/orcanos_qms_AI` · `c:\AI Projects\Orcanos QMS` |
-| **Version** | backend `2.38.5`, frontend `1.39.0` |
-| **What it does** | Multi-tenant **RAG** compliance assistant over ISO 27001 / 13485 / 14971, plus an IEC 62304 requirements pipeline |
-| **Runtime** | FastAPI (Python 3.11) on **Google Cloud Run** + React/Vite on **Vercel** |
+| **Version** | backend `2.65.0`, frontend `1.68.0` (2026-09-23; later commits, including the Intercom widget, did not bump it) |
+| **What it does** | Multi-tenant **RAG** compliance assistant over ISO 27001 / 13485 / 14971 and the tenant's own controlled documents, plus: an IEC 62304 requirements pipeline; an **agents layer** with a catalogue of QMS agents that can **propose writes back into Orcanos** ([§2.9](#29-ask-paul-agents-and-automation)); **scheduled automation** of those agents; a **510(k) / DHF module** ([§2.10](#210-ask-paul-510k-and-the-design-history-file)); SOP rule extraction with a compliance-gap dashboard; DMS revision tracking with Word-style diffs; voice input |
+| **Runtime** | FastAPI (Python 3.11) on **Google Cloud Run** + React/Vite on **Vercel**. The backend now also runs an **in-process scheduler** (§2.9) |
 | **Data** | Master Supabase **+ one Supabase project per customer** (pgvector) **+** customer SQL Server, read-only |
-| **Auth** | Platform JWT in `localStorage`. Google / Office 365 / Orcanos email |
-| **Docs** | `CLAUDE.md`, then `MD files/SYSTEM.md`, `MD files/ARCHITECTURE.md`, `MD files/SCHEMA.md` |
+| **Auth** | Platform JWT in `localStorage`. Google / Office 365 / Orcanos email. Orcanos `Is_admin` is read at login into `users.is_orcanos_admin`; Google/O365-only users are never Orcanos admins |
+| **Docs** | `CLAUDE.md`, then `MD files/SYSTEM.md`, `MD files/ARCHITECTURE.md`, `MD files/SCHEMA.md`, `MD files/FDA_510K.md` |
 | **Help site** | https://orcanos.gitbook.io/orcanos-qms-ai/ |
 
 Ask Paul is the app with the most moving parts: a document ETL, a vector index, a
-two-stage query router, streaming answers, and per-account LLM routing.
+two-stage query router, streaming answers, per-account LLM routing — and, since 2026-09-10,
+agents that loop over tools, a background scheduler, and a second way of reaching Orcanos (§6.4).
+
+⚠️ **Several features shipped with no release note:** the CAPA / Complaint / NC Initiator agents,
+the Action Items Drafter, migrations 032 (RLS) and 034, and the Intercom widget. The release
+notes are not a complete record of what is running.
 
 ### 2.2 Traceability Matrix
 
 | | |
 |---|---|
-| **URL** | https://traceability.orcanos.ai (also installable on customer **IIS**) |
+| **URL** | US https://traceability.orcanos.ai · EU https://eu.traceability.orcanos.ai (also installable on customer **IIS**) |
 | **Repo / folder** | `zoharp/traceability-matrix` · `c:\AI Projects\traceability-matrix` |
-| **Version** | `3.42.1` |
-| **What it does** | Requirement→test traceability, levels L1→L6, gap detection, funnels, graph view, HTML/Excel export, plus the **Training** module (training traceability panels + quizzes) |
-| **Runtime** | FastAPI + React **in one container** on **Fly.io** — single machine, 1 GB volume, **Litestream** replication |
-| **Data** | **SQLite** on the Fly volume, 15 tables |
+| **Version** | `4.7.0` (both regions verified serving it, 2026-09-25) |
+| **What it does** | Three licensed **modules** behind one left-hand nav (3.46.0): **Traceability** — requirement→test, levels L1→L6, gap detection, funnels, graph view, HTML/Excel export; **Training** ([§2.7](#27-the-training-module)); **BOM Viewer** ([§2.8](#28-the-bom-viewer-module)). Across all three: **presence and 1:1 chat** with shareable context cards (4.0), **invite a colleague** by email (4.2), an **Intercom** support widget (4.6), an **AI usage disclaimer** gate, and a `/admin` **Disaster recovery** page (3.49) |
+| **Runtime** | FastAPI + React **in one container** on **Fly.io** — one app per region, single machine each, 1 GB volume, **Litestream** replication |
+| **Data** | **SQLite** on the Fly volume, **30 tables** (was 15). Since 4.0 it holds **people and their conversations**, not only cache and config — §10.3 |
 | **Auth** | Proxies Orcanos `QW_Login`, then keeps its **own** server-side session row + httpOnly cookie + CSRF token |
-| **Docs** | `CLAUDE.md` → `docs/notes/` (55 numbered traps), `docs/API.md`, `docs/FILE_MAP.md` |
-| **Help site** | https://orcanos.gitbook.io/traceability-marix/ |
+| **Time** | Every stamp the app writes is **UTC and labelled UTC** (3.47.2). Dates that come from Orcanos are shown as Orcanos sent them |
+| **Docs** | `CLAUDE.md` → `docs/notes/` (**79** numbered traps — ⚠️ #68 and #69 are each used twice, in `SECURITY.md` and `COLLAB.md`), `docs/API.md`, `docs/FILE_MAP.md`, `docs/SECURITY_CONTROLS.md` (for customers), `docs/DISASTER_RECOVERY.md`, `docs/REPORTS.md`, `docs/changelog/` |
+| **Help site** | https://orcanos.gitbook.io/traceability-marix/ — five modules: Getting Started, Traceability Matrix, Training, BOM Viewer, Help & Reference |
+
+**Why 4.0.0 was a major version.** Until 3.x the database was cache plus config — all of it
+rebuildable from Orcanos. 4.0 added `users` and `chat_messages`: records of people and what they
+said to each other. A chat message is personal data with a retention obligation, and it cannot be
+rebuilt from anywhere. That changes what a lost volume costs.
+
+**Modules.** `ALL_MODULES = ["trace", "training", "bom"]`, defaults `trace: on, training: on,
+bom: off`. The nav appears only when a user has at least two destinations; `/` redirects to the
+first licensed module. It replaced the old portal page, module switcher and Ask Paul button.
+
+**Presence and chat** — short polling only (`GET /api/collab/poll`: 5 s idle, 2 s with a thread
+open, paused while the tab is hidden), because IIS/ARR forwards only `/api/*` and there is no
+WebSocket path. Messages are kept `chat_settings.retention_days` (default **90**, 0 = forever),
+swept hourly. A shared context card is **re-resolved on the server under the reader's own
+privacy scope and module licence** (4.7.0), so sharing a view never shares more than the reader
+could open. Design: `design/DESIGN_PRESENCE_CHAT.md`; traps in `docs/notes/COLLAB.md`.
+
+**Invite a colleague** — SMTP from the Python standard library, 10 recipients per send, 50 per
+rolling 24 h. ⚠️ **Off unless `SMTP_HOST`, `MAIL_FROM` and `APP_BASE_URL` are all set — and
+neither production app has them, so Invite is invisible in production today.**
+
+**AI usage disclaimer** (2026-09-24). Before AI features work, a tenant must accept a disclaimer
+(`AI_DISCLAIMER_VERSION` 1.0, effective 2026-09-23). Acceptances are append-only in
+`ai_disclaimer_acceptances` (who, which version, a snapshot of the text) and must post-date
+`account_access.ai_enabled_at`, which `/admin` stamps whenever AI goes off → on. The text is
+copied word for word from Ask Paul — **edit it by hand in both apps**. ⚠️ Shipped without a
+release note or changelog entry.
+
+**Intercom** (4.6.0) is the **first third-party runtime in the product**: the *Let's Chat* button
+loads Intercom's script in the browser — on the login screen too, and **in the EU app too** — and
+sends the user id and tenant name to a US processor. If the script is blocked, the button opens
+orcanos.com instead.
 
 ![Traceability dashboard](images/dashboard.png)
 *The dashboard — every saved panel, with its own actions menu.*
@@ -152,22 +201,30 @@ it can only choose item types the tenant actually has.*
 |---|---|
 | **URL** | https://accounts.orcanos.ai |
 | **Repo / folder** | `zoharp/account-management` · `c:\AI Projects\compliance-platform\account-management` |
-| **Version** | `0.3.4` |
-| **What it does** | Manages tenant **accounts** — their databases, credentials, module licences, status and spend — plus the shared security audit trail |
+| **Version** | `0.12.0` |
+| **What it does** | Manages tenant **accounts** — their databases, credentials, **four module licences** (Traceability, Training, BOM, Ask Paul), data region, status and spend — plus the shared security audit trail, a **Disaster recovery** status screen, the **ISO 27001 audit** console, and this handbook |
 | **Runtime** | Next.js 15 + React 19 + TypeScript on **Vercel**, route handlers only (no separate backend) |
-| **Data** | Master Supabase, via PostgREST |
+| **Data** | Master Supabase, via PostgREST; the Supabase Management API for backup status |
 | **Auth** | Platform JWT in an **httpOnly cookie**. Google / Office 365 / Orcanos |
-| **Docs** | `CLAUDE.md`, `ARCHITECTURE.md`, `SCHEMA.md`, `SECURITY.md`, `DEPLOYMENT.md` |
+| **Docs** | `CLAUDE.md`, `ARCHITECTURE.md`, `SCHEMA.md`, `SECURITY.md`, `DEPLOYMENT.md`, `docs/compliance/ISO27001.md`, `docs/compliance/DISASTER_RECOVERY.md` |
 
 It was extracted from the Accounts panel inside Ask Paul. **Both are still running**, on
 the same data, so they can be compared before the old panel is retired.
 
-### 2.4 The other two (context only)
+The sidebar has five screens: **Accounts**, **Audit log**, **Disaster recovery**, **ISO 27001
+audit** and **Handbook** (this document's slide deck, staff-only). Each account row also opens
+Ask Paul or Traceability in a new tab at the address matching the account's data region (0.11.0);
+Ask Paul's button is disabled for EU accounts because there is no EU Ask Paul.
 
-| App | What | Runtime | Note |
+### 2.4 The other two — both now absorbed into Traceability
+
+| App | What | Runtime | Status (2026-09-25) |
 |---|---|---|---|
-| **covaris-bom** | Read-only BOM tree browser for one customer | Static React on Vercel, no backend, no database | Logs in to Orcanos **client-side**. Cheapest app to absorb into a portal, gains the least. |
-| **quiz-management** | Training quizzes, assignment, pass/fail | Next.js on Vercel + Supabase queried **from the browser** | Uses Supabase Auth + RLS — a different security model. The plan is to absorb the *domain* and discard the *code*. |
+| **covaris-bom** | Read-only BOM tree browser for one customer | Static React (Vite) on Vercel, no backend, no database. Deployed with `vercel --prod` from its `deploy.bat` — **not** by a git push | **Legacy.** Superseded by the **BOM Viewer module** inside Traceability (3.46.0, [§2.8](#28-the-bom-viewer-module)). Kept deployed as a fallback and as the behavioural reference; to be retired. ⚠️ Its git `main` stops at 1.3.0 while the local copy is 1.8.0 with uncommitted changes — GitHub is behind what was last deployed |
+| **quiz-management** | Training quizzes, assignment, pass/fail | Next.js on Vercel + Supabase queried **from the browser** | **Domain absorbed, code discarded**, as planned. Quizzes, attempts and *My to-do* now live in Traceability's Training module ([§2.7](#27-the-training-module)), in FastAPI + SQLite. Catalog and assignment were not ported |
+
+Decision **D4** in [chapter 22](#22-next-steps--the-short-list) — *does covaris-bom join at
+all?* — is answered: it joined by being absorbed.
 
 ### 2.5 The portal that does not exist yet
 
@@ -219,6 +276,8 @@ flowchart TB
 
 | Point | Detail |
 |---|---|
+| **Orcanos DMS source** (2.55.0) | Controlled documents are indexed **by their file contents**, latest **Approved** revision only, downloaded through the Orcanos web UI (§6.4). Evidence is pinned to a revision; migration 035 makes every search function return **the current revision only**, and superseded documents carry an *Obsolete* badge |
+| **At index time** | Each chunk carries a `content_hash` (2.49), and **SOP rules** are extracted into `sop_rules` / `sop_rule_sections` for the Rules tab's compliance-gap dashboard |
 | **File types** | `.pdf` (PyMuPDF), `.docx` (python-docx), `.txt`, `.md`, `.csv` |
 | **Dedup** | SHA-256 of the content. Same hash → **skipped**. Changed → delete then re-index → **updated**. This is what makes re-running an import cheap and safe |
 | **Deletions** | Google Drive indexing **removes documents no longer in the folder** — the folder is the source of truth |
@@ -312,7 +371,8 @@ never change the key.
 | | |
 |---|---|
 | Search | **Hybrid** — pgvector cosine **+** full-text `tsvector`, merged with **RRF**. Falls back to pure vector if there is no keyword query |
-| Scope | Always filtered to the `repository_id` |
+| Scope | Always filtered to the `repository_id`, and (since 2.62) to the **current revision** of a controlled document |
+| Prompt injection | Retrieved text is wrapped as untrusted context before it reaches the model (2.61.0). Document text is customer-controlled input, like any Orcanos field (§6.2) |
 | Threshold | Similarity filter applied **after** search, default `0.20`. 0.20+ passes; **0.60+ is good relevance** |
 | Context cap | 12,000 characters |
 | **Dynamic `top_k`** | Confidence `< 0.5` → `top_k × 2` (cast a wider net). Confidence `> 0.8` **with** a document filter → `max(3, top_k // 2)` (we already know where to look) |
@@ -345,6 +405,185 @@ Every result event carries the full router trace: `confidence`, `router_rule`,
 | Debug panel says "No LLM call" on a routed query | An early-exit `result` is missing `**_router_debug` |
 | Google Drive indexing stops early | 3 consecutive errors halt it — read the **first** error in the progress log, not the last |
 
+### 2.7 The Training module
+
+Training is a **module inside Traceability** — same container, same SQLite, same session —
+licensed separately. It is read-only insight over the training that Orcanos already runs,
+plus a quiz layer Orcanos does not have. Deep docs: `traceability-matrix/docs/TRAINING_TRACEABILITY.md`,
+`docs/notes/TRAINING.md`, `docs/REPORTS.md`.
+
+**The question it exists to answer:** *who holds a role that a document names, but has no
+training task for it at all?* Orcanos cannot report a task that was never created — that gap
+is invisible inside Orcanos and is what an auditor finds.
+
+| | |
+|---|---|
+| **Routes** | `/training` dashboard · `/training/:id` panel (Matrix / Funnel / Reports) · `/training/people/:id` People panel · `/training/report/:id` instant reports · `/training/quizzes*` authoring (Orcanos admins only) · `/training/my` the trainee's *My to-do* · `/training/attempt/:id` taking a quiz |
+| **Licence** | `account_access.allow_training` in Traceability's SQLite, set from Account Management. ⚠️ **Fail-open** — a missing column reads as allowed. (BOM is the opposite, §2.8) |
+| **Orcanos sources** | Four saved filters, read whole (page size 200, 6 pages in parallel): **DMS** (Document Control — must be `DMS`, not `DMS_ITEM`), **USRP** user profiles, **TRN_TSK** training tasks, **TRN** training records (optional). The wizard pre-selects filters named `trace.matrix…` |
+| **Storage** | Panels in `trace_setups` (`panel_type='training'`), snapshots in `funnel_cache`, and **five quiz tables** — `quizzes`, `quiz_questions`, `quiz_options`, `quiz_attempts`, `quiz_answers` |
+| **LLM** | Quiz generation only (`quiz_ai.py`): a revision diff, then questions from up to 120k characters of the document file. Through the per-account engine (§12) — Anthropic by default, or the Orcanos Bedrock gateway |
+| **Jobs** | **No scheduler, deliberately.** Builds, smart refreshes and HTML exports are user-triggered background threads, one per user per account (a second gets 429). Nothing that reads document files runs on a timer |
+| **Exports** | HTML (background job), Excel, printable certificates, and **12 instant reports** (7 of them Training: progress, scorecard, overdue watchlist, role coverage, quiz board, question difficulty, quiz reach). All render the snapshot; none re-reads Orcanos |
+
+> ⚠️ **The quiz tables are the first data we hold that cannot be rebuilt from Orcanos.**
+> Everything else in the SQLite file is a cache or config; an exam record is not. They must
+> never be cache-evicted, they travel in a region move (§5.5), and they are why a Traceability
+> restore now matters ([§14.2](#142-the-gaps-to-close-before-an-audit)).
+
+**Three things that are deliberately not there:**
+
+* **No e-signatures.** Signing happens in Orcanos. A quiz opens only after the task is signed,
+  and a pass is explicitly *not* a signature.
+* **No write-back yet.** A pass is stored with `write_state='pending'` as an outbox;
+  `list_pending_writebacks` exists and nothing calls it. Until it does, a quiz pass lives
+  **only** in our database.
+* **No email from Training.** The only outbound mail in Traceability is the 4.2.0 user invite.
+
+**What an Orcanos admin must set up** — four filters that **select** the needed columns. The
+save is blocked if a required column is missing:
+
+| Filter | Required | Recommended |
+|---|---|---|
+| DMS | Key, Name, Roles, Last Approved Revision | Trainees, Training List, Approved Date |
+| USRP | Key, Name, Assigned To, Job Title | |
+| TRN_TSK | Key, Name, Assigned To, Routing State | Training List, Created Date, Routing Due Date, **Completion Date** (needed for signed dates) |
+| TRN | Key, Name | Roles, Trainees, Completion Date |
+
+⚠️ **USRP `Assigned To` must equal the task's `Assigned To`,** character for character, or
+every person reads as untrained — a clean, plausible, wrong report.
+
+Limits are environment variables: `TRAINING_MAX_PAGES` (400), `TRAINING_MAX_DOCS` (20000),
+`TRAINING_MAX_ATTENTION` (5000), `TRAINING_PAGE_CONCURRENCY` (6), `TRAINING_PARSED_CACHE` (3),
+`TRAINING_PARSED_TTL` (600 s).
+
+### 2.8 The BOM Viewer module
+
+A **read-only Bill-of-Materials browser inside Traceability** (3.46.0, 2026-09-16) — a port of
+the standalone covaris-bom app, with the passwords and the SQL moved out of the browser. Deep
+docs: `traceability-matrix/docs/BOM_VIEWER.md` (as built) and `user-manual/BOM_VIEWER.md`
+(its own GitBook section).
+
+| | |
+|---|---|
+| **Routes** | `/bom/boms`, `/bom/assemblies`, `/bom/parts`, `/bom/dms`, `/bom/ecos`. Configured per tenant at **Admin → Settings → BOM Viewer** |
+| **What it does** | BOM trees, where-used and locate, cost roll-up, related ECOs, revision comparison (also on children, 4.4.0), and exports. Three structures: part instance, part hierarchy, and **assembly** (3.47.0) |
+| **Licence** | `account_access.allow_bom`, **default 0 — the only opt-in module, and fail-CLOSED.** `_require_bom()` re-reads it on every `/api/bom/*` request. A BOM-only tenant is valid. Switched on from Account Management (0.8.0+, needs Traceability ≥ 3.46.0 or the write is refused 409) or Traceability `/admin` |
+| **Orcanos calls** | `QW_Get_Filter_Results` (roots, children, up to three filters in parallel, ECOs), `QW_Get_Section_Data` (History, Revisions, Attachments), `GetFilterList` and `QW_Login` for the settings pickers |
+| **SQL** | **All `Filter_By` SQL is built on the server** in `bom_api.py` (where-used uses `dbo.fn_GetRootParentByCS21`). The browser sends intent and numeric ids only; ids must be digits and anything else is dropped, never scrubbed |
+| **Storage** | One SQLite table, `bom_settings` — one row per tenant keyed on the lower-cased `Virtual_dir`, ~30 columns. No server-side cache: caching is in the browser only |
+| **LLM** | None |
+| **Env vars / secrets** | **None new** — so the EU app needs nothing extra (§5.8) |
+
+**Export with files** (4.5.0, 2026-09-25). A server-built zip (`/api/bom/bom-export`,
+`/api/bom/eco-export`) with the latest Approved DMS revision of each document, every part's and
+assembly's own attachments (e.g. STEP models), a `files-not-included.txt`, and an index in HTML,
+XLSX, CSV, JSON or PDF (`reportlab`).
+
+| Limit | Value |
+|---|---|
+| Per zip | 300 DMS files · 1,500 items listed (413 above) · 500 attachments · 200 MB per attachment · **1 GB total** |
+| Browser export | 20 MB HTML / 20,000 rows |
+| Tree | 500 children per node per filter (larger nodes are cut), depth 20 for Expand all / Locate |
+| Orcanos timeouts | 60 s API, 120 s file download |
+
+Three things IT should know:
+
+* ⚠️ **Capacity.** The zip is held in memory up to 64 MB, then spills to the container's temp
+  disk (not the volume) and streams out. A 1 GB package on a **1 GB-RAM, 1 GB-disk** Fly machine
+  is a real capacity question, and it holds a long request open.
+* ⚠️ **File downloads sign in to Orcanos as the user.** `/web/Download/ViewAttachment` ignores
+  Basic auth, so the server decodes the password from the session's stored `auth_header` and does
+  a web-form login. The session row therefore holds a **usable credential**, not just a token —
+  and every downloaded file writes a *downloaded* row into that document's Orcanos history under
+  the exporting user. Training's quiz generation uses the same path.
+* **Known issue:** exporting a large ECO makes one Revisions call per document (6 at once). On an
+  81-document ECO this exhausted Orcanos' SQL connection pool. Not fixed —
+  `design/ECO_REVISIONS_TIMEOUT.md`.
+
+The per-tenant image token (`bom_settings.image_url_query`, for `<tenant>FTP` images) is
+effectively a credential stored in the database.
+
+### 2.9 Ask Paul agents and automation
+
+Since 2.40.0 (2026-09-10) Ask Paul is not only a question-answering system. **Agents** are
+tool-using LLM loops that read Orcanos, read the tenant's documents, and **propose changes to
+Orcanos records**. Code: `backend/agents_runtime.py` (~2.5k lines), `agent_catalog.py`,
+`agent_text_protocol.py`, `agent_history.py`, `agent_memories.py`, `agent_cache.py`,
+`agent_*_proposals.py`; 23 `/agents*` routes.
+
+```mermaid
+flowchart LR
+  T["Trigger<br/>Run button · follow-up chat ·<br/>another agent · schedule"] --> L
+  L["Tool-use loop<br/>≤ 12 rounds · NDJSON step events"] --> TO["Tools<br/>documents · Orcanos reads ·<br/>standards · openFDA · memory"]
+  TO --> L
+  L --> P["Proposal<br/>CAPA · action items · field update"]
+  P -->|human confirms<br/>or approval_mode='auto'| W["Orcanos write<br/>QW_Add_Object · QW_Update_Object ·<br/>QW_Add_Relations_Custom_Code"]
+```
+
+| | |
+|---|---|
+| **The catalogue** | QA Manager; CAPA / Complaint / Nonconformity Agent; CAPA, Complaint and Non-Conformity **Initiators**; **Action Items Drafter**; CAPA / Complaint / NC **Record Reviewer**; 510(k) Compliance Check, RTA Screener, Change Impact Screener, **510(k) Advisor**; the Doc↔eForm Compliance Check. Admins can build their own in the **Agent Builder** |
+| **Tools** | `list_documents`, `search_documents`, `orcanos_get_eform`, `orcanos_get_workflow`, `orcanos_query_items`, `orcanos_get_item`, `orcanos_get_item_relations`, `get_standard_clause`, `fda_510k_dossier`, `fda_510k_search`, `remember`, and the proposal tools `propose_capa`, `propose_action_item(s)`, `propose_field_update`. `orcanos_write_item` is **locked platform-wide** |
+| **Boundaries** | Each agent's `enabled_tools` and `data_sources` are enforced **on the server**, not by the prompt |
+| **Hand-offs** | An agent may consult or delegate to another (`callable_agents`, `parent_run_id`) — the user must click *Allow*. Agent History shows the delegation chain |
+| **LLM** | The account's engine (§12). Since 2026-09-17 the Bedrock gateway forwards `tools`, so Bedrock agents use **native tool-calling**; the emulated text protocol remains only as a fallback |
+| **Storage** (per tenant) | `agent_definitions`, `agent_runs`, `agent_run_messages`, `agent_tool_cache`, `agent_memories`, `capa_proposals`, `capa_proposal_action_items`, `item_field_update_proposals`, `action_item_proposals` |
+
+> ⚠️ **This is the first time any Orcanos AI app writes into a customer's QMS.** Everything
+> else in this handbook reads. A write goes through a **human-confirmed proposal** — except when
+> an automation job is set to `approval_mode='auto'`, which applies it with nobody looking. In a
+> regulated QMS, who changed a record matters: check what Orcanos records as the author before
+> enabling auto-apply for a customer.
+
+#### Automation — scheduled agents (2.57.0)
+
+A job is *an agent + a plain-English trigger + an approval mode*. The trigger is turned into an
+Orcanos filter and a **watermark**, so each tick only sees records changed since the last one.
+Due jobs run; results land in an **approval queue** or are auto-applied. A job **auto-pauses
+after 3 failures**. Routes under `/automation/*`; storage `automation_jobs`.
+
+The scheduler is `backend/automation_scheduler.py` — an **in-process APScheduler
+`BackgroundScheduler`** started from FastAPI's startup event. Every 30 s it walks all active
+accounts, **sets that account's ContextVars itself, with no HTTP request** (§4.1), and runs what
+is due.
+
+> ⚠️ **Three consequences of running a scheduler inside Cloud Run:**
+> 1. **It only ticks while an instance is alive and has CPU.** The service has no
+>    `--min-instances` and no `--no-cpu-throttling`, so when traffic stops, automation stops —
+>    silently.
+> 2. **N instances means N schedulers.** There is only a per-process lock; nothing claims a job
+>    across instances, so the same job can run twice when Cloud Run scales out.
+> 3. **Automation runs are neither billed nor logged** to `account_usage_logs` — there is no
+>    user id to attribute them to. They are the first unmetered LLM path (§11).
+
+### 2.10 Ask Paul: 510(k) and the Design History File
+
+A module for preparing an FDA 510(k) submission from what the tenant already has. Code:
+`backend/fda_510k.py` (~2.2k lines), 41 routes (`/dossiers-510k…`); docs `MD files/FDA_510K.md`,
+`design/510k/`.
+
+| | |
+|---|---|
+| **Model** | A **device dossier** — setup answers, an **eSTAR checklist** (44 items, driven by device profile and category), documents and references — with **submissions** under it (K-number, FDA status, FDA comments). A **DHF** tab maps evidence to design-history categories, pinned to a document revision |
+| **Sources** | The tenant's indexed documents (with verbatim-quote suggestions), the company profile, and **openFDA** (`api.fda.gov/device/510k.json`) — **off until an admin enables it** |
+| **Drafting** | 11+ draftable documents, LLM-drafted (2,500-token cap per draft). Bedrock timeout raised to 180 s for these |
+| **Export** | DOCX, Markdown, and PDF rendered server-side with PyMuPDF |
+| **Storage** (per tenant, migrations 027–031) | `dossiers_510k`, `dossier_510k_documents`, `dossier_510k_checklist_items`, `submissions_510k`, `submission_510k_fda_comments`, `dossier_510k_references`, `settings_510k` |
+
+**Also new in Ask Paul, briefly:**
+
+* **Voice input** — the browser's Web Speech API only; no backend service. ⚠️ In Chrome the
+  browser's recogniser sends the audio to Google, which makes Google a processor of whatever
+  the user dictates.
+* **In-app document and record viewers**, with the live Orcanos form beside a DMS document.
+  Controlled documents **cannot be downloaded or printed** from the viewer. Viewer URLs carry a
+  document-scoped `view_token` valid for 120 s, never the session JWT.
+* **Revision diff** with Word-style track changes and *Analyze with AI*, cached in
+  `document_diff_analyses`.
+* **AI usage disclaimer** — the same gate as Traceability's (§2.2), stored on the account.
+* **Intercom** — the same widget as Traceability; it sends user id, **name and email** to Intercom.
+
 ---
 
 ## 3. Environments — Fly, Vercel, Supabase, Cloud Run, IIS
@@ -353,9 +592,9 @@ Every result event carries the full router trace: `confidence`, `router_rule`,
 
 | Environment | We use it for | What it is good at | What it cannot do |
 |---|---|---|---|
-| **Vercel** | Account Management (full Next.js app), Ask Paul frontend, covaris-bom, quiz-management | Push to `main` = deployed. Free SSL, global CDN, preview deploys per branch. Zero servers to run. | **No long-running work.** Functions have a time limit. **IPv4 only** — it cannot reach `db.<ref>.supabase.co`, which is IPv6-only. No ODBC driver. No disk. |
+| **Vercel** | Account Management (full Next.js app), Ask Paul frontend; legacy covaris-bom and quiz-management, both now absorbed into Traceability (§2.4) | Push to `main` = deployed. Free SSL, global CDN, preview deploys per branch. Zero servers to run. | **No long-running work.** Functions have a time limit. **IPv4 only** — it cannot reach `db.<ref>.supabase.co`, which is IPv6-only. No ODBC driver. No disk. |
 | **Fly.io** | Traceability Matrix — **two separate apps, one per region** (`traceability-matrix` in `iad`, `traceability-matrix-eu` in `fra`). Each is one container: FastAPI + React + SQLite | A real always-on machine with a **persistent volume**. Background jobs that run for minutes survive. Cheap. Litestream continuously replicates SQLite. A volume being pinned to one region is what makes per-region residency possible at all (§5.3) | One machine **per app**. **Never `fly scale count 2`** — Fly gives the second machine its own volume, and you silently get two divergent databases. That is also why an EU region is a second *app*, not a second machine |
-| **Google Cloud Run** | Ask Paul backend | Containers, autoscaling, Secret Manager, Cloud Build CI. Handles streaming responses well. | Cold starts. Config lives in Cloud Build triggers and Secret Manager, so it is easy to set something on the running service and have the next build erase it. |
+| **Google Cloud Run** | Ask Paul backend — including, since 2.57.0, its **automation scheduler** | Containers, autoscaling, Secret Manager, Cloud Build CI. Handles streaming responses well. | Cold starts. Config lives in Cloud Build triggers and Secret Manager, so it is easy to set something on the running service and have the next build erase it. **Not a home for background work**: CPU is only guaranteed during a request, and instances scale to zero and out to many — the in-process scheduler inherits both problems (§2.9). |
 | **Supabase** | Master database + one project per Ask Paul tenant | Postgres + **pgvector** + PostgREST + a Management API that can **create projects by API**. | PostgREST cannot run DDL — schema changes need a direct Postgres connection or the Management API `database/query` route. Direct-connection hostnames are IPv6-only. |
 | **IIS (customer site)** | Traceability Matrix, installed on the customer's own Windows Server | The customer keeps all data on-premises. No internet dependency. | Manual install and manual upgrade. Needs URL Rewrite + ARR. `/admin` is only reachable on the server itself. |
 
@@ -381,6 +620,9 @@ Every result event carries the full router trace: `confidence`, `router_rule`,
    fly.eu.toml` ships the identical image; secrets are per-app, write-only, and there is no
    "copy from". The features that go missing are exactly the ones written to fail closed, and
    nothing reports the drift. This has already cost us a support call — §5.8.
+7. **A background job on Cloud Run stops when the traffic does.** Ask Paul's automation
+   scheduler runs inside the web process. With no requests the instance scales to zero and the
+   scheduler with it; with many requests there are many schedulers. Neither shows as an error.
 
 ### 3.3 Where everything is, in one table
 
@@ -389,13 +631,21 @@ Every result event carries the full router trace: `confidence`, `router_rule`,
 | Ask Paul frontend | Vercel | https://askpaul.orcanos.ai |
 | Ask Paul backend | Cloud Run (`us-east4`) | service `orcanos-qms` |
 | Traceability Matrix — **US** | Fly.io (`iad`) | https://traceability.orcanos.ai · `traceability-matrix.fly.dev` |
-| Traceability Matrix — **EU** | Fly.io (`fra`) | `traceability-matrix-eu` · deployed with `fly deploy -c fly.eu.toml` |
-| Account Management | Vercel | https://accounts.orcanos.ai |
+| Traceability Matrix — **EU** | Fly.io (`fra`) | **https://eu.traceability.orcanos.ai** · app `traceability-matrix-eu` |
+| Account Management | Vercel | https://accounts.orcanos.ai (the handbook deck: `/handbook`) |
+| covaris-bom (legacy) | Vercel | project `covaris-bom`, deployed by CLI |
 | Master database | Supabase | project `jjiavhexvfahboiodomv` |
 | Per-tenant vector DBs | Supabase | one project per account, created on demand |
-| Orcanos QMS itself | Orcanos hosting | `https://app.orcanos.com/<tenant>` |
+| Orcanos QMS itself | Orcanos hosting | `https://app.orcanos.com/<tenant>` — REST API **and** the web UI (§6.4) |
 | Bedrock LLM gateway | Orcanos AWS | `https://br.orcanos.com/ext/chat` |
+| Support chat | Intercom (US) | app id `y9ldbtxq`, loaded in the browser by Traceability and Ask Paul |
+| FDA data | openFDA | `https://api.fda.gov/device/510k.json` — Ask Paul 510(k), opt-in |
 | Help sites | GitBook | orcanos.gitbook.io |
+
+⚠️ **Three hostnames for Traceability US are written down, and only one works.** `fly.toml`'s
+comments call `us.traceability.orcanos.ai` an alias — it does not resolve. `.env.example` gives
+`APP_BASE_URL` as `https://trace.orcanos.ai`. The real one is `https://traceability.orcanos.ai`;
+use it when setting `APP_BASE_URL` for Invite, or invitation links will point nowhere.
 
 ### 3.4 Choosing a platform for a **new** app
 
@@ -449,6 +699,14 @@ flowchart LR
 * **Users are global.** The `users` table lives only in master, keyed by email. Per-tenant
   tables store the user id as a plain number with no foreign key — there is deliberately
   **no `users` table** in a tenant database.
+* ⚠️ **Since 2.57.0 the middleware is no longer the only thing that sets the ContextVars.** The
+  automation scheduler (§2.9) loads each account's context itself, outside any request
+  (`automation_scheduler._load_account_context`). Any change to how the middleware resolves an
+  account must be made there too, or scheduled jobs will run against a different database than
+  interactive ones.
+* **RLS is on** for 38 tenant tables (migration 032) — with **no policies**. The backend uses the
+  service role, which bypasses RLS, so this closes the anonymous PostgREST door rather than
+  isolating anything between users.
 
 **Why:** a customer's documents and embeddings are physically separated. Strong isolation,
 easy to delete a customer, easy to reason about for an auditor. The cost is that every new
@@ -466,6 +724,12 @@ customer is a real, billable Supabase project that must be provisioned.
   so one busy tenant cannot fill the disk. Eviction only costs speed.
 * Access is gated by an **allowlist table** managed from `/admin`. ⚠️ **An empty allowlist
   table means the gate is OFF.**
+* **Since 4.0 people live here too, and every one of those tables is account-scoped:** `users`
+  (a mirror of the Orcanos user, refreshed at every login — **never** an authorisation source),
+  `chat_messages`, `chat_settings`, `invites`. Presence is derived from `sessions`
+  (`account_id` plus `last_seen` within 90 s), so nobody can see who is online in another tenant.
+* Module licences are three columns on `account_access`: `allow_trace`, `allow_training`
+  (both fail-open for old rows) and `allow_bom` (default 0, **fail-closed**).
 
 **Why:** it started as an on-premises IIS app where per-customer databases made no sense.
 It is cheap and fast. The cost is that isolation is enforced by code, not by the database,
@@ -506,8 +770,9 @@ data**:
 |---|---|
 | `matrix_cache` / `source_cache` / `funnel_cache` | Trainee **names, emails, roles, completion dates** |
 | `quiz_attempts` / `quiz_answers` | Somebody's **exam record** — the one thing Orcanos cannot rebuild |
-| `sessions.auth_header` | The user's **real Orcanos credential**, encrypted |
-| Ask Paul's per-customer Supabase | The customer's **document text and its embeddings** |
+| `sessions.auth_header` | The user's **real Orcanos credential**, encrypted — and since 3.46 actually *used* as a password for web-UI downloads (§6.4) |
+| `users` / `chat_messages` / `invites` (Traceability 4.x) | Names, emails, **what colleagues said to each other**, who invited whom |
+| Ask Paul's per-customer Supabase | The customer's **document text and its embeddings**, agent runs, 510(k) dossiers |
 
 We are the **processor**; the tenant is the **controller**.
 
@@ -530,9 +795,9 @@ fly deploy                    # US
 fly deploy -c fly.eu.toml     # EU
 ```
 
-⚠️ **`deploy.bat` deploys the US app only.** A release is not shipped until both commands have
-run. Both regions serve real customers off the same build, so a version drift produces no
-error anywhere — only a customer in one region seeing something the other cannot.
+✅ **Since 2026-09-16 `deploy.bat` deploys both regions** and then checks that **both** hosts
+serve the released version (§18.4). An EU failure prints *"EU is now BEHIND"* and fails the
+run. Before that it deployed the US only, and a version drift produced no error anywhere.
 
 **`SELF_REGION`** is the whole of an instance's identity. Two apps sharing one value is a
 deployment mistake nothing else would catch, so `GET /api/admin/regions` returns `self_region`
@@ -572,8 +837,14 @@ refuses them and stores nothing. So the check hangs off `POST /api/auth/check-ac
 already fired on URL blur; `/login` enforces it as **409 with the correct URL**, not 403 —
 nothing is wrong with the account, the request arrived at the wrong deployment.
 
-Since 3.45.0 the customer is **redirected automatically**, carrying the Orcanos URL they typed
-so they do not type it twice. Which region holds their data is **our** implementation detail.
+Since 3.45.0 the customer is **redirected automatically** once the URL check says they belong
+elsewhere, carrying the Orcanos URL they typed so they do not type it twice. Which region holds
+their data is **our** implementation detail.
+
+**Changed in 4.4.1:** simply *loading* the login page no longer forwards anyone — only the URL
+check does. Saved accounts from the other region are remembered in the browser with an **EU/US
+badge**. The badge is a label, never a decision: `check-account` still decides where an account
+lives.
 
 - **`rr=1` is a loop guard, and it is not theoretical.** The two instances hold separate copies
   of the directory. If they ever disagree — a half-finished move, a directory write that failed
@@ -622,6 +893,12 @@ region works perfectly — every query succeeds, nothing reports it. **The defau
 rather than corrected**, because a correct default is still a default: the next caller that
 omits the argument gets a silent residency decision made for it. See `REQ-047`.
 
+⚠️ **A live example of the gap (verified 2026-09-16): `orca60` is `region='eu'` in master, but
+its Supabase project `askpaul-orca60` is in `us-east-1`.** A region move relocates the
+Traceability rows and the master field; it cannot relocate a Supabase project. Open decision —
+recreate the project in `eu-central-1` and re-index, or record the exception with the customer.
+See `docs/compliance/DISASTER_RECOVERY.md` §3.3.
+
 ### 5.7 ⚠️ What is NOT residency yet
 
 **An EU vector database while the backend and embeddings are in the US is a residency claim
@@ -634,9 +911,14 @@ that reads as true and is not.** Do not tell a customer we have EU residency for
 | Ask Paul FastAPI backend | ❌ **one Cloud Run service, `us-east4`** — every EU customer's questions and document text are processed in the US |
 | Embeddings | ❌ **always OpenAI on the platform key**, no per-account override |
 | Chat LLM | ⚠️ per-account engine; only `bedrock_claude` uses an EU inference profile — the Anthropic / OpenAI / Gemini branches are US |
-| Traceability AI calls | ❌ **not region-routed** — panel-describe, trace-build and quiz-generation send requirement text and trainee names to the US Anthropic API |
-| SSO into Ask Paul from the EU app | ❌ deliberately unconfigured — §5.8 |
-| EU Litestream bucket restriction | ⚠️ **unverified from the CLI** |
+| Traceability AI calls | ❌ **not region-routed by default** — panel-describe, trace-build and quiz-generation send requirement text and trainee names to the US Anthropic API. An account *can* be pointed at the Bedrock gateway with an `eu.` model id in `/admin`, but nothing chooses that from the region. The EU app has **no** `ANTHROPIC_API_KEY` (verified 2026-09-25) |
+| Ask Paul automation and agents | ❌ same US backend as everything else in Ask Paul |
+| SSO into Ask Paul from the EU app | ⚠️ **was deliberately unconfigured — the secrets are now SET on the EU app** (§5.8). Unverified where they point |
+| **Intercom** (both products) | ❌ a US processor, loaded in the **browser** of EU users too — user id and tenant name from Traceability; id, name and email from Ask Paul |
+| Voice input (Ask Paul) | ❌ Chrome sends dictated audio to Google |
+| orca60's Ask Paul database | ❌ account is EU, project is in `us-east-1` (§5.6) |
+| Chat, users, invites (Traceability 4.x) | ✅ in the regional database, so they stay in region |
+| EU Litestream bucket restriction | ⚠️ **still unverified from the CLI** |
 
 A US call for an EU tenant returns a perfectly normal answer, which is exactly the problem.
 
@@ -663,13 +945,24 @@ hidden because `ASK_PAUL_APP_URL` / `ASK_PAUL_SSO_SECRET` had never been set on 
 | `SESSION_ENC_KEY` | set | set | **Must differ** — the databases never travel together |
 | `AWS_*`, `BUCKET_NAME` | set | set | **Must differ** — and the EU bucket must be EU-restricted |
 | `ADMIN_DB_BROWSER` | set | set | Same value is fine — a flag, not a credential |
-| `ASK_PAUL_APP_URL` / `ASK_PAUL_SSO_SECRET` | set | **unset** | ⚠️ Needs an **EU Ask Paul** first. Do **not** point EU at the US app |
-| `ANTHROPIC_API_KEY` | set | **unset** | ⚠️ Regional Bedrock endpoint — not the US key |
+| `ADMIN_DB_DOWNLOAD` | per need | per need | A flag. Lets `/admin` → Disaster recovery download a copy of the **whole database** — keep off unless in use (§10.4) |
+| `ASK_PAUL_APP_URL` / `ASK_PAUL_SSO_SECRET` | set | ⚠️ **SET — see below** | Intended: unset until an **EU Ask Paul** exists. Do **not** point EU at the US app |
+| `ANTHROPIC_API_KEY` | set | **unset** (verified 2026-09-25) | ⚠️ Regional Bedrock endpoint — not the US key |
+| `SMTP_HOST` / `SMTP_USER` / `SMTP_PASSWORD` / `MAIL_FROM` / `APP_BASE_URL` | unset | unset | Invite (4.2.0) is off until all of `SMTP_HOST`, `MAIL_FROM`, `APP_BASE_URL` are set. `SMTP_PASSWORD` is a credential — **different per region** if both are ever set; `APP_BASE_URL` **must** differ (each region's own address) |
+| `ALLOW_INSECURE_ORCANOS_URL` | unset | unset | **Keep unset.** Setting it lets a user send their Orcanos password to an `http://` URL (§7.6) |
 
-**The two unset rows are a residency decision, not an oversight.** An operator who finds them
+**The unset rows are a residency decision, not an oversight.** An operator who finds them
 blank at 2 a.m. will "fix" them by copying, because copying is what parity means everywhere
 else. Wiring either in sends EU personal data to the US **through a deployment whose entire
 purpose is that it does not** — a breach that looks like a feature working.
+
+> 🔴 **Open finding, 2026-09-25.** `flyctl secrets list -a traceability-matrix-eu` shows
+> **`ASK_PAUL_APP_URL` and `ASK_PAUL_SSO_SECRET` are both set on the EU app.** There is no EU
+> Ask Paul, so unless the URL points somewhere unexpected, the EU app now hands EU users —
+> carrying their Orcanos credentials in the SSO token (§8) — to the **US** Ask Paul. That is
+> precisely the breach described above. Fly secrets are write-only, so the value cannot be read
+> back: check who set it and why, and either unset both or record the decision. Until then,
+> **do not describe the EU deployment as residency-complete** (§5.7).
 
 ---
 
@@ -706,10 +999,35 @@ endpoints.
 
 ### 6.3 We have three separate Orcanos clients
 
-`covaris-bom/src/api/orcanosClient.js`, Ask Paul's `backend/api.py`, and
-`traceability-matrix/src/backend/orcanos_client.py`. Each independently rediscovered the
-same quirks. **One shared client is the highest-value piece of de-duplication available to
+Ask Paul's `backend/api.py`, `traceability-matrix/src/backend/orcanos_client.py`, and — now
+legacy — `covaris-bom/src/api/orcanosClient.js`. Each independently rediscovered the same
+quirks. The BOM port did not reduce the count: Traceability's `bom_api.py` builds its own
+`Filter_By` SQL on the server, and both Python apps now carry a **second** client for the web
+UI (§6.4). **One shared client is still the highest-value piece of de-duplication available to
 us** — see chapter 22.
+
+### 6.4 A second way in — the Orcanos web UI
+
+Some things the REST API does not offer: **document file bytes** (`/web/Download/ViewAttachment`)
+and the **Process Flow chart** (`/web/<Ver_Id>/items/workflowchart`). Both apps now fetch them by
+**signing in to the Orcanos web UI with a form post** (`/web/Account/Login/form-login`) and
+carrying the session cookie — Basic auth is ignored there.
+
+| Used by | For |
+|---|---|
+| Traceability — Training quiz generation, BOM *export with files* | Document files, part/assembly attachments |
+| Ask Paul — DMS indexing, agents (`orcanos_web.py`, `orcanos_dms.py`, `orcanos_workflow.py`) | Document files; the item type's workflow, which agents read to know what state comes next |
+
+> ⚠️ **Four properties of this path that the REST API does not have:**
+> 1. **It needs the real password.** Traceability decodes it from the session's stored Basic
+>    header; Ask Paul uses the account credential. A session row is therefore a usable credential.
+> 2. **Failure is an HTTP 200** carrying the login page's HTML. Code that checks the status code
+>    alone will store a login page as a document.
+> 3. **Repeated failed logins can lock the Orcanos account** — ours or the customer's user.
+> 4. **Every download is recorded** in that document's Orcanos history as *downloaded* by the
+>    signed-in user — visible to the customer's auditors.
+>
+> It is also **scraping**: an Orcanos UI change can break it with no API version to pin.
 
 ---
 
@@ -788,7 +1106,19 @@ on purpose: the route cannot be used to enumerate users.
 
 Unifying these is [step 4 of the consolidation plan](#21-future-stay-on-vercelfly-or-move-everything-to-orcanos-aws).
 Note that "as the end user" vs "as the account" changes what Orcanos records in **its own**
-audit trail — which matters in a regulated QMS.
+audit trail — which matters in a regulated QMS, and matters more now that Ask Paul's agents
+**write** (§2.9).
+
+### 7.6 Changes since 2026-09-10
+
+| App | Change |
+|---|---|
+| Traceability | **`http://` Orcanos URLs are refused before the password is sent** — checked on blur (`/api/auth/check-account`) and again at login. Override `ALLOW_INSECURE_ORCANOS_URL=true` exists for on-prem test rigs and warns at boot; never set it in the cloud |
+| Traceability | The login URL field opens on the placeholder `https://app.orcanos.com/[YOUR ACCOUNT]`, not on a real tenant (4.3.1) |
+| Traceability | `/api/collab/poll` is the second route that **does not extend** the 45-minute session, so an open tab polling for chat does not keep an idle user signed in |
+| Ask Paul | Orcanos `Is_admin` is read at login into `users.is_orcanos_admin` and gates the Agent Builder and admin screens. Google/O365-only users are never Orcanos admins |
+| Ask Paul | 2.46.1 fixed Orcanos-username and SSO sign-ins **creating a phantom account** instead of joining the existing one |
+| Both | An **AI usage disclaimer** must be accepted per tenant before AI features run (§2.2) |
 
 ---
 
@@ -860,9 +1190,13 @@ pill can read "licensed" while the button is hidden from everyone.
 > ```
 >
 > Check `fly secrets list` **before** touching a licence. Since 2026-09-10 there are **two
-> Traceability deployments**, and the EU one deliberately has neither secret set (§5.8) —
-> so for an EU tenant the button is hidden by design, and the licence row still says `1`.
-> This has already been mistaken for a failed region move.
+> Traceability deployments**, and the EU one was meant to have neither secret set (§5.8) —
+> so for an EU tenant the button was hidden by design while the licence row said `1`. This
+> was once mistaken for a failed region move. ⚠️ **As of 2026-09-25 both secrets *are* set on
+> EU** — see the open finding in §5.8 before assuming either behaviour.
+>
+> Since 3.46.0 the button is gone: Ask Paul is an entry in Traceability's left-hand nav, under
+> the same three gates.
 
 ---
 
@@ -903,9 +1237,13 @@ flowchart LR
   re-attaches.
 * **One job per user** is enforced, and exports have their own slot so a download cannot
   block a rebuild.
-* **Cache is disposable.** `matrix_cache`, `funnel_cache`, `export_jobs`, `ai_jobs` and
-  `pending_traces` can all be deleted; they rebuild. That is why they are also the tables
-  we would *not* migrate to Postgres.
+* **Cache is disposable — the cache, not the database.** `matrix_cache`, `funnel_cache`,
+  `export_jobs`, `ai_jobs` and `pending_traces` can all be deleted; they rebuild. That is why
+  they are also the tables we would *not* migrate to Postgres. ⚠️ Two caveats: a training
+  snapshot behind a signed-off report is evidence (§5.5), and **the rest of the file is no
+  longer rebuildable at all** — quiz records, chat, users and invites exist nowhere else (§10.3).
+* **The BOM Viewer has no server cache.** Every tree expansion is a live Orcanos call; caching
+  is in the browser only (§2.8).
 
 ### If someone says "the data is wrong"
 
@@ -934,6 +1272,18 @@ filters? (3) Was the change a **deletion** — those only surface via the count 
 | `account_region` | **every** Traceability instance | The cross-region directory (tenant → region). Grants nothing — §5.4 |
 | `admin_blocked_ips` | each Traceability instance | Permanently blocked admin-login IPs — §13.5 |
 
+**Added 2026-09-10 → 09-25:**
+
+| Where | Tables |
+|---|---|
+| Traceability SQLite (now **30 tables**) | `bom_settings`; `users`, `chat_messages`, `chat_settings`, `invites`; `ai_disclaimer_acceptances` (append-only); columns `account_access.allow_bom`, `account_access.ai_enabled_at`, `sessions.last_seen`, `sessions.last_where` |
+| Ask Paul, per tenant (migrations 010–036) | Agents — `agent_definitions`, `agent_runs`, `agent_run_messages`, `agent_tool_cache`, `agent_memories`; proposals — `capa_proposals`, `capa_proposal_action_items`, `item_field_update_proposals`, `action_item_proposals`; `automation_jobs`; `sop_rules`, `sop_rule_sections`; `document_diff_analyses`; `account_skills`, `account_section_keywords`; the 510(k) tables (§2.10); `schema_migrations`. RLS on 38 tables (032) |
+| Master Supabase | `account_usage_logs` gained `model`, `input_tokens`, `output_tokens`, `interaction_summary`, `app_feature` and the function `ai_billing_totals()` (Ask Paul 022); `iso27001_controls`, `iso27001_audit_runs`, `iso27001_run_controls`, `iso27001_control_notes` (Account Management `sql/005`, `006`) |
+
+⚠️ **One master migration is still not applied: `sql/004_account_name_unique.sql`** (Account
+Management 0.6.1). Until it is, duplicate account names are refused by the app but not by the
+database. It raises rather than half-applies if duplicates already exist — read its header first.
+
 ### 10.2 Changing schema on Supabase
 
 PostgREST **cannot run DDL**. Do not hand-edit in the SQL editor — you lose the record of
@@ -947,6 +1297,18 @@ body: {"query": "<contents of the .sql file>"}
 
 Write every migration as `create table if not exists` / `add column if not exists`, so
 re-running one is a no-op.
+
+**Ask Paul now does this automatically on every deploy** (2.51.0). A Cloud Build step after
+the deploy runs `scripts/run_missing_migrations.py`, which applies any `.sql` file not yet
+recorded in each database's `schema_migrations` table, through the same Management API route.
+Files 008, 009, 011 and 022 go to master only; 005 is excluded. Two properties to know:
+
+* **It runs after the deploy**, so a failing migration never blocks a release — and new code
+  can briefly run against the old schema. Check the build log, not just the green deploy.
+* `SUPABASE_SERVICE_KEY` and the org access token are now **build-time secrets**
+  (`availableSecrets` in `cloudbuild.yaml`), so the build has the keys to every tenant database.
+
+Account Management's migrations are still run by hand, one file at a time, with `curl`.
 
 ⚠️ **`accounts` has five NOT NULL columns with no default.** A `tsc` build cannot see a
 database constraint. Verify a new insert shape by actually running it against the live
@@ -977,13 +1339,14 @@ copy `traceability.db-wal` and `traceability.db-shm` **alongside** the `.db` —
 
 **(b) "Move it to Postgres."**
 
-Do **not** think of this as "port a database". The 15 tables are not equally precious —
+Do **not** think of this as "port a database". The 30 tables are not equally precious —
 classify first:
 
 | Class | Tables | What to do |
 |---|---|---|
 | **Cache — disposable** | `matrix_cache`, `funnel_cache`, `export_jobs`, `ai_jobs`, `pending_traces` | **Leave in local SQLite indefinitely.** This is most of the write volume and it *wants* to be node-local. |
-| **Config — small, precious** | `trace_setups`, `user_projects`, `products`, `product_projects`, `product_sources`, `ai_prompts`, `ai_config`, `account_access` | The only data that genuinely must move. Small, low write rate. |
+| **Config — small, precious** | `trace_setups`, `user_projects`, `products`, `product_projects`, `product_sources`, `ai_prompts`, `ai_config`, `account_access`, `bom_settings` | Must move. Small, low write rate. |
+| **Records — irreplaceable** 🆕 | `quizzes`, `quiz_questions`, `quiz_options`, `quiz_attempts`, `quiz_answers`; `users`, `chat_messages`, `chat_settings`, `invites`; `ai_disclaimer_acceptances` | **Must move, and must be backed up today.** Nothing can rebuild them. Chat and users carry a retention duty; disclaimer acceptances are a compliance record |
 | **Session — about to disappear** | `sessions` | Do not migrate it. It evaporates when Traceability adopts the platform JWT. |
 | **Ledger — already duplicated** | `ai_usage` | Duplicates master `account_usage_logs`. Append-only, so it is the **safest first migration** and it proves the pipe. |
 | **Tenant registry — conflicting** | `accounts` | Must be **reconciled**, not copied — see [§4.3](#43--the-same-customer-has-two-different-tenant-ids). |
@@ -992,10 +1355,51 @@ classify first:
 chain exists. AWS RDS Postgres if we move to Orcanos AWS ([chapter 21](#21-future-stay-on-vercelfly-or-move-everything-to-orcanos-aws)).
 There is no third candidate worth the argument.
 
-**Honest cost warning.** `src/backend/db.py` is ~1,800 lines of raw `sqlite3` — no ORM,
-`sqlite3.Row` factories, `sqlite3.IntegrityError` catches, SQLite-specific SQL throughout.
-A wholesale port is a large, risky, **zero-feature** change. Migrate `ai_usage` first,
-then the config tables, and stop there unless something forces more.
+**Honest cost warning.** `src/backend/db.py` is now well past its old ~1,800 lines of raw
+`sqlite3` — no ORM, `sqlite3.Row` factories, `sqlite3.IntegrityError` catches, SQLite-specific
+SQL throughout. A wholesale port is a large, risky, **zero-feature** change. Migrate `ai_usage`
+first, then config and records, and stop there unless something forces more.
+
+### 10.4 Backups and disaster recovery
+
+Both halves of the platform now have a written DR plan and a screen that reports on it:
+Traceability's in its own `/admin`, the Supabase side in Account Management. Neither has been
+**rehearsed**.
+
+**Traceability** (`traceability-matrix/docs/DISASTER_RECOVERY.md`, `/admin` → Disaster recovery, 3.49.0)
+
+| Layer | Loses at most | Detail |
+|---|---|---|
+| **Litestream → Tigris** | seconds | Snapshot every 6 h, 72 h retention, prefix `traceability/`. EU bucket `traceability-matrix-eu-db`. `docker-entrypoint.sh` runs uvicorn *under* `litestream replicate` and **auto-restores onto an empty volume** |
+| **Fly volume snapshot** | ~24 h | Daily, managed by Fly |
+| **Local copies** | — | `VACUUM INTO` copies in `<db>/backups`, newest 5 kept. A safety net against a bad change, **not a backup** — same disk |
+
+The console has nine routes under `/api/admin/dr/*` — status, replica, runbook, verify,
+checkpoint, and local copies (list, create, delete, download). **Download is off unless
+`ADMIN_DB_DOWNLOAD=1`** and answers 404 otherwise: it hands out every tenant's data in one file.
+Restoring over the live database is deliberately **not** a button — the runbook covers a damaged
+database, a lost volume, and point-in-time recovery.
+
+> ⚠️ **`SESSION_ENC_KEY` is part of the backup.** Restore the database without the same key and
+> every user is silently signed out, and every stored Orcanos credential is unreadable. Run
+> **Verify** in both regions after any change to the schema, the entrypoint, `litestream.yml` or
+> the Dockerfile. The 3.49.0 code has not yet been exercised against a real bucket.
+
+**Supabase — master and every Ask Paul tenant** (`account-management/docs/compliance/DISASTER_RECOVERY.md`,
+Account Management → Disaster recovery, 0.7.0)
+
+The screen asks the Supabase Management API (`/v1/projects/{ref}/database/backups`) about master
+and every account whose vector DB is a Supabase project, and rates each: *No database / Check
+failed / At risk / Stale / Healthy*, with a *What needs attention* panel (0.9.1).
+
+> ⚠️ **Every project reads "At risk", and that is correct.** **Point-in-time recovery is off on
+> all of them, master included** — daily physical backups only, restorable **in place** only,
+> never restored. Worst case is a day of data. There is no off-platform copy of any Supabase
+> project, and **no escrow for `ENCRYPTION_KEY` or `JWT_SECRET`** — lose those and the backups
+> restore ciphertext nobody can read. Nothing alerts on any of this; the screen is read on demand.
+
+The plan's own to-do list (DR.md §9): escrow the two keys, decide orca60, PITR on master, a
+nightly logical dump off-platform, the first drills, audit-log export, DR alerting.
 
 ---
 
@@ -1029,6 +1433,13 @@ then the config tables, and stop there unless something forces more.
 * ⚠️ **Ask Paul's own `bedrock_claude` engine is priced** the same as `claude_sonnet`
   ($3/$15 per million tokens) — the opposite of Traceability's treatment of the same
   gateway. This inconsistency is deliberate today but is worth a decision.
+* ⚠️ **Ask Paul automation runs are not recorded at all** (§2.9). The scheduler has no user to
+  attribute a run to, so it writes no usage row. An agent run can be up to 12 LLM rounds, and a
+  delegation multiplies that — this is now the largest unmetered LLM path we have.
+
+Since Ask Paul migration 022, master `account_usage_logs` records **per call** the `model`,
+`input_tokens`, `output_tokens`, an `interaction_summary` and the `app_feature` (chat, agent,
+510(k)…), and `ai_billing_totals()` sums them. Traceability's `ai_usage` did not change.
 
 ### 11.4 Where to look
 
@@ -1045,7 +1456,8 @@ then the config tables, and stop there unless something forces more.
 |---|---|
 | **A provisioned Supabase project per Ask Paul tenant** | Billable from the moment it is created. **Deleting an account does not de-provision it.** |
 | **Orphaned projects from failed provisioning** | A job that dies mid-run leaves a real, billable project with no account row. The finder query is at the bottom of `sql/001_account_provisioning.sql` — **run it after any failed run.** |
-| Fly machine | Always-on by design (`min_machines_running = 1`), 1 GB volume |
+| Fly machine | **Two** since the EU region — always-on by design (`min_machines_running = 1`), 1 GB RAM and a 1 GB volume each. The BOM *export with files* (up to 1 GB per zip) is the first feature that can press on those limits |
+| Intercom | Per seat / plan — new with the support widget |
 | Cloud Run | Per request, plus Artifact Registry storage |
 | Vercel | Per project |
 | GitBook, domains | Fixed |
@@ -1159,8 +1571,22 @@ Three traps:
 On Bedrock the JSON schema is only *prompt-instructed*, not enforced — so parsing is
 defensive there.
 
-Ask Paul additionally routes `gpt_4o` to OpenAI and `gemini_pro` / `gemini_flash` to
-Google, per account, from the same kind of table.
+**Since 2026-09-17 the gateway forwards `tools`**, so Ask Paul's agents use native tool-calling
+on Bedrock; the emulated text protocol is now a fallback. It still takes no `max_tokens`, and
+long 510(k) drafts need the 180 s timeout.
+
+Ask Paul's engine map (`backend/account_keys.py`), per account:
+
+| Engine | Model |
+|---|---|
+| `claude_sonnet` / `claude_opus` | `claude-sonnet-4-6` / `claude-opus-4-6`, Anthropic direct |
+| `bedrock_claude` | `eu.anthropic.claude-sonnet-4-6` via `br.orcanos.com` |
+| `gpt_4o` | OpenAI |
+| `gemini_pro` / `gemini_flash` | Google `gemini-2.5-*` |
+
+**When AI is off, the message now says which layer is empty** (Traceability 3.45.2): the account
+row, the `'*'` global row or the environment — and names the Fly app that has no key — instead of
+*"not enabled for this account"*, which sent people to the licence when the problem was a secret.
 
 ### 12.3 Keys
 
@@ -1179,6 +1605,9 @@ Google, per account, from the same kind of table.
    routing and per-account billing at a stroke.
 2. **On a provider error we hard-fail with a clear message** — no silent fallback to the
    other provider. A misconfigured account gets fixed, not masked.
+
+Both still hold in Ask Paul's agents and automation — every call goes through `account_keys` —
+but rule 1's second half (per-account billing) is broken by the automation path (§11.3).
 
 ### 12.5 Which model a developer should use
 
@@ -1249,7 +1678,7 @@ claude --model claude-sonnet-5
 |---|---|---|
 | **`/security-review`** (built-in) | The pending changes on the current branch | Before every merge of anything security-relevant |
 | **`/security-scan`** (traceability-matrix, `.claude/skills/security-scan.md`) | Full backend + frontend audit, fan-out by surface, results tracked in `SECURITY_AUDIT.md` | Periodic full audits; `/security-scan diff` for one branch |
-| **`/compliance-audit`** (global) | ISO 27001:2022 controls across code, Supabase, Fly, Vercel + a static pentest pass | Getting a tool audit-ready |
+| **`/compliance-audit`** (global, and a repo copy in `account-management/.claude/skills/`) | ISO 27001:2022 controls across code, Supabase, Fly, Vercel + a static pentest pass. Writes `compliance/systems/<key>/{scope.yaml, ledger.json}`; the ledger is **imported** into Account Management's ISO 27001 screen (§14.3) | Getting a tool audit-ready |
 | **`/multitenant-audit`** (traceability-matrix) | Every query is account-scoped | After touching any query in the shared SQLite |
 | **`/code-review`** (global) | Correctness, regressions, security in changed code | Every PR |
 
@@ -1289,6 +1718,25 @@ claude --model claude-sonnet-5
   distributes globally by default, so an unrestricted bucket puts an EU database's
   write-ahead log on US edges while everything else looks compliant.
 
+**Added 2026-09-25:**
+
+* 🔴 **The EU Traceability app has `ASK_PAUL_APP_URL` / `ASK_PAUL_SSO_SECRET` set** although no
+  EU Ask Paul exists (§5.8). Unexplained.
+* **PITR is off on every Supabase project, master included**; no off-platform copy; **no escrow
+  of `ENCRYPTION_KEY` / `JWT_SECRET`**; nothing alerts on backup state (§10.4).
+* **orca60 is EU in master and US in Supabase** (§5.6).
+* **Agents can write to a customer's QMS**, and an automation job in `auto` mode does it with no
+  human in the loop (§2.9).
+* **The session row is a usable password** in Traceability, because web-UI downloads need one
+  (§6.4).
+* **Ask Paul's scheduler can run a job twice** when Cloud Run scales out, and stops when it
+  scales in (§2.9).
+* **Traceability's own list of open gaps** (`docs/SECURITY_CONTROLS.md`, written for customers):
+  `session_id` and `csrf_token` stored in plaintext; no rate limit on `/api/auth/login`; no HSTS
+  or CSP headers; `ai_config.api_key` unencrypted; no user-action audit log.
+* **Intercom is a new sub-processor** receiving user identities from both products, in both
+  regions — not yet on any sub-processor list (§14.2).
+
 ### 13.5 The Traceability `/admin` console (hardened 2026-09-10, v3.44.0)
 
 `/admin` is a FastAPI route on the **same public host as the app**, registered before the SPA
@@ -1321,7 +1769,22 @@ internet**, and one shared password stands in front of it.
   `ai_config.api_key` are redacted by name, and any column whose *name* looks like a secret is
   redacted too. ⚠️ **A missed entry is not a visible bug — it is a silent disclosure on a page
   reachable from the internet.** Add the column to the redaction list in the same commit that
-  adds the table, and never add a filter box.
+  adds the table, and never add a filter box. Since 4.0 that includes `chat_messages` and
+  `invites` — people's conversations are now browsable here when the flag is on.
+* **A Disaster recovery page** (3.49.0, §10.4). Its *download a copy* action hands out the whole
+  database and is off unless `ADMIN_DB_DOWNLOAD=1`.
+* **Not everything admin is in `/admin` any more.** Collaboration settings (chat retention) and
+  the BOM Viewer settings live in the in-app **Admin → Settings** (`/settings`), written by the
+  tenant's own **Orcanos admins** — per tenant, not platform-wide.
+
+### 13.6 Ask Paul security release 2.61.0 (2026-09-23)
+
+Response headers (nosniff, `X-Frame-Options: DENY` except the document viewer, HSTS,
+Referrer-Policy); a **document-scoped `view_token`** valid 120 s in viewer URLs instead of the
+session JWT; the skills marketplace pinned to a reviewed snapshot, with skill instructions
+visible to admins only; retrieved text wrapped against prompt injection; controlled documents
+not downloadable or printable from the viewer. CORS now defaults to `*.orcanos.com` /
+`*.orcanos.ai` plus localhost with credentials off; `ALLOWED_ORIGINS` overrides it.
 
 ---
 
@@ -1336,11 +1799,11 @@ We sell to regulated customers, so our own tooling has to stand up to the same s
 | **A.5 / A.8 Access control** | Platform staff gate; roles read live from the database; per-account allowlists; module licences; Orcanos permission letters gate write actions per type and per project |
 | **A.8.24 Cryptography** | AES-256-GCM at rest for all customer secrets; HTTPS everywhere; `force_https` on Fly |
 | **A.8.15 Logging** | `security_audit_log` shared across apps; every sign-in records method, tenant and reason |
-| **A.8.16 Monitoring** | `/admin` dashboards, deploy verification scripts |
+| **A.8.16 Monitoring** | `/admin` dashboards, deploy verification scripts (now checking **both** regions), the Account Management Audit log and Disaster recovery screens. ⚠️ Read on demand — **nothing alerts** |
 | **A.8.32 Change management** | Version bump + release note + changelog for every shippable change; deploy gate requiring explicit approval |
 | **A.5.23 Cloud services** | Documented per-environment configuration; secrets in Secret Manager / Fly secrets / Vercel env |
 | **A.5.34 / A.8.10 Privacy and residency** | Per-account data region on the master `accounts` table; one Traceability deployment per region sharing no data; a tenant migration that compares row counts before purging the source. ⚠️ **Partial** — see the gap list below |
-| **A.8.13 Backup** | Litestream continuous replication for SQLite; Supabase managed backups |
+| **A.8.13 Backup** | Litestream continuous replication + Fly snapshots + local copies for SQLite, with a DR console; Supabase **daily** backups only — PITR off everywhere, restore in place only, never rehearsed (§10.4). Two written DR plans |
 | **A.8.8 Vulnerabilities** | `/security-scan` + `/security-review` + tracked ledgers |
 
 ### 14.2 The gaps to close before an audit
@@ -1366,6 +1829,20 @@ We sell to regulated customers, so our own tooling has to stand up to the same s
    perfectly normal answer.
 7. **The empty-allowlist fail-open** and the module-licence **fail-open for old rows** are
    deliberate, but both need writing down as accepted risks, with a compensating control.
+8. **Key escrow and recovery targets.** No escrow for `ENCRYPTION_KEY` / `JWT_SECRET`; PITR off;
+   RPO/RTO targets proposed in the DR plan but not agreed.
+9. **Traceability now holds irreplaceable personal data** — quiz records, chat, users. A retention
+   rule exists for chat (90 days default); none for the rest.
+10. **New processors since 2026-09-10:** Intercom (both products, both regions), Google speech via
+    Chrome, openFDA (no personal data). The draft sub-processor table in
+    `docs/compliance/ISO27001.md` §2.1 needs them, and **DPAs are not on file**.
+11. **AI that writes to the customer's QMS** (Ask Paul agents). Needs a stated control: who
+    approves, what Orcanos records as the author, and whether `auto` mode is allowed at all.
+12. **Asset inventory / SoA (A.5.9).** Our own systems are not in the company asset inventory.
+
+**Where we stand, measured:** Ask Paul's re-run on 2026-09-15 scored **22 % compliant** (19 pass,
+39 partial, 28 gap — `Orcanos QMS/compliance/ISO27001_REPORT.md`). **Traceability and Account
+Management have never been audited** with `/compliance-audit`.
 
 ### 14.3 The tooling
 
@@ -1373,6 +1850,14 @@ We sell to regulated customers, so our own tooling has to stand up to the same s
 `compliance/scope.yaml` naming its frameworks, which connectors apply (code, Supabase, Fly,
 Vercel, pentest, org) and **environment variable names only — never values**. It produces a
 ledger plus a report, and the ledger is updated in place run over run.
+
+**The results now live in Account Management → ISO 27001 audit** (0.9.0–0.10.0, §20.11). Each
+system (`orcanos-qms`, `traceability-matrix` — `src/lib/iso27001-systems.ts`) has its own
+controls; each imported `ledger.json` becomes an immutable **run**, so two audits can be
+compared; each answer an operator gives is kept in an append-only history. Every open control
+carries a **priority** (Low → Critical) and a *How to fix* — computed on read, not stored. The
+**% compliant** figure uses only the skill's own verdict, never an operator's *resolved* mark.
+Details: `account-management/docs/compliance/ISO27001.md`.
 
 There is also an evidence generator for Google Drive-based controls in
 `c:\AI Projects\iso 27001\`.
@@ -1699,8 +2184,8 @@ Two habits worth copying:
 ### 18.1 Repos
 
 All private, all under `zoharp/`, all on `main`, all cloned under `c:\AI Projects\`:
-`orcanos_qms_AI`, `traceability-matrix`, `account-management`, `covaris_bom`,
-`quiz-management`, `ai-portal`, `Claude-skills`.
+`orcanos_qms_AI`, `traceability-matrix`, `account-management`, `ai-portal`, `Claude-skills` —
+plus the legacy `covaris_bom` and `quiz-management`, both absorbed into Traceability (§2.4).
 
 ### 18.2 ⚠️ The deployment gate
 
@@ -1733,16 +2218,21 @@ The `/release-management` skill does steps 1–3.
 |---|---|---|
 | 1 | Mirror `release_notes.json` into `src/frontend/public/`, then **binary-compare the copy** | The app reads the *copy* at runtime. Skip this and the footer shows the previous version through any number of clean deploys, with nothing failing. **This has drifted twice.** |
 | 2 | Rebuild the landing page (`python landing/landing.py build`) | The public page ships the newest version number |
-| 3 | `git add -A`, show status, prompt for a message, commit, push | One place, one confirmation |
-| 4 | `flyctl deploy` | The actual deploy |
+| 3 | `git add -A`, show status, prompt for a message, commit, push. **Pushes whenever the branch is ahead of upstream**, even with nothing new to commit | One place, one confirmation — and a previous commit that never got pushed no longer slips through |
+| 4 | `flyctl deploy` **then** `flyctl deploy -c fly.eu.toml` | Both regions, every time. An EU failure prints *"EU is now BEHIND"* |
 | 5 | Build the IIS zip (`build_and_zip.ps1`) | The on-premises package never drifts from the cloud one |
-| 6 | `curl` the live landing page and print HTTP status + byte size | **Proof it is actually live** |
+| 6 | `curl` `/release_notes.json` on **both** hosts and compare with the version just released; also the landing page's status and size | **Proof both regions are actually live on this version** |
 
 **Any step failing stops everything.** Nothing half-deploys.
 
+⚠️ **`flyctl deploy` ships the working tree, not the commit.** Any uncommitted change in the
+folder goes to production with it. The in-progress `deploy_video.bat` (which syncs tutorial
+MP4s into `public/videos` and deploys both regions) has the same property.
+
 Ask Paul's `deploy.bat` follows the same idea for Cloud Build: commit → push → then run
-`git_scripts/verify_deploy.py`, because *a push alone does not mean deployed*. If the build
-fails you are told that production is still running old code.
+`verify_deploy.py` (now at the repo root), because *a push alone does not mean deployed*. If the
+build fails you are told that production is still running old code. **Cloud Build now also runs
+the database migrations** after the deploy step (§10.2).
 
 Account Management's `deploy.bat`: **typecheck → `next build` → commit prompt → push**. The
 build gate runs **before** the commit prompt, so a broken build never reaches a red Vercel
@@ -1783,8 +2273,14 @@ flowchart LR
   I --> J[Public landing page]
 ```
 
-**GitBook.** One page per `##` H2 section of `USER_MANUAL.md`, plus an auto-generated
-Release Notes page placed last.
+**GitBook.** One page per `##` H2 section, plus an auto-generated Release Notes page placed
+last. **Traceability's manual is now five modules** (2026-09-17), declared in
+`user-manual/gitbook-config.json` → `modules`, each with a slug and an icon: Getting Started
+(`USER_MANUAL.md`), Traceability Matrix (`TRACEABILITY.md`), Training (`TRAINING.md`), BOM Viewer
+(`BOM_VIEWER.md`), Help & Reference (`REFERENCE.md`). The first `##` of each file is that
+module's hub page; **page titles must be unique across all five files**; images in
+`user-manual/images/` are uploaded by the script; and cross-page links must be written
+`[Text](page:Title)` or GitBook strips them.
 
 * Spaces: Traceability `DX08MS01eLeTOrEp4kod` → https://orcanos.gitbook.io/traceability-marix/ ·
   Ask Paul `Ywj8Iox1ZDfgLDr6wn6r` → https://orcanos.gitbook.io/orcanos-qms-ai/ ·
@@ -1838,7 +2334,7 @@ flowchart LR
 | 4 | **Enable the reverse proxy** — IIS Manager → server node → Application Request Routing Cache → Server Proxy Settings → tick **Enable proxy** → Apply |
 | 5 | **Copy files** — extract `traceability-deploy.zip` into `C:\inetpub\wwwroot\traceability-matrix\` |
 | 6 | **Copy `wwwroot_web.config`** to `C:\inetpub\wwwroot\web.config` — this is what proxies `/api/*` to the backend |
-| 7 | **Configure `.env`** — `ORCANOS_BASE_URL`, `ORCANOS_TENANT`, `DATABASE_PATH`, `SECRET_KEY`, `SESSION_TIMEOUT`, `ADMIN_PASSWORD` |
+| 7 | **Configure `.env`** — `ORCANOS_BASE_URL`, `ORCANOS_TENANT`, `DATABASE_PATH`, `SECRET_KEY`, `SESSION_TIMEOUT`, **`ADMIN_PASSWORD` (required — `/admin` answers 503 without it)**. Optional for Invite: `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURITY` (`starttls`\|`ssl`\|`none`), `SMTP_USER`, `SMTP_PASSWORD`, `MAIL_FROM`, `MAIL_FROM_NAME`, `APP_BASE_URL` — which must be **https** (except localhost), so Invite needs a certificate on the IIS site |
 | 8 | **Run the backend** on `localhost:8000` — manually, or as a Windows Service |
 | 9 | **Open** `http://<server>/traceability-matrix/` |
 
@@ -1870,6 +2366,11 @@ itself at `http://localhost:8000/admin`.**
 
 `ADMIN_PASSWORD` is read **at process start**. Change it without restarting and the old one
 stays live while the login answers 401.
+
+**Chat on IIS works by short polling** — IIS/ARR forwards only `/api/*` and there is no
+WebSocket path, which is exactly why the feature was designed that way. The Intercom widget
+needs the customer's network to allow Intercom's script; if it is blocked, the button opens
+orcanos.com instead.
 
 ---
 
@@ -1908,7 +2409,16 @@ Since 0.6.0 clicking the account name opens **one window with six tabs** — Ove
 **Traceability**, **Ask Paul**, **LLM**, **Spend** — one per *system* rather than one per
 *table*. The two AI configurations sit together on the LLM tab, and both cost ledgers sit on
 Spend, listed separately rather than summed: one is a lifetime counter, the other a total over
-the events shown, so a combined figure would mean nothing.
+the events shown, so a combined figure would mean nothing. The Traceability tab carries the
+**BOM** licence alongside Traceability and Training (0.8.0).
+
+Since 0.11.0 each row has **Ask Paul ↗** and **Traceability ↗** buttons that open the product in
+a new tab **at the address matching the account's region**. Ask Paul's is disabled on EU
+accounts, because there is no EU Ask Paul.
+
+If Traceability cannot be reached, the list retries once (0.9.1) and then says **which region**
+failed and why — *"the connection timed out" on the EU instance* — instead of a bare
+*fetch failed*.
 
 ### 20.3 Creating an account
 
@@ -1952,6 +2462,7 @@ secret must never be sent to a host someone typed.
 | Module | Rule |
 |---|---|
 | **Traceability / Training** | Licensing either one on a tenant without an `account_access` row creates the row. A new row is licensed for **nothing**, explicitly. |
+| **BOM** (0.8.0) | **Off by default** — the only opt-in module. A BOM-only tenant is valid. The switch is refused (**409**) against a Traceability instance older than 3.46.0, which has no such column. Traceability re-checks it on every BOM request, so turning it off takes effect immediately |
 | **Ask Paul** | **Cannot be turned ON without a database** (`vector_db_host` or `db_host`) — it is the only module with a per-tenant vector store. Turning it **off is never blocked**. |
 
 Because of the provisioning limitation, **Ask Paul currently cannot be licensed at creation
@@ -2020,6 +2531,49 @@ reason; account changes; licence changes.
 Two things to expect: it **starts on 2026-08-29** — nothing before that was ever recorded —
 and the account filter shows **both old and new spellings** of renamed accounts, because
 audit rows deliberately keep the label the event actually carried at the time.
+
+### 20.10 Disaster recovery
+
+**Sidebar → Disaster recovery.** One row per Supabase project — master, and every account whose
+vector database is a Supabase project — read live from the Supabase Management API.
+
+| Verdict | Means |
+|---|---|
+| **Healthy** | PITR on, recent backup |
+| **At risk** | **PITR off** — a day of data can be lost. Today this is **every** project, and the screen is right |
+| **Stale** | No backup, or the newest is older than 26 h |
+| **Check failed** | Supabase did not answer for that project |
+| **No database** | The account has no Supabase project |
+
+The **What needs attention** panel groups the problems, names the projects affected, the risk
+and the steps; click a flagged row for the same explanation for that project. **Status only** —
+nothing here takes a backup or restores one, and it does **not** cover Traceability, whose DR
+page is its own `/admin` (§10.4). The runbooks are in `docs/compliance/DISASTER_RECOVERY.md`.
+
+### 20.11 ISO 27001 audit
+
+**Sidebar → ISO 27001 audit.**
+
+1. **Pick the system** at the top — Ask Paul or Traceability. Each has its own controls, runs
+   and answers.
+2. **Import a run** — the `ledger.json` that `/compliance-audit` wrote for that system. Every
+   import is kept; switch between past runs to see what changed.
+3. **Work the list.** Filter or sort by **priority** (Low → Critical). Each control shows its main
+   recommendation; open it for *How to fix* — the concrete steps per open finding.
+4. **Answer a control.** *Save comment* records a note; *Resolve* also marks it handled, with
+   evidence. Every answer goes into the control's history and nothing is overwritten. Use evidence
+   links that will still work in a year — an auditor will follow them.
+
+⚠️ **The % compliant figure ignores your answers on purpose.** It counts only the skill's own
+verdict. *Resolved* means "an operator says this is handled" — to move the number, fix the thing
+and re-run the audit.
+
+### 20.12 Handbook
+
+**Sidebar → Handbook** shows the slide-deck version of this document inside the console. Click
+into the deck and use ← → to move, **M** for the index; **Open full screen** opens it in its own
+tab. It is served from behind the staff gate like every other route. To change it, edit
+`docs/platform/orcanos-ai-infrastructure.html` (and this file) and deploy.
 
 ---
 
@@ -2113,6 +2667,17 @@ Supabase project per tenant.**
 parallel and compare answers → move the rest → decommission. The master database moves
 **last**, or not at all.
 
+**Two things any move must now carry over** (both new since 2026-09-10):
+
+* **The automation scheduler.** On AWS it should not live inside the web process at all — a
+  single scheduled worker (EventBridge + a task, or one always-on container) removes both the
+  scale-to-zero and the run-twice problems of §2.9.
+* **The web-UI sign-in path** (§6.4) — it needs outbound access to the Orcanos web front end, not
+  only the API, and it holds real passwords in memory.
+
+RLS is already enabled on the tenant tables (migration 032), though with no policies — so the
+"one database with RLS" option has a start, not a design.
+
 ---
 
 ## 22. Next steps — the short list
@@ -2130,7 +2695,10 @@ These come before everything below, because we now have EU customers on a guaran
 | R4 | **Decide the Ask Paul EU story** — an EU Cloud Run service and an EU embedding path, or a stated limitation in the contract | The vector DB is in Frankfurt; the backend, the embeddings and most LLM branches are not. Until this is answered, **do not claim EU residency for Ask Paul** | High |
 | R5 | **Only then** set `ASK_PAUL_APP_URL` / `ASK_PAUL_SSO_SECRET` on the EU app | Pointing EU at the US app is a residency breach that looks like a feature working (§5.8) | — |
 | R6 | **A secret-parity check that runs on deploy** and reports the difference between the two regions' `fly secrets list` against the decision table in §5.8 | Nothing detects the drift today, and the failure is invisible: same build, no error, one region quietly missing a paid feature | Low |
-| R7 | **Make `deploy.bat` deploy both regions, or refuse to finish until the other one is done** | It deploys the US app only. A release is not shipped until both commands have run, and a version drift produces no error anywhere | Low |
+| R7 | ✅ **Done 2026-09-16** — `deploy.bat` deploys both regions and verifies both serve the released version | — | — |
+| R10 🆕 | **Explain the Ask Paul secrets on the EU app** — who set `ASK_PAUL_APP_URL` / `ASK_PAUL_SSO_SECRET` on `traceability-matrix-eu`, and where the URL points. Unset both, or record the decision | If it points at the US Ask Paul, EU users' credentials cross the border on every click (§5.8) | None to check |
+| R11 🆕 | **Decide orca60** — recreate `askpaul-orca60` in `eu-central-1` and re-index, or record the exception with the customer | The account says EU; its documents are in Virginia (§5.6) | Medium |
+| R12 🆕 | **Decide Intercom for EU users** — a DPA and an EU data-hosting option, or don't load it on the EU app | A US processor in the browser of every EU user, on the login page too | Low |
 | R8 | **Set `ADMIN_PASSWORD` and `SECRET_KEY` on both regions** — different values — and confirm `/admin` is not 503 | v3.44.0 removed the password default. Until they are set, `/admin` is unusable; before it shipped, it was open | None |
 | R9 | **Rehearse a region move on a test tenant end to end**, including the sign-out and the Ask Paul caveat | It has run once, in anger. The purge is irreversible and the safety is the row-count comparison | Low |
 
@@ -2141,7 +2709,11 @@ These come before everything below, because we now have EU customers on a guaran
 | 1 | **Fix the orphaned Supabase project `qms-pcure`** and run the orphan-finder query | It is billing us today | None |
 | 2 | **Fix provisioning to use the Supabase pooler host** (`aws-0-<region>.pooler.supabase.com:5432`, user `postgres.<ref>`), and create the `accounts` row *before* the project | The DDL step cannot work from Vercel; failures are unrecoverable | Low |
 | 3 | **Test everything in Account Management that writes.** Only sign-in and the list are verified | We are one save away from finding out the hard way | Low |
-| 4 | **Rehearse a restore** — Litestream and Supabase — and write down how long it took | ISO 27001 evidence, and peace of mind | None |
+| 4 | **Rehearse a restore** — Litestream and Supabase — and write down how long it took. Both runbooks now exist (§10.4); the drill logs are empty | ISO 27001 evidence — and Traceability now holds data nothing can rebuild | None |
+| 4a 🆕 | **Escrow `ENCRYPTION_KEY` and `JWT_SECRET`; turn on PITR for master; a nightly off-platform logical dump** | Without the keys, every backup restores unreadable ciphertext | Low |
+| 4b 🆕 | **Move Ask Paul's scheduler out of the web process**, or at least pin `--min-instances=1` and add a cross-instance job claim | It stops with the traffic and can double-run on scale-out (§2.9) | Medium |
+| 4c 🆕 | **Meter automation runs** in `account_usage_logs`, attributed to the job's owner | The largest unmetered LLM path (§11.3) | Low |
+| 4d 🆕 | **Decide `approval_mode='auto'`** — allowed per customer, off by default, and what Orcanos records as the author | AI writing to a regulated QMS with nobody looking (§2.9) | — |
 | 5 | **`user_accounts` membership table in master** | Every consolidation step needs it; nothing reads it at first | Low |
 | 6 | **One parent domain**, session cookie scoped to it | Unlocks SSO with no app moving anywhere | Low |
 | 7 | **Portal shell + module registry**, `modules[]` served from master. Single-module tenants skip the launcher, so nothing changes for them | Proves one login without absorbing any app | Low |
@@ -2155,6 +2727,12 @@ These come before everything below, because we now have EU customers on a guaran
 | 15 | **Retention policy + access review schedule + sub-processor list** | The remaining ISO 27001 gaps | None |
 | 16 | **Update the team deck and its model table** ([§15.12](#1512-the-deck-itself), [§12.5](#125-which-model-a-developer-should-use)), and work through the pending `change_Instructions.md` edits | It is what new people are onboarded with, and it predates the Claude 5 family | None |
 | 17 | **Decide the cost-ledger boundary** — one service keyed on both tenant and application, or two ledgers with a stated line between them — then fix the stale price table before building `orcanos-ai-cost-analysis` ([§11.7](#117-the-centralized-cost-service--designed-not-built)) | A wrong price table writes a wrong ledger silently, and two overlapping ledgers is how numbers stop agreeing | Low |
+| 18 🆕 | **Run `/compliance-audit` on Traceability and on Account Management**, and import both into the ISO 27001 screen | Neither has ever been audited; Ask Paul scored 22 % | None |
+| 19 🆕 | **Apply `sql/004_account_name_unique.sql`** to master | Duplicate account names are stopped by the app only | Low — read its header |
+| 20 🆕 | **Configure SMTP on both Fly apps** (different credentials, each region's own `APP_BASE_URL`) — or decide Invite stays off | Invite shipped in 4.2.0 and is invisible in production | Low |
+| 21 🆕 | **Paper trail for what shipped silently** — release notes for the AI disclaimer (both apps) and Ask Paul's Initiator agents / Intercom; renumber Traceability's duplicated Critical Notes #68 and #69 | Release notes are how customers and auditors learn what changed; a duplicated note number sends a reader to the wrong trap | None |
+| 22 🆕 | **Retire covaris-bom** once the customer has moved to the BOM module — commit or discard its uncommitted 1.8.0 work first | Two live copies of one product, one of them with its source not in git | Low |
+| 23 🆕 | **Fix the ECO export's Revisions fan-out** (`design/ECO_REVISIONS_TIMEOUT.md`) | It has already exhausted Orcanos' SQL connection pool once | Low |
 
 ### The open decisions blocking step 9
 
@@ -2169,7 +2747,8 @@ These come before everything below, because we now have EU customers on a guaran
   Basic header, so answering "per user" means keeping a server-side session row.
 * **D3 — is a module licence per tenant or per user?** Recommendation: tenant-level with
   optional per-user narrowing.
-* **D4 — does covaris-bom join at all?**
+* ~~**D4 — does covaris-bom join at all?**~~ **Answered 2026-09-16:** it joined by being
+  absorbed, as Traceability's BOM Viewer module (§2.8).
 * **CSRF:** Account Management relies on `SameSite=Lax`; Traceability issues an explicit
   `X-CSRF-Token`. Pick one, apply it everywhere.
 
@@ -2180,6 +2759,15 @@ These come before everything below, because we now have EU customers on a guaran
 | Term | Meaning |
 |---|---|
 | **Account / tenant** | One customer. In Orcanos it is the `Virtual_dir` — the path segment in `app.orcanos.com/<tenant>` |
+| **Agent** | In Ask Paul: an LLM that loops over tools (≤ 12 rounds) and can **propose** changes to Orcanos records. Not a Claude Code subagent |
+| **Approval mode** | An automation job's `manual` (proposals wait in the approval queue) or `auto` (applied with no human) |
+| **Automation job** | An Ask Paul agent + a plain-English trigger + an approval mode, run by the in-process scheduler |
+| **Context card** | A shared view in Traceability chat — re-resolved on the server under the *reader's* privacy scope and licence |
+| **DHF** | Design History File — Ask Paul's evidence map for a device, pinned to document revisions |
+| **eSTAR** | The FDA's structured 510(k) submission template; Ask Paul's checklist follows it |
+| **Module** | A licensed part of Traceability: `trace`, `training`, `bom`. Ask Paul is licensed alongside them |
+| **PITR** | Point-in-time recovery. Off on every Supabase project today |
+| **Web-UI sign-in** | Fetching Orcanos files or pages by a form login + cookie instead of the REST API (§6.4) |
 | **ARR** | Application Request Routing — the IIS module that reverse-proxies `/api/*` |
 | **Bedrock gateway** | `br.orcanos.com/ext/chat` — an Orcanos-owned proxy in front of AWS Bedrock. Serves Claude *and* OpenAI models |
 | **ContextVar** | Python per-request variable. How Ask Paul routes a request to the right customer database |
@@ -2210,18 +2798,23 @@ These come before everything below, because we now have EU customers on a guaran
 
 Honest gaps, so nobody assumes coverage we do not have:
 
-1. **Monitoring and alerting.** We have dashboards; we do not have alerts. Nobody is paged
-   if Fly stops or Cloud Run starts erroring.
+1. **Monitoring and alerting.** We have dashboards — now including two DR screens; we do not
+   have alerts. Nobody is paged if Fly stops, Cloud Run starts erroring, or the automation
+   scheduler quietly stops ticking.
 2. **Incident response.** Who is called, in what order, and what we tell customers.
-3. **A real cost dashboard.** LLM spend is well tracked; Fly, Vercel, Cloud Run, Supabase
-   and Anthropic bills are not tracked together anywhere.
-4. **DR / RTO / RPO.** We have replication, no stated targets and no rehearsed restore.
+3. **A real cost dashboard.** LLM spend is well tracked (except automation runs); Fly, Vercel,
+   Cloud Run, Supabase, Intercom and Anthropic bills are not tracked together anywhere.
+4. **DR / RTO / RPO.** Now written down per system (§10.4) — targets proposed, not agreed, and no
+   restore rehearsed.
 5. **On-boarding and off-boarding a person** across GitHub, GCP, Vercel, Fly, Supabase,
    Anthropic and GitBook.
 6. **The customer SQL Server integration** — read-only, but it deserves its own section.
 7. **Load and capacity.** One Fly machine, one SQLite writer. We do not know where it breaks.
 8. **Formal test evidence for Account Management.** `TESTING.md` says plainly that only
    sign-in and the list are verified. That is honest, and it is also a gap.
+9. **The agents in depth** — each agent's prompt, tools and the proposal lifecycle. This
+   handbook covers the infrastructure shape only; the design docs are under
+   `Orcanos QMS/design/agent network/`.
 
 ---
 

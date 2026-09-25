@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.12.0",
+    "date": "2026-09-25",
+    "changes": [
+      "✨ **The infrastructure handbook is now inside the console.** A new *Handbook* item in the sidebar shows the Orcanos AI infrastructure deck — apps, hosting, tenancy, residency, security, cost and next steps — updated for everything shipped since 10 September. Use the arrow keys to move, M for the index, or open it full screen."
+    ]
+  },
+  {
     "version": "0.11.0",
     "date": "2026-09-25",
     "changes": [

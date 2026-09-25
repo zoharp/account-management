@@ -273,6 +273,18 @@ button {
   margin: 2px 0 0;
 }
 
+/* The handbook deck, framed (`/handbook`). It sizes itself to the frame, so the
+   frame takes the rest of the viewport below the page header. */
+.handbook-frame {
+  display: block;
+  width: 100%;
+  height: calc(100vh - 150px);
+  min-height: 520px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--bg-surface);
+}
+
 .app-card {
   background: var(--bg-surface);
   border: 1px solid var(--border);
