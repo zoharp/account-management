@@ -9,6 +9,25 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.11.0** (2026-09-25) — **Open Ask Paul / Traceability from each account row.**
+
+The accounts list's Actions column gains two links beside *Manage…*: **Ask Paul ↗** and
+**Traceability ↗**. Each opens the product's front door in a new tab (`noopener noreferrer`) for
+the row's region — `coerceRegion(row.region)`, so a row with no region is US. Nothing about the
+account is carried: no tenant, no session, no `?u=` prefill. The product's own sign-in decides.
+
+URLs live in `APP_URLS` in `src/lib/regions.ts` (client-safe):
+
+| | US | EU |
+|---|---|---|
+| Ask Paul | `https://askpaul.orcanos.ai` | *none — button disabled* |
+| Traceability | `https://traceability.orcanos.ai` | `https://eu.traceability.orcanos.ai` |
+
+EU Ask Paul is `null`, not the US address — same no-fallback rule as `traceApiUrlFor`. When an
+EU Ask Paul is deployed, set it there.
+
+---
+
 **0.10.0** (2026-09-24) — **ISO 27001: priority and a recommendation for every open control.**
 
 New `src/lib/iso27001-guidance.ts` holds one entry per `compliance-audit` check (all 40 in

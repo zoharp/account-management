@@ -100,3 +100,23 @@ export function traceApiUrlFor(region: DataRegion): string | null {
   const url = region === 'eu' ? process.env.TRACE_API_URL_EU : process.env.TRACE_API_URL;
   return url?.replace(/\/$/, '') || null;
 }
+
+/**
+ * Where each product's front door is, per region — what the accounts list's
+ * "open" links point at. Plain URLs, no tenant or session carried: the product's
+ * own sign-in decides who gets in.
+ *
+ * `null` means that product has no deployment in that region. Ask Paul has no EU
+ * deployment yet, and an EU tenant must NOT be sent to the US one — the same
+ * no-fallback rule as `traceApiUrlFor`.
+ */
+export const APP_URLS: Record<DataRegion, { ask_paul: string | null; traceability: string | null }> = {
+  us: {
+    ask_paul: 'https://askpaul.orcanos.ai',
+    traceability: 'https://traceability.orcanos.ai',
+  },
+  eu: {
+    ask_paul: null,
+    traceability: 'https://eu.traceability.orcanos.ai',
+  },
+};

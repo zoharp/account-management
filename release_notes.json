@@ -1,5 +1,12 @@
 [
   {
+    "version": "0.11.0",
+    "date": "2026-09-25",
+    "changes": [
+      "✨ **Open Ask Paul or Traceability straight from the accounts list.** Each row has an Ask Paul ↗ and a Traceability ↗ button that opens the product in a new tab, at the US or EU address that matches the account's data region. Ask Paul has no EU deployment yet, so its button is disabled on EU accounts."
+    ]
+  },
+  {
     "version": "0.10.0",
     "date": "2026-09-24",
     "changes": [

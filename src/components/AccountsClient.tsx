@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import AccountManageModal from './AccountManageModal';
 import CreateAccountModal from './CreateAccountModal';
 import { MODULES } from '@/lib/module-catalog';
-import { REGION_LABELS, coerceRegion } from '@/lib/regions';
+import { APP_URLS, REGION_LABELS, coerceRegion } from '@/lib/regions';
 import type { MergedAccountRow, ModuleKey, TraceSourceStatus } from '@/lib/types';
 
 /**
@@ -272,9 +272,13 @@ export default function AccountsClient() {
                           INSIDE that screen, where the reason a tab is disabled
                           can actually be shown — the old row offered a different
                           set of buttons per account with nothing explaining why. */}
-                      <button className="btn-sm" onClick={() => setManage(row)}>
-                        Manage…
-                      </button>
+                      <div className="acl-row-actions">
+                        <OpenLink label="Ask Paul" row={row} app="ask_paul" />
+                        <OpenLink label="Traceability" row={row} app="traceability" />
+                        <button className="btn-sm" onClick={() => setManage(row)}>
+                          Manage…
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -461,5 +465,43 @@ function ModuleCell({
       <span className="acl-mod-mark">{busy ? '⋯' : state === null ? '–' : state ? '✓' : '✗'}</span>
       {label}
     </button>
+  );
+}
+
+/**
+ * Opens the product in a new tab at the deployment for this row's region. A row
+ * with no region on record is US — `coerceRegion`, same as everywhere else. A
+ * product with no deployment in that region is shown disabled rather than
+ * pointing at the other region's app.
+ */
+function OpenLink({
+  label,
+  row,
+  app,
+}: {
+  label: string;
+  row: MergedAccountRow;
+  app: 'ask_paul' | 'traceability';
+}) {
+  const region = coerceRegion(row.region);
+  const url = APP_URLS[region][app];
+  const where = region.toUpperCase();
+  if (!url) {
+    return (
+      <button className="btn-sm" disabled title={`${label} has no ${where} deployment yet.`}>
+        {label} ↗
+      </button>
+    );
+  }
+  return (
+    <a
+      className="btn-sm"
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      title={`Open ${label} (${where}) — ${url}`}
+    >
+      {label} ↗
+    </a>
   );
 }
