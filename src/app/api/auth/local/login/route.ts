@@ -187,7 +187,12 @@ export async function POST(req: Request) {
       detail: { reason: 'orcanos_not_admin', orcanos_url: apiUrl },
       success: false,
     });
-    return Response.json({ detail: 'Invalid credentials' }, { status: 401 });
+    // A distinct message is safe here: QW_Login has already accepted the
+    // password, so this tells only the account's owner something they know.
+    return Response.json(
+      { detail: 'Only Orcanos administrators can sign in to the platform console.' },
+      { status: 403 },
+    );
   }
 
   if (user.orcanos_account) {

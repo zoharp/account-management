@@ -111,6 +111,7 @@ export default function LoginClient() {
       router.refresh();
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
+      setPassword('');
       setSubmitting(false);
     }
   }

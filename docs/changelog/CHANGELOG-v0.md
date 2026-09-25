@@ -9,6 +9,17 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.12.1** (2026-09-25) — **Non-admin sign-in says why.**
+
+`POST /api/auth/local/login` now answers a successful `QW_Login` whose
+`Is_admin` is false with `403 Only Orcanos administrators can sign in to the
+platform console.` instead of `401 Invalid credentials`. No enumeration cost:
+the password has already been accepted by Orcanos at that point. The login
+screen shows the message and clears the password field. Audit reason is
+unchanged (`orcanos_not_admin`).
+
+---
+
 **0.12.0** (2026-09-25) — **The infrastructure handbook, inside the console.**
 
 New sidebar item **Handbook** (`/handbook`) framing the slide-deck version of

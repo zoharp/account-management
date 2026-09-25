@@ -201,7 +201,7 @@ it can only choose item types the tenant actually has.*
 |---|---|
 | **URL** | https://accounts.orcanos.ai |
 | **Repo / folder** | `zoharp/account-management` · `c:\AI Projects\compliance-platform\account-management` |
-| **Version** | `0.12.0` |
+| **Version** | `0.12.1` |
 | **What it does** | Manages tenant **accounts** — their databases, credentials, **four module licences** (Traceability, Training, BOM, Ask Paul), data region, status and spend — plus the shared security audit trail, a **Disaster recovery** status screen, the **ISO 27001 audit** console, and this handbook |
 | **Runtime** | Next.js 15 + React 19 + TypeScript on **Vercel**, route handlers only (no separate backend) |
 | **Data** | Master Supabase, via PostgREST; the Supabase Management API for backup status |
