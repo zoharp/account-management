@@ -416,6 +416,10 @@ Verdict rules (`BackupsClient.tsx`):
 | otherwise | **Healthy** |
 
 Things to know:
+- **Each verdict carries its risk and recommended actions** (`ADVICE` in `BackupsClient.tsx`,
+  keyed by `issueFor`, which mirrors the rules above). They appear in a *What needs attention* panel
+  grouped by issue, and inline when a flagged row is clicked. The steps point back to §5 and §9.
+  Change the advice there when a runbook here changes.
 - **It does not cover traceability.** Litestream and Fly snapshots are invisible to it; check them
   with `fly` (§3.2).
 - **Daily backups are counted but do not make a row healthy** — only PITR does. That matches the

@@ -1,10 +1,19 @@
 [
   {
+    "version": "0.10.0",
+    "date": "2026-09-24",
+    "changes": [
+      "✨ **Every open ISO 27001 control now has a priority.** Procedure gaps (a policy, an inventory entry, a signed agreement) are Low; security gaps are Low, Medium, High or Critical depending on the finding. Filter by priority, or sort the list so the most urgent come first.",
+      "✨ **Each control tells you how to fix it.** The table shows the main recommendation, and the control's dialog lists the concrete steps for every open finding."
+    ]
+  },
+  {
     "version": "0.9.1",
     "date": "2026-09-24",
     "changes": [
       "🐛 **A brief network hiccup between the console and Traceability no longer blanks its columns.** A dropped or timed-out connection is retried once before the accounts list gives up on the Traceability half.",
-      "🐛 **When Traceability really cannot be reached, the warning says which region and why** — for example \"the connection timed out\" on the EU instance — instead of a bare \"fetch failed\" that always showed the US address."
+      "🐛 **When Traceability really cannot be reached, the warning says which region and why** — for example \"the connection timed out\" on the EU instance — instead of a bare \"fetch failed\" that always showed the US address.",
+      "✨ **The Disaster recovery screen now explains each problem.** A \"What needs attention\" panel lists every issue found, which projects it affects, what the risk is and the steps to take. Click a flagged row for the same explanation for that project."
     ]
   },
   {

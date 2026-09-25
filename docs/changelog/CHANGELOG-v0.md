@@ -9,6 +9,33 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.10.0** (2026-09-24) — **ISO 27001: priority and a recommendation for every open control.**
+
+New `src/lib/iso27001-guidance.ts` holds one entry per `compliance-audit` check (all 40 in
+`checks/registry.yaml`): gap kind (`procedure` for `org.*` attestations, `security` for
+code/Supabase/Fly/Vercel/pentest), a base severity, a one-line action and concrete steps.
+`assessControl()` reads each check's own status out of the evidence text
+(`check.id (status): …`, joined by ` | `) and rates it:
+
+- procedure → always **low**;
+- security → the check's severity when it **failed**, one level lower when **partial** or
+  **blocked**;
+- control → the highest of its open checks; compliant/N/A → none.
+
+A check listed in `check_ids` that the evidence does not mention produced no finding and is
+skipped. Only evidence with no per-check breakdown lends every check the control's status.
+Without that rule A.8.29 on Ask Paul read Critical from an SSRF check that had reported nothing.
+
+Nothing is stored. The rating is derived on read, so it works on saved runs and needs no migration.
+To re-rate a check or change its advice, edit `CHECKS`. The screen gains Priority and
+Recommendation columns, a priority filter, a *Sort by priority* option and open-by-priority counts
+in the header line; the control dialog gains a *How to fix* section. New `.acl-toggle--crit` pill.
+
+Against the Ask Paul 2026-09-15 run: 13 high, 17 medium, 12 low security, 26 low procedure,
+25 compliant/N/A.
+
+---
+
 **0.9.0** (2026-09-16) — **ISO 27001 audits per system, with history.**
 
 Also records the ISO 27001 screen itself (commit `400360d`), which shipped with no version or

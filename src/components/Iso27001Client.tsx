@@ -9,6 +9,14 @@ import type {
   Iso27001Theme,
 } from '@/lib/types';
 import { ISO27001_SYSTEMS, DEFAULT_ISO27001_SYSTEM } from '@/lib/iso27001-systems';
+import {
+  assessControl,
+  PRIORITY_LABEL,
+  PRIORITY_ORDER,
+  PRIORITY_TOGGLE,
+  type Iso27001Assessment,
+  type Iso27001Priority,
+} from '@/lib/iso27001-guidance';
 import ResolveControlModal from './ResolveControlModal';
 
 /**
@@ -46,6 +54,25 @@ const STATUS_TOGGLE: Record<Iso27001Status, string> = {
 
 const CURRENT = 'current';
 
+/** Rank for sorting: critical first, compliant/N/A last. */
+function priorityRank(a: Iso27001Assessment): number {
+  return a.priority ? PRIORITY_ORDER.indexOf(a.priority) : -1;
+}
+
+function PriorityPill({ assessment }: { assessment: Iso27001Assessment }) {
+  if (!assessment.priority) return <span className="acl-muted">—</span>;
+  return (
+    <>
+      <span className={`acl-toggle ${PRIORITY_TOGGLE[assessment.priority]}`}>{PRIORITY_LABEL[assessment.priority]}</span>
+      {assessment.kind === 'procedure' && (
+        <span className="acl-muted" style={{ marginLeft: 8 }}>
+          procedure
+        </span>
+      )}
+    </>
+  );
+}
+
 function StatusPill({ status }: { status: Iso27001Status }) {
   return <span className={`acl-toggle ${STATUS_TOGGLE[status]}`}>{STATUS_LABEL[status]}</span>;
 }
@@ -65,7 +92,7 @@ async function getJson<T>(url: string): Promise<T> {
 }
 
 /** One table row, whichever view it came from. */
-type ViewRow = Iso27001RunControl & { current?: Iso27001ControlRow };
+type ViewRow = Iso27001RunControl & { current?: Iso27001ControlRow; assessment: Iso27001Assessment };
 
 export default function Iso27001Client() {
   const [system, setSystem] = useState(DEFAULT_ISO27001_SYSTEM);
@@ -84,6 +111,8 @@ export default function Iso27001Client() {
   const [themeFilter, setThemeFilter] = useState<'all' | Iso27001Theme>('all');
   const [statusFilter, setStatusFilter] = useState<'all' | Iso27001Status>('all');
   const [resolvedFilter, setResolvedFilter] = useState<'all' | 'open' | 'resolved' | 'changed'>('all');
+  const [priorityFilter, setPriorityFilter] = useState<'all' | Iso27001Priority>('all');
+  const [sortBy, setSortBy] = useState<'control' | 'priority'>('control');
 
   const [opened, setOpened] = useState<ViewRow | null>(null);
   const [importing, setImporting] = useState(false);
@@ -141,31 +170,36 @@ export default function Iso27001Client() {
   const rows: ViewRow[] = useMemo(
     () =>
       viewingPast
-        ? snapshot.map((s) => ({ ...s, current: currentById.get(s.control_id) }))
-        : current.map((c) => ({ ...c, run_id: '', current: c })),
+        ? snapshot.map((s) => ({ ...s, current: currentById.get(s.control_id), assessment: assessControl(s) }))
+        : current.map((c) => ({ ...c, run_id: '', current: c, assessment: assessControl(c) })),
     [viewingPast, snapshot, current, currentById],
   );
 
-  const filtered = useMemo(
-    () =>
-      rows
-        .filter((r) => themeFilter === 'all' || r.theme === themeFilter)
-        .filter((r) => statusFilter === 'all' || r.status === statusFilter)
-        .filter((r) => {
-          if (resolvedFilter === 'all') return true;
-          if (resolvedFilter === 'changed') {
-            const was = previous.get(r.control_id);
-            return was !== undefined && was !== r.status;
-          }
-          return (resolvedFilter === 'resolved') === Boolean(r.current?.resolved);
-        }),
-    [rows, themeFilter, statusFilter, resolvedFilter, previous],
-  );
+  const filtered = useMemo(() => {
+    const out = rows
+      .filter((r) => themeFilter === 'all' || r.theme === themeFilter)
+      .filter((r) => statusFilter === 'all' || r.status === statusFilter)
+      .filter((r) => priorityFilter === 'all' || r.assessment.priority === priorityFilter)
+      .filter((r) => {
+        if (resolvedFilter === 'all') return true;
+        if (resolvedFilter === 'changed') {
+          const was = previous.get(r.control_id);
+          return was !== undefined && was !== r.status;
+        }
+        return (resolvedFilter === 'resolved') === Boolean(r.current?.resolved);
+      });
+    // rows are already in control order; a stable sort keeps it within a priority.
+    return sortBy === 'priority' ? [...out].sort((a, b) => priorityRank(b.assessment) - priorityRank(a.assessment)) : out;
+  }, [rows, themeFilter, statusFilter, priorityFilter, resolvedFilter, previous, sortBy]);
 
   const applicable = rows.filter((r) => r.status !== 'not_applicable');
   const compliant = applicable.filter((r) => r.status === 'pass').length;
   const openGaps = rows.filter((r) => r.status === 'fail' && !r.current?.resolved).length;
   const resolvedCount = rows.filter((r) => r.current?.resolved).length;
+  const openByPriority = PRIORITY_ORDER.map((p) => ({
+    p,
+    n: rows.filter((r) => r.assessment.priority === p && !r.current?.resolved).length,
+  })).filter((x) => x.n > 0);
   const changedCount = previous.size ? rows.filter((r) => (previous.get(r.control_id) ?? r.status) !== r.status).length : 0;
   const systemLabel = ISO27001_SYSTEMS.find((s) => s.key === system)?.label ?? system;
   const shownRun = viewingPast ? runs.find((r) => r.id === selectedRun) : runs[0];
@@ -273,6 +307,8 @@ export default function Iso27001Client() {
                 {applicable.length ? Math.round((100 * compliant) / applicable.length) : 0}% compliant
                 {' · '}
                 {openGaps} open gap{openGaps === 1 ? '' : 's'}
+                {openByPriority.length > 0 &&
+                  ` (open by priority: ${[...openByPriority].reverse().map((x) => `${x.n} ${PRIORITY_LABEL[x.p].toLowerCase()}`).join(', ')})`}
                 {' · '}
                 {resolvedCount} of {rows.length} resolved
                 {previous.size > 0 && ` · ${changedCount} changed since the previous run`}
@@ -336,6 +372,30 @@ export default function Iso27001Client() {
                 Changed since previous run
               </option>
             </select>
+            <select
+              className="acl-input"
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value as typeof priorityFilter)}
+              style={{ width: 'auto' }}
+              aria-label="Priority"
+            >
+              <option value="all">All priorities</option>
+              {[...PRIORITY_ORDER].reverse().map((p) => (
+                <option key={p} value={p}>
+                  {PRIORITY_LABEL[p]}
+                </option>
+              ))}
+            </select>
+            <select
+              className="acl-input"
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+              style={{ width: 'auto' }}
+              aria-label="Sort"
+            >
+              <option value="control">Sort by control</option>
+              <option value="priority">Sort by priority</option>
+            </select>
           </div>
         </div>
 
@@ -362,6 +422,8 @@ export default function Iso27001Client() {
                   <th>Control</th>
                   <th>Title</th>
                   <th>Status</th>
+                  <th>Priority</th>
+                  <th>Recommendation</th>
                   <th>Resolution</th>
                 </tr>
               </thead>
@@ -383,6 +445,13 @@ export default function Iso27001Client() {
                             was {STATUS_LABEL[was]}
                           </span>
                         )}
+                      </td>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        <PriorityPill assessment={row.assessment} />
+                      </td>
+                      <td className="acl-muted">
+                        {row.assessment.recommendations[0]?.action ?? ''}
+                        {row.assessment.recommendations.length > 1 && ` (+${row.assessment.recommendations.length - 1} more)`}
                       </td>
                       <td>
                         {row.current?.resolved ? (

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
 import type { BackupStatusRow } from '@/lib/types';
 
 /**
@@ -33,6 +33,103 @@ function verdictFor(row: BackupStatusRow): Verdict {
   return 'ok';
 }
 
+type Issue = 'no_database' | 'check_failed' | 'pitr_off' | 'no_backup' | 'stale';
+
+/** Which rule in `verdictFor` fired. Kept beside it so the two cannot drift. */
+function issueFor(row: BackupStatusRow): Issue | null {
+  if (!row.has_project) return 'no_database';
+  if (!row.available) return 'check_failed';
+  if (!row.pitr_enabled) return 'pitr_off';
+  if (!row.last_backup_at) return 'no_backup';
+  if (hoursAgo(row.last_backup_at) > STALE_HOURS) return 'stale';
+  return null;
+}
+
+interface Advice {
+  title: string;
+  risk: string;
+  actions: string[];
+}
+
+/**
+ * What each issue means and what to do about it. The runbooks behind these
+ * steps are `docs/compliance/DISASTER_RECOVERY.md` §5 and the to-do list in §9.
+ */
+const ADVICE: Record<Issue, Advice> = {
+  pitr_off: {
+    title: 'Point-in-time recovery is off',
+    risk:
+      'The database can only be restored to its last daily snapshot, so up to about 24 hours of changes can be lost. ' +
+      'Snapshots are kept for about 7 days, restore only into the same project, and disappear if the project itself is deleted.',
+    actions: [
+      'Turn on PITR in the Supabase dashboard: Project Settings → Add-ons → Point in time recovery. It is a paid add-on and needs at least the Small compute size.',
+      'Do the master project first. It holds every account, user and encrypted credential, so it is the one loss that affects all customers.',
+      'For demo or low-value tenants, you can accept daily snapshots instead. Record that decision in DISASTER_RECOVERY.md §4 so the red status is a known risk, not a surprise.',
+      'Either way, add a nightly database dump to storage outside Supabase (DR plan §9, item 4). That is the only copy that survives the project being deleted.',
+    ],
+  },
+  stale: {
+    title: `No backup in the last ${STALE_HOURS} hours`,
+    risk: 'Backups seem to have stopped, and the amount of data a restore would lose grows every hour until they resume.',
+    actions: [
+      'Check in the Supabase dashboard that the project is not paused or being restored.',
+      'Check status.supabase.com for an incident in the project’s region.',
+      'If neither explains it, open a Supabase support ticket and quote the project ref.',
+      'Until backups resume, take a manual dump (pg_dump) and keep it outside Supabase.',
+    ],
+  },
+  no_backup: {
+    title: 'PITR is on, but no backup has completed',
+    risk:
+      'There is nothing to restore from yet. If PITR was just turned on, this is expected for the first day; otherwise backups are failing.',
+    actions: [
+      'If PITR was turned on in the last 24 hours, wait and refresh tomorrow.',
+      'Otherwise, open a Supabase support ticket and quote the project ref.',
+      'Take a manual dump (pg_dump) now so a copy exists in the meantime.',
+    ],
+  },
+  check_failed: {
+    title: 'Backup status could not be read',
+    risk:
+      'This does not mean the data is at risk, only that its protection could not be confirmed. A 404 is the exception: it can mean the project no longer exists.',
+    actions: [
+      'Refresh. A timeout is often a one-off.',
+      'HTTP 401 or 403: SUPABASE_ORG_ACCESS_TOKEN in Vercel has expired or lacks access to this project. Issue a new one in the Supabase dashboard.',
+      'HTTP 404: check that the project still exists in the Supabase dashboard. If it has been deleted, treat it as an incident and follow DR plan §5.4.',
+    ],
+  },
+  no_database: {
+    title: 'No Supabase database',
+    risk:
+      'There is nothing in Supabase to back up for this account. That is fine if the account does not use Ask Paul. If the database is self-hosted, its backups are the host’s responsibility and are not checked here.',
+    actions: [
+      'If the account should have Ask Paul, provision its database from the account page.',
+      'Otherwise, no action is needed.',
+    ],
+  },
+};
+
+function AdviceBody({ advice, isMaster }: { advice: Advice; isMaster?: boolean }) {
+  return (
+    <div className="dr-advice-body">
+      <p>
+        <strong>Risk: </strong>
+        {advice.risk}
+        {isMaster ? ' This is the master project, so the risk applies to the whole platform.' : ''}
+      </p>
+      <p className="dr-advice-label">What you can do</p>
+      <ol>
+        {advice.actions.map((a) => (
+          <li key={a}>{a}</li>
+        ))}
+      </ol>
+    </div>
+  );
+}
+
+/** Most serious first — the order of the "What needs attention" panel. */
+const ISSUE_ORDER: Issue[] = ['pitr_off', 'stale', 'no_backup', 'check_failed'];
+
 function Pill({ verdict, children }: { verdict: Verdict; children: React.ReactNode }) {
   const cls = verdict === 'ok' ? 'acl-toggle--on' : verdict === 'warn' ? 'acl-toggle--warn' : 'acl-toggle--err';
   return <span className={`acl-toggle ${cls}`}>{children}</span>;
@@ -63,7 +160,15 @@ export default function BackupsClient() {
     void load();
   }, [load]);
 
+  const [openKey, setOpenKey] = useState<string | null>(null);
+
   const atRisk = rows.filter((r) => r.has_project && verdictFor(r) !== 'ok');
+
+  // One entry per problem, listing the projects it affects.
+  const issueGroups = ISSUE_ORDER.map((issue) => ({
+    issue,
+    rows: atRisk.filter((r) => issueFor(r) === issue),
+  })).filter((g) => g.rows.length > 0);
 
   return (
     <>
@@ -72,10 +177,35 @@ export default function BackupsClient() {
           <h1>Disaster recovery</h1>
           <p className="app-page-sub">
             Point-in-time recovery status per Supabase project, read live from Supabase.
-            Status only — nothing here triggers a backup or a restore.
+            Status only — nothing here triggers a backup or a restore. Click a row that needs
+            attention to see the risk and what to do.
           </p>
         </div>
       </div>
+
+      {!loading && !error && issueGroups.length > 0 && (
+        <div className="app-card dr-attention">
+          <h2 className="acl-section-title">What needs attention</h2>
+          {issueGroups.map(({ issue, rows: affected }) => (
+            <div key={issue} className="dr-issue">
+              <div className="dr-issue-head">
+                <Pill verdict={issue === 'pitr_off' || issue === 'check_failed' ? 'err' : 'warn'}>
+                  {ADVICE[issue].title}
+                </Pill>
+                <span className="acl-muted">
+                  {affected.map((r) => (r.is_master ? `${r.account_name} (master)` : r.account_name)).join(', ')}
+                </span>
+              </div>
+              <AdviceBody advice={ADVICE[issue]} isMaster={affected.some((r) => r.is_master)} />
+            </div>
+          ))}
+          <p className="acl-hint">
+            Not covered by this screen: Traceability backups (Litestream and Fly snapshots — check them with{' '}
+            <code>fly</code>), and escrow of <code>ENCRYPTION_KEY</code>. Losing that key makes every stored
+            credential unreadable. See DISASTER_RECOVERY.md §3.2 and §6.3.
+          </p>
+        </div>
+      )}
 
       <div className="app-card">
         <div className="acl-toolbar">
@@ -121,8 +251,15 @@ export default function BackupsClient() {
               <tbody>
                 {rows.map((row) => {
                   const v = verdictFor(row);
+                  const issue = issueFor(row);
+                  const open = openKey === row.key;
                   return (
-                    <tr key={row.key}>
+                    <Fragment key={row.key}>
+                    <tr
+                      className={issue ? 'acl-row' : undefined}
+                      onClick={issue ? () => setOpenKey(open ? null : row.key) : undefined}
+                      title={issue ? 'Show the risk and what to do' : undefined}
+                    >
                       <td>
                         {row.is_master ? <span className="acl-badge">MASTER</span> : null}{' '}
                         {row.account_name}
@@ -158,8 +295,18 @@ export default function BackupsClient() {
                         ) : (
                           <Pill verdict={v}>{v === 'ok' ? 'Healthy' : v === 'warn' ? 'Stale' : 'At risk'}</Pill>
                         )}
+                        {issue ? <span className="dr-caret">{open ? '▾' : '▸'}</span> : null}
                       </td>
                     </tr>
+                    {open && issue ? (
+                      <tr className="dr-advice-row">
+                        <td colSpan={6}>
+                          <p className="dr-advice-title">{ADVICE[issue].title}</p>
+                          <AdviceBody advice={ADVICE[issue]} isMaster={row.is_master} />
+                        </td>
+                      </tr>
+                    ) : null}
+                    </Fragment>
                   );
                 })}
               </tbody>

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import ModalShell from './ModalShell';
 import type { Iso27001ControlNote, Iso27001ControlRow, Iso27001RunControl, Iso27001Status } from '@/lib/types';
+import { assessControl, PRIORITY_LABEL, PRIORITY_TOGGLE } from '@/lib/iso27001-guidance';
 
 const STATUS_LABEL: Record<Iso27001Status, string> = {
   pass: 'Compliant',
@@ -38,6 +39,7 @@ export default function ResolveControlModal({
 }) {
   const readOnly = snapshot !== null;
   const scan = snapshot ?? control;
+  const assessment = assessControl(scan);
 
   const [answer, setAnswer] = useState(control.resolution_answer ?? '');
   const [link, setLink] = useState(control.resolution_evidence_link ?? '');
@@ -114,6 +116,38 @@ export default function ResolveControlModal({
             <p className="acl-hint">Last checked {new Date(control.last_checked).toLocaleDateString()}.</p>
           )}
         </div>
+
+        {assessment.priority && (
+          <div className="acl-section">
+            <h3 className="acl-section-title">
+              How to fix{' '}
+              <span className={`acl-toggle ${PRIORITY_TOGGLE[assessment.priority]}`} style={{ marginLeft: 6 }}>
+                {PRIORITY_LABEL[assessment.priority]}
+              </span>
+            </h3>
+            {assessment.recommendations.map((r) => (
+              <div key={r.checkId || 'manual'} style={{ borderTop: '1px solid var(--border)', padding: '10px 0' }}>
+                <p className="acl-hint" style={{ margin: 0 }}>
+                  <span className={`acl-toggle ${PRIORITY_TOGGLE[r.priority]}`}>{PRIORITY_LABEL[r.priority]}</span>{' '}
+                  <strong>{r.label}</strong>
+                  {' · '}
+                  {r.kind === 'procedure' ? 'procedure' : 'security'}
+                  {' · '}
+                  {STATUS_LABEL[r.status]}
+                  {r.checkId && <span className="acl-muted"> · {r.checkId}</span>}
+                </p>
+                <p className="acl-hint" style={{ margin: '4px 0 0' }}>
+                  {r.action}
+                </p>
+                <ol className="acl-hint" style={{ margin: '4px 0 0', paddingLeft: 20 }}>
+                  {r.steps.map((step) => (
+                    <li key={step}>{step}</li>
+                  ))}
+                </ol>
+              </div>
+            ))}
+          </div>
+        )}
 
         {!readOnly && (
           <div className="acl-section">
