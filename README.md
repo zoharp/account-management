@@ -160,6 +160,69 @@ the master `users` table — the same predicate as the QMS
 `require_orcanos_admin`. API routes answer **404**, not 403, so a non-staff
 caller cannot tell the routes exist. Keep it that way.
 
+### Giving someone access
+
+A person needs to exist in **two places**. Being an Orcanos admin is not enough
+on its own: nothing creates the console row automatically, and there is no
+screen for adding staff yet, so it is manual SQL.
+
+**1. Orcanos, tenant `orcanos`** (`app.orcanos.com/orcanos` — `ORCANOS_LOGIN_URL`)
+
+- A user with a **password that works at that URL**. Someone who always signs
+  in to Orcanos with Google may have no usable password; Orcanos then answers
+  `Incorrect credentials. Try Using SSO`.
+- **Admin** in that tenant (`User_details.Is_admin`).
+
+**2. The master `users` table** (Supabase SQL editor, master project)
+
+| Column | Value | Why |
+|---|---|---|
+| `email` | `<name>@orcanos.com` | Must end in `@PLATFORM_EMAIL_DOMAIN` |
+| `role` | `admin` | The platform gate above |
+| `orcanos_user_name` | their Orcanos username, exactly | **The password is checked against this stored name, never against what was typed.** A wrong value fails every password. |
+| `orcanos_account` | leave `null` | Filled in with the Orcanos tenant (`Virtual_dir`) on the first successful sign-in. If it holds a different tenant, sign-in is refused. |
+
+```sql
+insert into users (email, display_name, auth_method, role, orcanos_user_name)
+values ('jane.doe@orcanos.com', 'Jane Doe', 'orcanos', 'admin', 'jane.doe');
+
+-- or, for an existing row:
+update users
+set role = 'admin', orcanos_user_name = 'jane.doe', orcanos_account = null
+where email ilike 'jane.doe@orcanos.com';
+```
+
+They then sign in with their email **or** Orcanos username, plus their Orcanos
+password.
+
+#### When sign-in fails
+
+Every failure before the password is accepted shows the same **`Invalid
+credentials`**, on purpose — the route must not reveal who is registered. The
+screen cannot tell you why; **`security_audit_log` can**:
+
+```sql
+select created_at, event_type, detail
+from security_audit_log
+where event_type in ('login_failed','login_denied')
+order by created_at desc limit 10;
+```
+
+| `detail.reason` | Cause | Fix |
+|---|---|---|
+| `no_such_user` | No `users` row matches, or it has no `orcanos_user_name` | Add or fix the row (step 2) |
+| `orcanos_rejected` | Orcanos refused the password — wrong password, SSO-only user, or the **stored** `orcanos_user_name` is wrong | Try the same credentials at `app.orcanos.com/orcanos`; check the stored name |
+| `wrong_orcanos_tenant` | The user's Orcanos tenant is not the one in the URL | Check `ORCANOS_LOGIN_URL` |
+| `orcanos_identity_mismatch` | Row already linked to another tenant (`orcanos_account`) | Set `orcanos_account = null` |
+| `orcanos_identity_already_linked` | Another `users` row owns this Orcanos username | Remove the duplicate |
+| `orcanos_not_admin` | Password fine, not an Orcanos admin. The screen says so: *Only Orcanos administrators can sign in* | Make them admin in Orcanos |
+
+**Google sign-in is separate** and currently broken: the `orcanosdemo`
+`auth_methods.google_client_id` is missing its trailing `.com` (Google answers
+`Error 401: invalid_client`), and `https://accounts.orcanos.ai/auth/callback` is
+not yet a registered redirect URI on that client (§4 above). Use the Orcanos
+username and password.
+
 ---
 
 ## Known deltas from the QMS implementation

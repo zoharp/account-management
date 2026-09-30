@@ -59,6 +59,16 @@ Both causes returned the same `Invalid credentials`, which is deliberate — eve
 real reason only ever reaches `security_audit_log`.** When someone reports a login problem, read
 that table first; the screen cannot tell you anything.
 
+**Giving someone access, and the `reason` → fix table:** [README.md → Giving someone access](README.md#giving-someone-access).
+A new person needs an Orcanos admin user *and* a hand-inserted master `users` row with the right
+`orcanos_user_name` — being an Orcanos admin alone gives `Invalid credentials` (`no_such_user`).
+
+⚠️ **Google sign-in is broken in production (found 2026-09-28).** The `orcanosdemo`
+`auth_methods.google_client_id` ends `.apps.googleusercontent` — no `.com` — so Google answers
+`401 invalid_client`; with `.com` it answers `redirect_uri_mismatch`, because
+`https://accounts.orcanos.ai/auth/callback` is not registered on that client. The ✅ Google row
+above predates this.
+
 1. **The identity was someone else's.** `users.id=1` (`zoharp@orcanos.com`) carried
    `orcanos_user_name='rami.azulay'` — test data this file had warned about since 0.2.0. The route
    calls `QW_Login` with the **stored** username, never with what was typed, so every password was
