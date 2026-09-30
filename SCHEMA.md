@@ -265,7 +265,7 @@ Events this app writes:
 | `login_succeeded`, `login_failed`, `login_denied` | `lib/login.ts`, the three auth routes |
 | `logout` | `/api/auth/logout` |
 | `account_provisioning_started` | `POST /api/accounts` |
-| `account_created`, `account_provisioning_failed` | `POST /api/accounts/provision/[jobId]` |
+| `account_created`, `account_provisioning_retried`, `account_provisioning_failed` | `POST /api/accounts/provision/[jobId]` |
 | `account_updated`, `account_deleted` | `PATCH`/`DELETE /api/accounts/[id]` |
 | `account_module_changed` | `PUT /api/accounts/modules` |
 | `trace_account_created`, `trace_account_updated`, `trace_account_deleted` | `/api/accounts/trace/[tenant]` |

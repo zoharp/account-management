@@ -64,7 +64,11 @@ export const AUDIT_EVENT_GROUPS: readonly AuditEventGroup[] = [
     key: 'provisioning',
     label: 'Provisioning',
     hint: 'Supabase projects created for a tenant — the ones that cost money.',
-    types: ['account_provisioning_started', 'account_provisioning_failed'],
+    types: [
+      'account_provisioning_started',
+      'account_provisioning_retried',
+      'account_provisioning_failed',
+    ],
   },
   {
     key: 'users',

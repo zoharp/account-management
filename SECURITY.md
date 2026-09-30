@@ -244,7 +244,7 @@ too, since both apps append to the one table.
 | **Accounts** | `account_created` · `account_updated` · `account_deleted` | both |
 | **Modules & licences** | `account_module_changed` · `trace_account_created` · `trace_account_updated` · `trace_account_deleted` | this app |
 | **Secrets & keys** | `account_credentials_tested` · `orcanos_login_tested` · `trace_ai_config_changed` · `trace_ai_key_tested` · `llm_key_set` · `llm_key_revealed` · `llm_key_deleted` · `auth_methods_updated` | both |
-| **Provisioning** | `account_provisioning_started` · `account_provisioning_failed` | this app |
+| **Provisioning** | `account_provisioning_started` · `account_provisioning_retried` · `account_provisioning_failed` | this app |
 | **Users & access** | `user_deleted` · `repo_member_added` / `_updated` / `_removed` | QMS |
 | **Compliance** | `iso27001_control_resolved` | this app |
 

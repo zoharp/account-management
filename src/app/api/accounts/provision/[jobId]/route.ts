@@ -7,12 +7,21 @@
  * outlive a serverless function; see the header comment in lib/provisioning.ts
  * for why the streaming design in the QMS backend was replaced.
  *
- * `running_schema` is the long step — it executes the whole bootstrap file over
- * one Postgres connection — hence the raised maxDuration.
+ * `running_schema` is the long step — it executes the whole bootstrap file in
+ * one Management API `database/query` call — hence the raised maxDuration.
+ *
+ * A body of `{ "retry": true }` first resumes a job that is in `error` from the
+ * step it failed on (`retryProvisioning`), then ticks it as usual.
  */
 
 import { requirePlatformStaff } from '@/lib/session';
-import { getJob, tickProvisioning, toJobView } from '@/lib/provisioning';
+import {
+  getJob,
+  ProvisioningError,
+  retryProvisioning,
+  tickProvisioning,
+  toJobView,
+} from '@/lib/provisioning';
 import { pgGet } from '@/lib/supabase';
 import { logSecurityEvent } from '@/lib/audit';
 import type { AccountListRow } from '@/lib/types';
@@ -34,14 +43,31 @@ export async function GET(_req: Request, ctx: Ctx) {
   return Response.json({ job: toJobView(job) });
 }
 
-export async function POST(_req: Request, ctx: Ctx) {
+export async function POST(req: Request, ctx: Ctx) {
   const { user, error } = await requirePlatformStaff();
   if (error) return error;
 
   const { jobId } = await ctx.params;
 
-  const before = await getJob(jobId);
+  let before = await getJob(jobId);
   if (!before) return Response.json({ detail: 'Provisioning job not found' }, { status: 404 });
+
+  const { retry } = (await req.json().catch(() => ({}))) as { retry?: boolean };
+  if (retry && before.state === 'error') {
+    try {
+      before = await retryProvisioning(jobId);
+    } catch (e) {
+      if (e instanceof ProvisioningError) {
+        return Response.json({ detail: e.message }, { status: 409 });
+      }
+      throw e;
+    }
+    await logSecurityEvent('account_provisioning_retried', {
+      user,
+      accountName: before.account_name,
+      detail: { project_ref: before.project_ref, job_id: before.id, resumed_at: before.state },
+    });
+  }
 
   const job = await tickProvisioning(jobId);
 

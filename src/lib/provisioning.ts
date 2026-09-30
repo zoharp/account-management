@@ -31,7 +31,7 @@
 
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { decryptSecret, encryptSecret, generateDbPassword } from './crypto';
+import { encryptSecret, generateDbPassword } from './crypto';
 import { supabaseOrgAccessToken, supabaseOrgId } from './env';
 import { traceTenantForAccount } from './orcanos-url';
 import { coerceRegion, supabaseRegionFor } from './regions';
@@ -333,39 +333,61 @@ async function tickFetchingKeys(job: JobRow): Promise<JobRow> {
 }
 
 /**
- * Run the whole bootstrap file in one statement, as the Python does.
- * PostgREST cannot execute DDL, so this is a direct Postgres connection using
- * the password generated at project-creation time.
+ * Run the whole bootstrap file in one request, as the Python does.
+ *
+ * Through the Management API's `database/query` route, NOT a direct `pg`
+ * connection. PostgREST cannot execute DDL, and `db.<ref>.supabase.co` publishes
+ * only an AAAA record while Vercel functions are IPv4-only — the direct
+ * connection failed every time with `getaddrinfo ENOTFOUND`. This route is plain
+ * HTTPS on the same org token the earlier steps already use, and it is how the
+ * master migrations are applied too. It also means the generated DB password is
+ * no longer needed after project creation.
  */
 async function tickRunningSchema(job: JobRow): Promise<JobRow> {
-  if (!job.project_ref || !job.db_password_encrypted) {
-    return updateJob(job.id, { state: 'error', message: 'Job is missing its project credentials' });
+  if (!job.project_ref) {
+    return updateJob(job.id, { state: 'error', message: 'Job is missing its project ref' });
   }
 
   const sqlPath = path.join(process.cwd(), 'sql', 'bootstrap_new_account.sql');
   const sql = await readFile(sqlPath, 'utf8');
-  const password = decryptSecret(job.db_password_encrypted);
 
-  const { Client } = await import('pg');
-  const client = new Client({
-    host: `db.${job.project_ref}.supabase.co`,
-    port: 5432,
-    database: 'postgres',
-    user: 'postgres',
-    password,
-    connectionTimeoutMillis: 15000,
-    statement_timeout: 120000,
-    ssl: { rejectUnauthorized: false },
+  const res = await fetch(`${MANAGEMENT_API}/projects/${job.project_ref}/database/query`, {
+    method: 'POST',
+    headers: mgmtHeaders(),
+    body: JSON.stringify({ query: sql }),
+    signal: AbortSignal.timeout(240000),
+    cache: 'no-store',
   });
-
-  await client.connect();
-  try {
-    await client.query(sql);
-  } finally {
-    await client.end().catch(() => {});
+  if (!res.ok) {
+    return updateJob(job.id, {
+      state: 'error',
+      message: `Schema setup failed: ${res.status} ${(await res.text()).slice(0, 300)}`,
+    });
   }
 
   return updateJob(job.id, { state: 'saving_account', message: 'Saving account' });
+}
+
+/**
+ * Resume a failed job from the step it died on, instead of starting over.
+ *
+ * Starting over is the wrong recovery once the Supabase project exists: it is
+ * billed, and a second create fails on "Project with name … already exists",
+ * leaving an orphan and no account. Only a job that got past project creation
+ * and never wrote its account can be resumed; the step is inferred from what the
+ * job already holds, since `error` does not record where it came from.
+ */
+export async function retryProvisioning(jobId: string): Promise<JobRow> {
+  const job = await getJob(jobId);
+  if (!job) throw new ProvisioningError('Provisioning job not found');
+  if (job.state !== 'error') return job;
+  if (!job.project_ref || job.account_id) {
+    throw new ProvisioningError('This job cannot be resumed — start the account again.');
+  }
+  return updateJob(job.id, {
+    state: job.service_key_encrypted ? 'running_schema' : 'fetching_keys',
+    message: 'Retrying',
+  });
 }
 
 /**

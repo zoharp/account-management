@@ -34,8 +34,10 @@ interface LogLine {
 interface JobView {
   id: string;
   state: ProvisionState;
+  project_ref: string | null;
   project_status: string | null;
   message: string | null;
+  account_id: string | null;
 }
 
 export default function CreateAccountModal({
@@ -93,6 +95,8 @@ export default function CreateAccountModal({
   const [error, setError] = useState('');
   const [lines, setLines] = useState<LogLine[]>([]);
   const [jobId, setJobId] = useState<string | null>(null);
+  // A failed job whose Supabase project exists but whose account was never written.
+  const [canRetry, setCanRetry] = useState(false);
 
   const bottomRef = useRef<HTMLDivElement>(null);
   const lastKeyRef = useRef<string>('');
@@ -161,6 +165,7 @@ export default function CreateAccountModal({
         break;
       case 'error':
         addLine('error', job.message || 'Failed');
+        setCanRetry(Boolean(job.project_ref) && !job.account_id);
         break;
     }
   }
@@ -198,6 +203,7 @@ export default function CreateAccountModal({
     setError('');
     setLines([]);
     setDone(false);
+    setCanRetry(false);
     lastKeyRef.current = '';
 
     try {
@@ -260,6 +266,45 @@ export default function CreateAccountModal({
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Failed to create account');
       setCreating(false);
+    }
+  }
+
+  /**
+   * Resume a failed job from the step it died on. Pressing Create again would
+   * try to make a second Supabase project with the same name — refused by
+   * Supabase, and the first one stays billed with no account behind it.
+   */
+  async function retry() {
+    if (!jobId) return;
+    setError('');
+    setCanRetry(false);
+    lastKeyRef.current = '';
+    try {
+      const res = await fetch(`/api/accounts/provision/${jobId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ retry: true }),
+      });
+      const data = (await res.json().catch(() => ({}))) as {
+        job?: JobView;
+        account?: AccountListRow | null;
+        detail?: string;
+      };
+      if (!res.ok || !data.job) {
+        setError(data.detail || `Server error (${res.status})`);
+        return;
+      }
+      renderJob(data.job);
+      if (data.job.state === 'done') {
+        setDone(true);
+        if (data.account) onCreated(data.account);
+      } else if (data.job.state === 'error') {
+        setError(data.job.message || 'Account creation failed');
+      } else {
+        setCreating(true);
+      }
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Retry failed');
     }
   }
 
@@ -616,13 +661,20 @@ export default function CreateAccountModal({
             <button className="acl-btn-cancel" onClick={onClose}>
               {creating ? 'Close' : 'Cancel'}
             </button>
-            <button
-              className="btn-primary"
-              onClick={() => void create()}
-              disabled={creating || done || duplicateName || !trimmedName}
-            >
-              {creating ? 'Creating…' : 'Create'}
-            </button>
+            {/* A failed job whose project already exists resumes; it never re-creates. */}
+            {jobId && canRetry && !creating && !done ? (
+              <button className="btn-primary" onClick={() => void retry()}>
+                Retry
+              </button>
+            ) : (
+              <button
+                className="btn-primary"
+                onClick={() => void create()}
+                disabled={creating || done || duplicateName || !trimmedName}
+              >
+                {creating ? 'Creating…' : 'Create'}
+              </button>
+            )}
           </div>
         </div>
       </div>

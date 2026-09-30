@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.12.1`
+- **App:** `0.12.2`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v0.md`](docs/changelog/CHANGELOG-v0.md) (long form) and
@@ -216,7 +216,7 @@ Browser ──▶ Next.js route handlers (Vercel, Node runtime)
                      │
                      ├──▶ master Supabase (PostgREST)   accounts, users, audit…
                      ├──▶ Supabase Management API        provisioning
-                     ├──▶ db.<ref>.supabase.co:5432      bootstrap DDL (pg)
+                     ├──▶ Supabase Management API        bootstrap DDL (database/query)
                      ├──▶ customer SQL Server            connection test (mssql)
                      └──▶ customer Orcanos REST          QW_Login test
 ```
@@ -398,26 +398,22 @@ Things to keep:
 - **Orphan projects are findable.** The query is at the bottom of
   `sql/001_account_provisioning.sql`. Check it after any failed run.
 
-⚠️ **`running_schema` cannot work from Vercel, and never could (found 2026-08-31).**
-The DDL step opens a direct `pg` connection to `db.<ref>.supabase.co`. That
-hostname publishes **only an AAAA record** — Supabase dropped IPv4 for direct
-connections — and Vercel functions are IPv4-only, so it fails with
-`getaddrinfo ENOTFOUND`, which reads like a wrong hostname rather than a missing
-address family. Confirmed by resolving it: AAAA answers, A does not, while
-`aws-0-<region>.pooler.supabase.com` has A records.
+⚠️ **Never open a direct `pg` connection to `db.<ref>.supabase.co` from this app.**
+That hostname publishes **only an AAAA record** and Vercel functions are
+IPv4-only, so it fails with `getaddrinfo ENOTFOUND` — which reads like a wrong
+hostname, not a missing address family. Until 0.12.2 `running_schema` did exactly
+that and failed on every real run (orphans `klrgfaddrnnawvagomxr` 2026-08-31,
+`aiydgrmdhecxwnzlddmd` 2026-09-30). **Since 0.12.2 it POSTs the bootstrap file to
+the Management API `/projects/<ref>/database/query` route** — HTTPS, same org
+token, no DB password needed. Keep it that way.
 
-This is why the very first real run left an orphan: the project
-`klrgfaddrnnawvagomxr` (`qms-pcure`) was created and billable, then the job died
-one step later. **Retrying makes it worse** — the second attempt fails at
-creation with *"Project with name qms-pcure already exists"*, so you get an
-orphan and no account.
-
-The fix is to connect through the **pooler** (`aws-0-<region>.pooler.supabase.com:5432`,
-user `postgres.<ref>`), which is IPv4-reachable. Not done — since 0.3.0 an
-account can be created without a database at all, which removes this from the
-common path. Anything still needing a provisioned project has to fix the host
-first, and should also create the `accounts` row *before* the Supabase project
-so a failure is recoverable.
+**A failed job is resumed, never restarted.** Pressing Create again makes Supabase
+refuse the second project (*"Project with name … already exists"*) while the
+first stays billed. `retryProvisioning()` / `POST …/provision/:jobId {retry:true}`
+/ the modal's *Retry* button resume a job that has a `project_ref` and no
+`account_id`. Still open: the `accounts` row is written *last*, so a job
+abandoned before *Retry* is an orphan findable only via the query in
+`sql/001_account_provisioning.sql`.
 
 `sql/bootstrap_new_account.sql` is a copy of the QMS file. **This app now owns
 running it.** If the per-account schema changes, it changes here.
@@ -540,10 +536,10 @@ deployment. Until `TRACE_API_URL_EU` is set, `POST /api/accounts` refuses `regio
     **Turning it OFF is never blocked** and the server checks only a transition
     to on — a pre-3.27.0 row has no `allow_ask_paul` column and reads as
     licensed, so blocking its save would lock the dialog for most tenants.
-    Combined with `running_schema` being unusable from Vercel (see
-    *Provisioning* above), Ask Paul currently **cannot be licensed at creation
-    time**: create the account, add the DB on the account window's **Ask Paul**
-    tab (*Vector DB*), then use the pill. Since 0.6.0 all four Ask Paul controls —
+    Until 0.12.2 `running_schema` could not run from Vercel (see
+    *Provisioning* above), so Ask Paul could not be licensed at creation time;
+    the fallback still works: create the account, add the DB on the account
+    window's **Ask Paul** tab (*Vector DB*), then use the pill. Since 0.6.0 all four Ask Paul controls —
     licence, kill switch, database, delete — are on that one tab; before it, the
     licence was inside the Traceability dialog and the database under
     *Account & databases*, which is why this note used to name two screens.

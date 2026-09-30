@@ -9,6 +9,34 @@ version and any trap that fails silently — not this.
 
 ---
 
+**0.12.2** (2026-09-30) — **Provisioning's schema step works from Vercel; failed jobs resume.**
+
+`running_schema` failed every time with `getaddrinfo ENOTFOUND db.<ref>.supabase.co`: that host
+publishes only an AAAA record and Vercel functions are IPv4-only (the trap recorded since
+2026-08-31). Hit again on a real run on 2026-09-30, leaving project `aiydgrmdhecxwnzlddmd` created
+with no schema and no account.
+
+- `tickRunningSchema` (`src/lib/provisioning.ts`) no longer opens a `pg` connection. It POSTs the
+  whole of `sql/bootstrap_new_account.sql` to
+  `https://api.supabase.com/v1/projects/<ref>/database/query` with the org token the other steps
+  already use — the same route master migrations are applied through. Chosen over the pooler
+  (`aws-0-<region>.pooler.supabase.com`, user `postgres.<ref>`) because the pooler's host prefix
+  varies per project and would have to be looked up or guessed; the query route has no such
+  dependency. The generated DB password is no longer read after project creation. Verified: the
+  route answers Node `fetch` (`201`) against the new project — no Cloudflare 1010, which only hits
+  urllib's User-Agent.
+- **Resume, not restart.** `retryProvisioning()` moves a job in `error` that has a `project_ref`
+  and no `account_id` back to `running_schema` (service key already fetched) or `fetching_keys`.
+  `POST /api/accounts/provision/:jobId` with `{ "retry": true }` calls it, audits
+  `account_provisioning_retried`, then ticks as usual; a non-resumable job answers 409. The create
+  modal replaces *Create* with *Retry* for such a job. Pressing Create again was the wrong
+  recovery: Supabase refuses the second project with the same name and the first stays billed.
+- `sql/bootstrap_new_account.sql` is all `if not exists` / `or replace`, so re-running it on retry
+  is safe.
+- `pg` stays a dependency — `lib/connections.ts` still uses it for the vector DB test.
+
+---
+
 **0.12.1** (2026-09-25) — **Non-admin sign-in says why.**
 
 `POST /api/auth/local/login` now answers a successful `QW_Login` whose
