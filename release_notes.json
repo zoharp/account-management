@@ -1,6 +1,6 @@
 [
   {
-    "version": "0.12.2",
+    "version": "1.0.0",
     "date": "2026-09-30",
     "changes": [
       "🐛 **Creating an account with its own database no longer fails at *Setting up schema*.** The step could not reach the new database and stopped with a *getaddrinfo ENOTFOUND* error. It now runs reliably.",

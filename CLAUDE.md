@@ -4,16 +4,16 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `0.12.2`
+- **App:** `1.0.0`
 
 Release history is **not** kept in this file — it is
-[`docs/changelog/CHANGELOG-v0.md`](docs/changelog/CHANGELOG-v0.md) (long form) and
+[`docs/changelog/CHANGELOG-v1.md`](docs/changelog/CHANGELOG-v1.md) (long form; v0.x in `CHANGELOG-v0.md`) and
 [`release_notes.json`](release_notes.json) (the short list the app's own release-notes modal
 shows, reachable from the version in the sidebar footer). CLAUDE.md is loaded into every session
 and capped at 150,000 chars, so it carries the current version and the traps — nothing historical.
 
 **After every shippable change:** bump `package.json` and the block above, prepend an entry to
-`release_notes.json`, prepend the long form to the changelog, and add its row to
+`release_notes.json`, prepend the long form to `CHANGELOG-v1.md`, and add its row to
 [`docs/changelog/README.md`](docs/changelog/README.md). Never put customer data or account names
 in `release_notes.json` — it ships to the browser verbatim.
 
@@ -401,9 +401,9 @@ Things to keep:
 ⚠️ **Never open a direct `pg` connection to `db.<ref>.supabase.co` from this app.**
 That hostname publishes **only an AAAA record** and Vercel functions are
 IPv4-only, so it fails with `getaddrinfo ENOTFOUND` — which reads like a wrong
-hostname, not a missing address family. Until 0.12.2 `running_schema` did exactly
+hostname, not a missing address family. Until 1.0.0 `running_schema` did exactly
 that and failed on every real run (orphans `klrgfaddrnnawvagomxr` 2026-08-31,
-`aiydgrmdhecxwnzlddmd` 2026-09-30). **Since 0.12.2 it POSTs the bootstrap file to
+`aiydgrmdhecxwnzlddmd` 2026-09-30). **Since 1.0.0 it POSTs the bootstrap file to
 the Management API `/projects/<ref>/database/query` route** — HTTPS, same org
 token, no DB password needed. Keep it that way.
 
@@ -536,7 +536,7 @@ deployment. Until `TRACE_API_URL_EU` is set, `POST /api/accounts` refuses `regio
     **Turning it OFF is never blocked** and the server checks only a transition
     to on — a pre-3.27.0 row has no `allow_ask_paul` column and reads as
     licensed, so blocking its save would lock the dialog for most tenants.
-    Until 0.12.2 `running_schema` could not run from Vercel (see
+    Until 1.0.0 `running_schema` could not run from Vercel (see
     *Provisioning* above), so Ask Paul could not be licensed at creation time;
     the fallback still works: create the account, add the DB on the account
     window's **Ask Paul** tab (*Vector DB*), then use the pill. Since 0.6.0 all four Ask Paul controls —

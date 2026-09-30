@@ -1,7 +1,7 @@
 # Changelog index — account-management
 
 One line per release, newest first. The long form is
-[`CHANGELOG-v0.md`](CHANGELOG-v0.md); the short, user-facing list the app's own release-notes
+[`CHANGELOG-v1.md`](CHANGELOG-v1.md) (v0.x: [`CHANGELOG-v0.md`](CHANGELOG-v0.md)); the short, user-facing list the app's own release-notes
 modal renders is [`release_notes.json`](../../release_notes.json).
 
 `CLAUDE.md` deliberately carries **none** of this — only the current version and the traps. See
@@ -9,7 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
-| `0.12.2` | 2026-09-30 | Provisioning runs the bootstrap schema through the Management API `database/query` route (the IPv6-only direct host is gone from the path); failed jobs can be resumed with Retry. |
+| `1.0.0` | 2026-09-30 | Provisioning runs the bootstrap schema through the Management API `database/query` route (the IPv6-only direct host is gone from the path); failed jobs can be resumed with Retry. |
 | `0.12.1` | 2026-09-25 | Non-admin Orcanos sign-in gets a clear 403 "Only Orcanos administrators can sign in" instead of "Invalid credentials". |
 | `0.12.0` | 2026-09-25 | *Handbook* screen: the infrastructure deck served staff-only from `GET /api/handbook` and framed at `/handbook` (frame headers relaxed to same-origin for that one route). Handbook md + deck updated for everything shipped 09-10 → 09-25. |
 | `0.11.0` | 2026-09-25 | Accounts list: per-row *Ask Paul ↗* and *Traceability ↗* links opening the product at the row's region (`APP_URLS` in `lib/regions.ts`). EU Ask Paul disabled — no deployment, no fallback to US. |
