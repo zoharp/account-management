@@ -267,6 +267,7 @@ Events this app writes:
 | `account_provisioning_started` | `POST /api/accounts` |
 | `account_created`, `account_provisioning_retried`, `account_provisioning_failed` | `POST /api/accounts/provision/[jobId]` |
 | `account_updated`, `account_deleted` | `PATCH`/`DELETE /api/accounts/[id]` |
+| `account_purged` | `POST /api/accounts/delete` — full delete, `detail.steps` lists what was removed |
 | `account_module_changed` | `PUT /api/accounts/modules` |
 | `trace_account_created`, `trace_account_updated`, `trace_account_deleted` | `/api/accounts/trace/[tenant]` |
 | `trace_ai_config_changed` | `POST /api/accounts/trace/[tenant]/ai-config` |

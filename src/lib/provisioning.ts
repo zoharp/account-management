@@ -55,6 +55,36 @@ function mgmtHeaders(): Record<string, string> {
   };
 }
 
+/** `https://<ref>.supabase.co` → `<ref>`, or null for anything else. */
+export function projectRefFromHost(host: string | null | undefined): string | null {
+  const m = /^(?:https?:\/\/)?([a-z0-9]{20})\.supabase\.co\b/i.exec((host ?? '').trim());
+  return m ? m[1].toLowerCase() : null;
+}
+
+/**
+ * Permanently delete a Supabase project — every table, every backup.
+ *
+ * ⚠️ Irreversible, and Supabase keeps no copy once it is gone. The caller is
+ * the full account delete (`POST /api/accounts/delete`), which refuses the
+ * master project and any project another account still points at before it
+ * gets here. Returns `false` when the project was already gone (404).
+ */
+export async function deleteSupabaseProject(ref: string): Promise<boolean> {
+  const res = await fetch(`${MANAGEMENT_API}/projects/${encodeURIComponent(ref)}`, {
+    method: 'DELETE',
+    headers: mgmtHeaders(),
+    cache: 'no-store',
+  });
+  if (res.status === 404) return false;
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new ProvisioningError(
+      `Supabase refused to delete project ${ref} (HTTP ${res.status})${body ? `: ${body.slice(0, 200)}` : ''}`,
+    );
+  }
+  return true;
+}
+
 /**
  * The Supabase project name for an account's own database.
  *

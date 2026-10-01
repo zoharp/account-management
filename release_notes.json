@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.1.0",
+    "date": "2026-10-01",
+    "changes": [
+      "✨ **Delete an account completely.** The account window's *Overview* tab has a new *Delete this account…* option. After you type DELETE, it removes everything for that account: its traceability data, its Ask Paul database, and its record, credentials, AI key and cost history. It cannot be undone. The security audit log is kept. The old delete on the *Ask Paul* tab is gone, because it left the traceability data and the database behind."
+    ]
+  },
+  {
     "version": "1.0.2",
     "date": "2026-10-01",
     "changes": [

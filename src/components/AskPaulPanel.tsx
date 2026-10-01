@@ -25,14 +25,10 @@ import type { AccountRow, ConnectionTestResult } from '@/lib/types';
  * are two different databases and a single button would have to report half a
  * success. That is the same shape the AI engine editor already uses.
  *
- * ## Why Delete is on this tab
+ * ## Deleting
  *
- * Deleting removes the **master account record** — `accounts`, plus the
- * name-keyed `account_llm_keys` and `auth_methods` rows that have no foreign key
- * to it. That record IS the Ask Paul account: its database, its kill switch, its
- * LLM key. It is not the traceability tenant, which survives a delete and has to
- * be removed from the Traceability tab separately. Putting the button here says
- * which of the two apps it destroys.
+ * Not here. Deleting an account removes every system's data at once, so it is
+ * on the Overview tab (`DeleteAccountPanel`) rather than on any one app's tab.
  *
  * ## The rules that must survive any edit
  *
@@ -52,7 +48,6 @@ export default function AskPaulPanel({
   accountName,
   tenant,
   onSaved,
-  onDeleted,
   onClose,
 }: {
   /** null when this tenant has no master account record. */
@@ -61,7 +56,6 @@ export default function AskPaulPanel({
   /** null when the account has no Orcanos tenant, so no trace row holds the licence. */
   tenant: string | null;
   onSaved: (patch?: Partial<AccountRow>) => void;
-  onDeleted: () => void;
   onClose: () => void;
 }) {
   const [loading, setLoading] = useState(true);
@@ -511,116 +505,8 @@ export default function AskPaulPanel({
               {saving ? 'Saving…' : 'Save status & database'}
             </button>
           </div>
-
-          <DangerZone
-            accountId={accountId}
-            accountName={accountName}
-            hasTenant={Boolean(tenant)}
-            onDeleted={onDeleted}
-            onClose={onClose}
-          />
         </>
       )}
-    </div>
-  );
-}
-
-/**
- * Delete, behind a typed confirmation.
- *
- * A single "Are you sure?" is one stray click from destroying an account, and
- * this button used to sit inline in a table row where the click before it was
- * "toggle a module". Typing the word makes the act deliberate and, more
- * importantly, makes you read WHICH account you are on.
- */
-function DangerZone({
-  accountId,
-  accountName,
-  hasTenant,
-  onDeleted,
-  onClose,
-}: {
-  accountId: string;
-  accountName: string;
-  hasTenant: boolean;
-  onDeleted: () => void;
-  onClose: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [typed, setTyped] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-
-  const armed = typed.trim().toUpperCase() === 'DELETE';
-
-  async function remove() {
-    if (!armed) return;
-    setBusy(true);
-    setError('');
-    try {
-      const res = await fetch(`/api/accounts/${accountId}`, { method: 'DELETE' });
-      if (!res.ok) {
-        const d = (await res.json().catch(() => ({}))) as { detail?: string };
-        throw new Error(d.detail || `HTTP ${res.status}`);
-      }
-      onDeleted();
-      onClose();
-    } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
-      setBusy(false);
-    }
-  }
-
-  if (!open) {
-    return (
-      <div className="acl-section">
-        <button className="acl-disclosure acl-disclosure--danger" onClick={() => setOpen(true)}>
-          Danger zone — delete this Ask Paul account
-        </button>
-      </div>
-    );
-  }
-
-  return (
-    <div className="acl-section acl-section--danger">
-      <h3 className="acl-section-title">Danger zone</h3>
-      <p className="acl-hint acl-hint--warn">
-        Deleting <strong>{accountName}</strong> removes its master account record — the Ask Paul
-        account, its database credentials, its LLM key and its sign-in methods.{' '}
-        {hasTenant ? (
-          <>
-            Its <strong>traceability</strong> data is not touched and the tenant keeps working; remove
-            that separately from the <em>Traceability</em> tab.
-          </>
-        ) : (
-          'It has no traceability tenant, so nothing else refers to it.'
-        )}{' '}
-        The tenant&rsquo;s Supabase project is <strong>not</strong> de-provisioned either, and keeps
-        costing money until someone removes it by hand.
-      </p>
-      <div className="acl-field-row">
-        <label className="acl-label" htmlFor="acl-del">
-          Type <code>DELETE</code> to confirm
-        </label>
-        <input
-          id="acl-del"
-          className="acl-input"
-          value={typed}
-          onChange={(e) => setTyped(e.target.value)}
-          placeholder="DELETE"
-          autoComplete="off"
-          disabled={busy}
-        />
-      </div>
-      {error && <div className="acl-error">{error}</div>}
-      <div className="acl-inline-actions">
-        <button className="acl-btn-cancel" onClick={() => setOpen(false)} disabled={busy}>
-          Cancel
-        </button>
-        <button className="btn-danger-sm" disabled={!armed || busy} onClick={() => void remove()}>
-          {busy ? 'Deleting…' : `Delete ${accountName}`}
-        </button>
-      </div>
     </div>
   );
 }

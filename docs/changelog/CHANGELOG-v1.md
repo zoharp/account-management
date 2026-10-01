@@ -9,6 +9,34 @@ Newest first.
 
 ---
 
+**1.1.0** (2026-10-01) — **Delete an account, all of it.**
+
+The only delete was the Ask Paul tab's, which removed the master record and left the traceability
+tenant and the Supabase project behind (CLAUDE.md behaviour #8). New: account window → *Overview*
+→ *Delete this account…*, typed `DELETE` → `POST /api/accounts/delete`
+(`{account_id, tenant, confirm: "DELETE"}` — the word is re-checked server-side).
+
+Order, stopping at the first failure:
+1. **Traceability** — `purgeTenant` in the region that holds it (every `account_id`- and
+   `account`-keyed table, `account_access` and AI config included), then `deleteRegionDirectory`
+   (new, `lib/trace.ts`) on every region, since the purge skips `account_region`.
+2. **Supabase** — `deleteSupabaseProject` (new, `lib/provisioning.ts`, Management API
+   `DELETE /v1/projects/:ref`) for the ref in `vector_db_host`/`db_host` plus every `project_ref`
+   on the name's `account_provisioning` rows. 404 = already gone.
+3. **Master** — `account_llm_keys`, `auth_methods`, `account_usage_logs`, `account_provisioning`,
+   then `accounts` **last** so a partial run stays visible and can be re-run.
+
+Refused (409): `PLATFORM_ACCOUNT`; a tenant another master account derives; a client tenant that
+differs from the server-derived one. Skipped with a warning: the master project and any project
+another account points at. Kept: `security_audit_log` (new event `account_purged`, with every
+step) and `users` (global). The Ask Paul tab's `DangerZone` is removed;
+`DELETE /api/accounts/:id` stays for QMS parity but no button calls it.
+
+⚠️ **Untested against live data** — built, typechecked and `next build` green only. The
+Supabase project-delete response and the trace purge from Vercel have not run end to end.
+
+---
+
 **1.0.2** (2026-10-01) — **One tenant, one account.**
 
 Reported: two `orcanosdemotest` rows in the accounts list after the 1.0.1 resume. Master held

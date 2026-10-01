@@ -31,7 +31,7 @@ export const AUDIT_EVENT_GROUPS: readonly AuditEventGroup[] = [
     key: 'accounts',
     label: 'Accounts',
     hint: 'Tenant records created, changed or removed.',
-    types: ['account_created', 'account_updated', 'account_deleted'],
+    types: ['account_created', 'account_updated', 'account_deleted', 'account_purged'],
   },
   {
     key: 'licences',

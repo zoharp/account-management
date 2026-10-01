@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `1.0.2`
+- **App:** `1.1.0`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v1.md`](docs/changelog/CHANGELOG-v1.md) (long form; v0.x in `CHANGELOG-v0.md`) and
@@ -499,9 +499,16 @@ deployment. Until `TRACE_API_URL_EU` is set, `POST /api/accounts` refuses `regio
 7. **The OAuth `state` check is a hard failure here.** QMS skipped it when no
    local state existed, for compatibility with its legacy Supabase path. There
    is no legacy path here, so skipping would only buy a CSRF hole.
-8. **Delete does not de-provision the tenant's Supabase project.** Same as QMS.
-   The difference is that the warning is now shown to the user instead of being
-   discarded — that project keeps costing money until someone removes it.
+8. **There are two deletes, and only one removes everything.** `DELETE /api/accounts/:id`
+   (QMS parity, no longer wired to any button) removes the master rows only. Since 1.1.0 the
+   account window's **Overview → Delete this account…** (typed `DELETE`, checked server-side too)
+   calls `POST /api/accounts/delete`: traceability purge + region directory → the Supabase
+   project(s), including orphans from failed provisioning jobs → master name-keyed rows →
+   `accounts` **last**, so a partial failure stays in the list and is re-runnable. It refuses
+   `PLATFORM_ACCOUNT`, the master project, a project or tenant another account still uses, and a
+   tenant that differs from the one the server derives. `security_audit_log` and `users` are
+   kept on purpose. **Never run against a live customer without a backup — nothing is
+   recoverable, Supabase included.**
 9. **A Vercel environment change does nothing until something redeploys.**
    Vercel snapshots env vars into each deployment. Editing a variable and
    reloading the site shows the *old* value indefinitely, and a code push that

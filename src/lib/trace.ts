@@ -661,6 +661,31 @@ export async function deleteTraceAccount(account: string, region: DataRegion): P
   await call(region, `/api/admin/accounts/${encodeURIComponent(account)}`, { method: 'DELETE' });
 }
 
+/**
+ * Remove the tenant's residency signpost from EVERY region — the counterpart of
+ * `upsertRegionDirectory`. `purgeTenant` deliberately skips `account_region`
+ * (a move keeps it), so a full account delete has to clear it separately.
+ * 404 is "already gone"; other failures are returned, not thrown, for the same
+ * reason the upsert does: the directory grants nothing.
+ */
+export async function deleteRegionDirectory(tenant: string): Promise<{ failed: DataRegion[] }> {
+  const name = tenant.trim().toLowerCase();
+  if (!name) return { failed: [] };
+  const failed: DataRegion[] = [];
+  await Promise.all(
+    traceRegions().map(async (target) => {
+      try {
+        await call(target, `/api/admin/regions/${encodeURIComponent(name)}`, { method: 'DELETE' });
+      } catch (e) {
+        if (e instanceof TraceApiError && e.status === 404) return;
+        console.error(`[regions] could not remove directory entry on ${target}:`, e);
+        failed.push(target);
+      }
+    }),
+  );
+  return { failed };
+}
+
 /* ── AI engine ──────────────────────────────────────────────────────────────
  * Per-tenant provider routing. Distinct from the master DB's
  * `account_llm_keys`: that key drives QMS AI's RAG and chat, this one drives

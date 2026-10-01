@@ -7,6 +7,7 @@ import AskPaulPanel from './AskPaulPanel';
 import LlmPanel from './LlmPanel';
 import SpendPanel from './SpendPanel';
 import MoveRegionPanel from './MoveRegionPanel';
+import DeleteAccountPanel from './DeleteAccountPanel';
 import { REGION_LABELS, coerceRegion } from '@/lib/regions';
 import type { AccountRow, MergedAccountRow, TraceSourceStatus } from '@/lib/types';
 
@@ -34,10 +35,10 @@ import type { AccountRow, MergedAccountRow, TraceSourceStatus } from '@/lib/type
  *
  * | Tab | What it is |
  * |---|---|
- * | Overview | Where the data is, what is licensed, and the region move |
+ * | Overview | Where the data is, what is licensed, the region move, and deleting the account |
  * | Orcanos | The customer's own Orcanos server — the API both apps hang off, and what identifies the tenant |
  * | Traceability | The traceability app's access gates and modules |
- * | Ask Paul | The QMS AI app: licence, kill switch, database, and deleting the account |
+ * | Ask Paul | The QMS AI app: licence, kill switch, database |
  * | LLM | Both AI configurations — traceability's engine and Ask Paul's key |
  * | Spend | Both AI ledgers |
  *
@@ -152,7 +153,9 @@ export default function AccountManageModal({
           ))}
         </div>
 
-        {tab === 'overview' && <Overview row={row} onChanged={onChanged} />}
+        {tab === 'overview' && (
+          <Overview row={row} onChanged={onChanged} onDeleted={onDeleted} onClose={onClose} />
+        )}
 
         {tab === 'orcanos' && row.id && (
           <OrcanosPanel
@@ -172,7 +175,6 @@ export default function AccountManageModal({
             accountName={row.account_name}
             tenant={row.tenant ?? null}
             onSaved={(patch) => onChanged(patch)}
-            onDeleted={onDeleted}
             onClose={onClose}
           />
         )}
@@ -194,9 +196,13 @@ export default function AccountManageModal({
 function Overview({
   row,
   onChanged,
+  onDeleted,
+  onClose,
 }: {
   row: MergedAccountRow;
   onChanged: () => void;
+  onDeleted: () => void;
+  onClose: () => void;
 }) {
   /**
    * The move is collapsed, and starts closed every time.
@@ -293,6 +299,8 @@ function Overview({
           </li>
         </ul>
       </div>
+
+      <DeleteAccountPanel row={row} onDeleted={onDeleted} onClose={onClose} />
     </div>
   );
 }
