@@ -9,6 +9,25 @@ Newest first.
 
 ---
 
+**1.0.2** (2026-10-01) — **One tenant, one account.**
+
+Reported: two `orcanosdemotest` rows in the accounts list after the 1.0.1 resume. Master held
+**one** row (verified; `accounts_account_name_key` is unique), so the second row came from the
+list's join, which matches master to traceability on the **tenant**, not the name
+(`mergeAccounts`). Not confirmed which row was the stray — reading production's traceability
+instances from a dev machine was not permitted.
+
+`POST /api/accounts` now refuses, with 409 and before anything is written or billed:
+- a tenant (`traceTenantForAccount`, compared case-insensitively) that another master account
+  already derives — two master rows on one tenant;
+- a tenant `findTraceAccount` finds in the **other** region — the master row and the existing
+  trace row would never join. The same region is allowed: that is adopting a trace-only tenant.
+
+An unreachable traceability instance skips the second check (logged) rather than blocking every
+create.
+
+---
+
 **1.0.1** (2026-10-01) — **Create resumes the failed job for that name.**
 
 1.0.0's *Retry* lives only in the dialog that started the job; close it and the job is

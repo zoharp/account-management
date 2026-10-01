@@ -22,6 +22,7 @@ import { logSecurityEvent } from '@/lib/audit';
 import { mergeAccounts } from '@/lib/modules';
 import { DEFAULT_REGION, parseRegion, traceApiUrlFor } from '@/lib/regions';
 import {
+  findTraceAccount,
   listTraceAccounts,
   supportsAskPaul,
   supportsBom,
@@ -250,6 +251,60 @@ export async function POST(req: Request) {
       },
       { status: 400 },
     );
+  }
+
+  // ── One tenant, one account ─────────────────────────────────────────────
+  //
+  // The list joins master to traceability on the tenant, not the name. A unique
+  // `account_name` therefore does not stop the console showing two rows for one
+  // name: a second master account deriving the same tenant, or the tenant
+  // already living in the OTHER region's instance, both surface as a duplicate
+  // (one of them "TRACE ONLY"). Refused here, before anything is written or
+  // billed. A tenant already in the SAME region is fine — that is adopting a
+  // traceability-only tenant, which is what creating its master row is for.
+  {
+    const { tenant } = traceTenantForAccount({
+      orcanosApiUrl: payload.orcanos_api_url || null,
+      accountName,
+    });
+    const others = await pgGet<Array<{ account_name: string; orcanos_api_url: string | null }>>(
+      'accounts?select=account_name,orcanos_api_url',
+    );
+    const clash = others.find(
+      (a) =>
+        traceTenantForAccount({ orcanosApiUrl: a.orcanos_api_url, accountName: a.account_name })
+          .tenant.toLowerCase() === tenant.toLowerCase(),
+    );
+    if (clash) {
+      return Response.json(
+        {
+          detail:
+            `Account '${clash.account_name}' already uses the Orcanos tenant '${tenant}'. ` +
+            `One tenant can have only one account — edit that account instead.`,
+        },
+        { status: 409 },
+      );
+    }
+
+    let existing: TraceAccountRow | null = null;
+    try {
+      existing = await findTraceAccount(tenant);
+    } catch (e) {
+      // An unreachable instance must not block every create; the licence write
+      // later reports it. The cross-region clash is then caught by nothing, so log.
+      console.error('[POST /api/accounts] tenant region lookup failed:', e);
+    }
+    if (existing?.region && existing.region !== region) {
+      return Response.json(
+        {
+          detail:
+            `The Orcanos tenant '${tenant}' already exists in the ` +
+            `${existing.region.toUpperCase()} traceability instance. Create the account in ` +
+            `that region, or move the tenant first.`,
+        },
+        { status: 409 },
+      );
+    }
   }
 
   if (!provision) {

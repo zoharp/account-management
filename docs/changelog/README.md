@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `1.0.2` | 2026-10-01 | Create refuses a tenant already used by another master account, or already living in the other region's traceability instance — both rendered as a duplicate row. |
 | `1.0.1` | 2026-10-01 | Create resumes a failed provisioning job for the same name (project made, no account) instead of asking Supabase for a duplicate project. |
 | `1.0.0` | 2026-09-30 | Provisioning runs the bootstrap schema through the Management API `database/query` route (the IPv6-only direct host is gone from the path); failed jobs can be resumed with Retry. |
 | `0.12.1` | 2026-09-25 | Non-admin Orcanos sign-in gets a clear 403 "Only Orcanos administrators can sign in" instead of "Invalid credentials". |

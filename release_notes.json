@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.0.2",
+    "date": "2026-10-01",
+    "changes": [
+      "🐛 **One Orcanos tenant can no longer get two accounts.** Creating an account is now refused when another account already uses the same Orcanos tenant, or when that tenant already exists in the other data region. Both used to show up as two rows with the same name in the accounts list."
+    ]
+  },
+  {
     "version": "1.0.1",
     "date": "2026-10-01",
     "changes": [
