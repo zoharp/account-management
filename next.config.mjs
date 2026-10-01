@@ -11,6 +11,9 @@ const nextConfig = {
   // imports it, so the tracer would leave it out of the Vercel function.
   outputFileTracingIncludes: {
     '/api/handbook': ['./docs/platform/orcanos-ai-infrastructure.html'],
+    // Read with `readFile` in `running_schema`. The tracer has picked it up so far; this
+    // keeps it from depending on that.
+    '/api/accounts/provision/[jobId]': ['./sql/bootstrap_new_account.sql'],
   },
 
   /**

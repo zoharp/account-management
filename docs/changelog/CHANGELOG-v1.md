@@ -9,6 +9,30 @@ Newest first.
 
 ---
 
+**1.1.1** (2026-10-01) — **New accounts get orca60's schema.**
+
+`sql/bootstrap_new_account.sql` was a hand copy of the QMS file taken at the 2026-08-28
+extraction and never updated, so every account created since got none of QMS per-account
+migrations `010`–`041` (agents, proposals, SOP rules, 510(k), DHF, RLS, diff analyses,
+repository visibility, MDSAP, section metadata). QMS's deploy-time runner would eventually
+have applied them, but only on the next QMS deploy, and — with no `schema_migrations`
+ledger in the bootstrap — by replaying everything from `003`. `orcanosdemotest`
+(created 2026-09-30) is in that state: 16 tables, no ledger.
+
+- **orca60 is the schema master.** New `scripts/snapshot-bootstrap.mjs` reads its live DB
+  (Management API) and regenerates the bootstrap: 45 tables, sequences, FKs, indexes,
+  6 functions, RLS flags, reference rows, and orca60's 35 ledger rows (latest
+  `041_standard_section_metadata.sql`). `agent_definitions` and tenant content excluded.
+- **Verified** on a local Postgres 17 + pgvector container set up like Supabase: applies
+  cleanly, re-applies cleanly (resume path), and a fingerprint of columns, defaults,
+  constraints, indexes, function bodies, RLS, reference-row hashes and ledger matches
+  live orca60 line for line (858 lines). Not yet run by a real provisioning job.
+- **Drift check.** `saving_account` compares the new DB's `schema_migrations` with
+  orca60's and appends any missing filenames, plus the fix, to the job message. Non-fatal.
+- `outputFileTracingIncludes` now pins the bootstrap to the provision tick route.
+
+---
+
 **1.1.0** (2026-10-01) — **Delete an account, all of it.**
 
 The only delete was the Ask Paul tab's, which removed the master record and left the traceability

@@ -176,8 +176,8 @@ creating_project ─▶ waiting_healthy ─▶ fetching_keys ─▶ running_sche
 | `creating_project` | — | Reaching this state in a tick means the start request died between the insert and the Management API call. Fails with a clear message. |
 | `waiting_healthy` | `GET /v1/projects/{ref}`, check `status` | `ACTIVE_HEALTHY` advances; `INIT_FAILED`/`REMOVED`/`RESTORE_FAILED`/`PAUSE_FAILED` fail; anything else stays. A non-OK HTTP response is treated as transient and retried. Hard timeout 10 min from `created_at`. |
 | `fetching_keys` | `GET /v1/projects/{ref}/api-keys` | `readServiceKey()` accepts both documented shapes and `api_key`/`apiKey`/`key`. |
-| `running_schema` | Direct Postgres to `db.<ref>.supabase.co:5432`, runs `sql/bootstrap_new_account.sql` as one statement | PostgREST cannot execute DDL; this is the only direct Postgres connection in the app. |
-| `saving_account` | Inserts the `accounts` row | Then nulls `db_password_encrypted`, `service_key_encrypted` and `payload`. |
+| `running_schema` | Management API `POST /v1/projects/{ref}/database/query` with `sql/bootstrap_new_account.sql` as one query | PostgREST cannot execute DDL, and the direct `db.<ref>` host is IPv6-only (unreachable from Vercel). The file is generated from orca60 — SCHEMA.md §6. |
+| `saving_account` | Inserts the `accounts` row, writes licences, compares the new DB's `schema_migrations` with orca60's | Then nulls `db_password_encrypted`, `service_key_encrypted` and `payload`. |
 
 Three things to preserve:
 

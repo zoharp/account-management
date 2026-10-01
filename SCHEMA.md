@@ -282,14 +282,38 @@ which also covers the event types QMS writes to this same table.
 
 ## 6. `sql/bootstrap_new_account.sql`
 
-The per-account schema applied to every newly provisioned tenant database —
-`documents`, `doc_chunks` (pgvector), `repositories`, `conversations`,
-`usage_logs`, `settings`, the search RPCs, plus seeded reference data
-(`standards`, `standard_sections`, `predefined_questions`).
+The per-account schema applied to every newly provisioned tenant database.
 
-Copied from the QMS repo, but **this app now owns running it**. If the per-account
-schema changes, it changes here. It must ship with the deployment — `running_schema`
-reads it from `process.cwd()/sql/`.
+**Generated — never edit it by hand.** Since 1.1.1 it is a snapshot of the
+**schema-master account, `orca60`**, written by `scripts/snapshot-bootstrap.mjs`
+(`node --env-file=.env.local scripts/snapshot-bootstrap.mjs`), which reads orca60's
+live database through the Management API and emits:
+
+- every `public` table, sequence, constraint, FK, index, function, trigger, RLS flag
+  and policy (the `v1_*` pre-510(k)-rename leftovers are skipped);
+- reference rows: `standards`, `standard_sections`, `predefined_questions`,
+  `rag_settings`, `account_skills`, `account_section_keywords`, `settings_510k`
+  (with `default_repository_ids`/`fda_identifiers` blanked), `settings_mdsap`;
+- orca60's `schema_migrations` rows, so QMS `scripts/run_missing_migrations.py`
+  treats a new database as being at the same migration and applies only later ones.
+
+Not copied: `agent_definitions` (QMS seeds the shipped library on first run from
+`agent_catalog.py`; orca60's rows carry its own project ids and test agents), and all
+tenant content — documents, chunks, conversations, runs, proposals, dossiers, `sop_rules`.
+
+**Why.** Until 1.1.1 this was a hand copy of the QMS file frozen on 2026-08-28, so
+every new account missed QMS migrations `010`–`041` (agents, proposals, 510(k), DHF,
+RLS, MDSAP) until the next QMS deploy ran the migration runner on it — and that
+runner, finding no ledger, replayed every migration from `003`.
+
+**Keeping it current.** A QMS per-account migration lands in orca60 first (the runner
+applies it on QMS deploy); then regenerate this file and ship. If that step is missed,
+`saving_account` compares the new database's ledger with orca60's and the job's final
+message names the missing migrations and the command that closes the gap
+(`schemaDriftNote`, non-fatal).
+
+It must ship with the deployment — `running_schema` reads it from
+`process.cwd()/sql/` (pinned in `outputFileTracingIncludes`).
 
 Note what a fresh tenant DB does *not* contain: there is no `users` table and no
 FK to one. Owner columns (`repositories.owner_id`, `documents.owner_id`,

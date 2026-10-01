@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.1.1",
+    "date": "2026-10-01",
+    "changes": [
+      "🐛 **New accounts get the current Ask Paul database.** A newly created account's database now includes everything added since August — agents, CAPA and action-item proposals, 510(k), DHF and MDSAP — instead of an older schema that was missing them. If the template ever falls behind again, the create log says which updates the new database is missing."
+    ]
+  },
+  {
     "version": "1.1.0",
     "date": "2026-10-01",
     "changes": [

@@ -46,6 +46,13 @@ const FAILED_STATUSES = new Set(['INIT_FAILED', 'REMOVED', 'RESTORE_FAILED', 'PA
 /** How long a job may sit in `waiting_healthy` before we call it failed. */
 const HEALTHY_TIMEOUT_MS = 10 * 60 * 1000;
 
+/**
+ * The account whose database is the per-account schema master (decided 2026-09-30).
+ * `sql/bootstrap_new_account.sql` is generated from it by `scripts/snapshot-bootstrap.mjs`,
+ * and a new database is checked against its `schema_migrations` ledger once created.
+ */
+const SCHEMA_MASTER_ACCOUNT = 'orca60';
+
 export class ProvisioningError extends Error {}
 
 function mgmtHeaders(): Record<string, string> {
@@ -398,6 +405,51 @@ async function tickRunningSchema(job: JobRow): Promise<JobRow> {
   return updateJob(job.id, { state: 'saving_account', message: 'Saving account' });
 }
 
+async function migrationLedger(projectRef: string): Promise<string[]> {
+  const res = await fetch(`${MANAGEMENT_API}/projects/${projectRef}/database/query`, {
+    method: 'POST',
+    headers: mgmtHeaders(),
+    body: JSON.stringify({ query: 'select filename from schema_migrations' }),
+    signal: AbortSignal.timeout(15000),
+    cache: 'no-store',
+  });
+  if (!res.ok) throw new Error(`HTTP ${res.status}`);
+  return ((await res.json()) as Array<{ filename: string }>).map((r) => r.filename);
+}
+
+/**
+ * Has the bootstrap fallen behind the schema master? Compares the new database's
+ * `schema_migrations` with `SCHEMA_MASTER_ACCOUNT`'s and returns a note naming what the new
+ * one lacks, or '' when they match.
+ *
+ * Never fatal: the database is usable for everything up to the bootstrap's migration, and the
+ * gap closes with QMS `scripts/run_missing_migrations.py --account <name>` (which every QMS
+ * deploy also runs). Saying so beats a tenant that fails later with "relation does not exist".
+ */
+async function schemaDriftNote(projectRef: string, accountName: string): Promise<string> {
+  try {
+    const rows = await pgGet<Array<{ vector_db_host: string | null }>>(
+      `accounts?account_name=${accountCiFilter(SCHEMA_MASTER_ACCOUNT)}&select=vector_db_host&limit=1`,
+    );
+    const masterRef = projectRefFromHost(rows[0]?.vector_db_host);
+    if (!masterRef || masterRef === projectRef) return '';
+    const [mine, master] = await Promise.all([migrationLedger(projectRef), migrationLedger(masterRef)]);
+    const have = new Set(mine);
+    const missing = master.filter((f) => !have.has(f)).sort();
+    if (!missing.length) return '';
+    return (
+      ` — but the bootstrap schema is behind ${SCHEMA_MASTER_ACCOUNT} by ${missing.length} ` +
+      `migration(s) (${missing.join(', ')}). Run QMS scripts/run_missing_migrations.py ` +
+      `--account ${accountName}, then regenerate the bootstrap (scripts/snapshot-bootstrap.mjs).`
+    );
+  } catch (e) {
+    return (
+      ` — and its schema could not be compared with ${SCHEMA_MASTER_ACCOUNT}'s ` +
+      `(${e instanceof Error ? e.message : String(e)}).`
+    );
+  }
+}
+
 /**
  * Resume a failed job from the step it died on, instead of starting over.
  *
@@ -578,6 +630,8 @@ async function tickSavingAccount(job: JobRow): Promise<JobRow> {
       ` — and its data-region signpost was not written to: ${failed.join(', ')}. ` +
       `Re-save the account to retry.`;
   }
+
+  licenceNote += await schemaDriftNote(job.project_ref, job.account_name);
 
   return updateJob(job.id, {
     state: 'done',

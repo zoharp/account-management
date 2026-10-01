@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `1.1.1` | 2026-10-01 | The bootstrap is generated from orca60 (the schema master) by `scripts/snapshot-bootstrap.mjs` — new accounts were missing QMS migrations 010–041. Provisioning reports drift vs orca60's `schema_migrations`. |
 | `1.1.0` | 2026-10-01 | Full account delete: Overview → *Delete this account…*, typed `DELETE`, `POST /api/accounts/delete` purges traceability, the Supabase project(s) and all master rows (audit log kept). Replaces the master-only delete on the Ask Paul tab. |
 | `1.0.2` | 2026-10-01 | Create refuses a tenant already used by another master account, or already living in the other region's traceability instance — both rendered as a duplicate row. |
 | `1.0.1` | 2026-10-01 | Create resumes a failed provisioning job for the same name (project made, no account) instead of asking Supabase for a duplicate project. |

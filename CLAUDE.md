@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `1.1.0`
+- **App:** `1.1.1`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v1.md`](docs/changelog/CHANGELOG-v1.md) (long form; v0.x in `CHANGELOG-v0.md`) and
@@ -416,8 +416,13 @@ first stays billed. `retryProvisioning()` / `POST …/provision/:jobId {retry:tr
 abandoned before *Retry* is an orphan findable only via the query in
 `sql/001_account_provisioning.sql`.
 
-`sql/bootstrap_new_account.sql` is a copy of the QMS file. **This app now owns
-running it.** If the per-account schema changes, it changes here.
+⚠️ **`sql/bootstrap_new_account.sql` is GENERATED from orca60 — never hand-edit it.**
+orca60 is the per-account schema master (decided 2026-09-30). After a QMS per-account
+migration reaches orca60, run `node --env-file=.env.local scripts/snapshot-bootstrap.mjs`
+and ship the result. The old hand copy was frozen on 2026-08-28 and gave every new
+account a database without agents, 510(k), DHF or MDSAP. A stale bootstrap is not fatal
+but is reported: the job's final message lists the migrations the new DB lacks vs
+orca60 (`schemaDriftNote`). Full account: [SCHEMA.md §6](SCHEMA.md#6-sqlbootstrap_new_accountsql).
 
 ---
 
