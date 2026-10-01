@@ -9,6 +9,23 @@ Newest first.
 
 ---
 
+**1.0.1** (2026-10-01) — **Create resumes the failed job for that name.**
+
+1.0.0's *Retry* lives only in the dialog that started the job; close it and the job is
+unreachable, and Create asks Supabase for a second `askpaul-<name>` project, which it refuses.
+Hit on `orcanosdemotest` straight after the 1.0.0 deploy.
+
+- `POST /api/accounts` (provision path) first calls `findResumableJob(name)` — newest
+  `account_provisioning` row for the name (case-insensitive) in `error` with a `project_ref` and no
+  `account_id`. If there is one, `resumeWithPayload()` merges the submitted form over the job's
+  stored payload (so a blank password keeps the one typed first time) and calls
+  `retryProvisioning()`; the response is the same `202 {job}` and the modal polls it as usual.
+  Audited as `account_provisioning_retried`.
+- **The region cannot change on resume** — the project already lives in one. A mismatch answers
+  409 naming the region, rather than recording the account somewhere its database is not.
+
+---
+
 **1.0.0** (2026-09-30) — **First 1.x release.** **Provisioning's schema step works from Vercel; failed jobs resume.**
 
 `running_schema` failed every time with `getaddrinfo ENOTFOUND db.<ref>.supabase.co`: that host

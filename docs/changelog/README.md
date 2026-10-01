@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `1.0.1` | 2026-10-01 | Create resumes a failed provisioning job for the same name (project made, no account) instead of asking Supabase for a duplicate project. |
 | `1.0.0` | 2026-09-30 | Provisioning runs the bootstrap schema through the Management API `database/query` route (the IPv6-only direct host is gone from the path); failed jobs can be resumed with Retry. |
 | `0.12.1` | 2026-09-25 | Non-admin Orcanos sign-in gets a clear 403 "Only Orcanos administrators can sign in" instead of "Invalid credentials". |
 | `0.12.0` | 2026-09-25 | *Handbook* screen: the infrastructure deck served staff-only from `GET /api/handbook` and framed at `/handbook` (frame headers relaxed to same-origin for that one route). Handbook md + deck updated for everything shipped 09-10 → 09-25. |

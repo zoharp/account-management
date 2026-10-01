@@ -35,7 +35,7 @@ import { encryptSecret, generateDbPassword } from './crypto';
 import { supabaseOrgAccessToken, supabaseOrgId } from './env';
 import { traceTenantForAccount } from './orcanos-url';
 import { coerceRegion, supabaseRegionFor } from './regions';
-import { isUniqueViolation, pgGet, pgPatch, pgPost } from './supabase';
+import { accountCiFilter, isUniqueViolation, pgGet, pgPatch, pgPost } from './supabase';
 import { upsertRegionDirectory, upsertTraceModules } from './trace';
 import type { DataRegion, ModuleKey, ProvisionState } from './types';
 
@@ -377,6 +377,47 @@ async function tickRunningSchema(job: JobRow): Promise<JobRow> {
  * and never wrote its account can be resumed; the step is inferred from what the
  * job already holds, since `error` does not record where it came from.
  */
+/**
+ * The newest failed job for this account name that left a Supabase project
+ * behind and never wrote its account — i.e. one `retryProvisioning` can resume.
+ *
+ * Create checks this first. Once the dialog that started a job is closed there
+ * is no other way back to it, and Create would otherwise try to make a second
+ * project with the same name, which Supabase refuses.
+ */
+export async function findResumableJob(accountName: string): Promise<JobRow | null> {
+  const rows = await pgGet<JobRow[]>(
+    `account_provisioning?account_name=${accountCiFilter(accountName)}` +
+      `&state=eq.error&project_ref=not.is.null&account_id=is.null` +
+      `&order=created_at.desc&limit=1&select=*`,
+  );
+  return rows[0] ?? null;
+}
+
+/**
+ * Resume `job` with the form the operator just submitted, keeping the project
+ * it already created. The region cannot change — the project already lives in
+ * one — so a mismatch is refused rather than recorded wrongly.
+ */
+export async function resumeWithPayload(
+  job: JobRow,
+  payload: Record<string, unknown>,
+  region: DataRegion,
+): Promise<JobRow> {
+  const jobRegion = coerceRegion((job.payload as { region?: unknown } | null)?.region);
+  if (jobRegion !== region) {
+    throw new ProvisioningError(
+      `A database for '${job.account_name}' was already created in the ${jobRegion.toUpperCase()} ` +
+        `region (project ${job.project_ref}). Pick that region to finish creating it, or delete ` +
+        `the project in Supabase first.`,
+    );
+  }
+  // Merged over the old payload: a password typed the first time and left blank
+  // now still counts, the same "blank keeps the stored secret" rule as editing.
+  await updateJob(job.id, { payload: { ...(job.payload ?? {}), ...payload, region } });
+  return retryProvisioning(job.id);
+}
+
 export async function retryProvisioning(jobId: string): Promise<JobRow> {
   const job = await getJob(jobId);
   if (!job) throw new ProvisioningError('Provisioning job not found');

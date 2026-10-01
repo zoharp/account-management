@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `1.0.0`
+- **App:** `1.0.1`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v1.md`](docs/changelog/CHANGELOG-v1.md) (long form; v0.x in `CHANGELOG-v0.md`) and
@@ -411,7 +411,8 @@ token, no DB password needed. Keep it that way.
 refuse the second project (*"Project with name … already exists"*) while the
 first stays billed. `retryProvisioning()` / `POST …/provision/:jobId {retry:true}`
 / the modal's *Retry* button resume a job that has a `project_ref` and no
-`account_id`. Still open: the `accounts` row is written *last*, so a job
+`account_id` — and since 1.0.1 so does **Create** for the same name
+(`findResumableJob`), since a closed dialog loses the Retry button. Still open: the `accounts` row is written *last*, so a job
 abandoned before *Retry* is an orphan findable only via the query in
 `sql/001_account_provisioning.sql`.
 

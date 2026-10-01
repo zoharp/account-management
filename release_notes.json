@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.0.1",
+    "date": "2026-10-01",
+    "changes": [
+      "🐛 **Create now finishes an account whose database was already made.** If an earlier attempt created the database and then stopped, pressing Create again with the same name used to fail with *Project … already exists*. It now picks up that attempt and finishes it. Choose the same data region as the first attempt."
+    ]
+  },
+  {
     "version": "1.0.0",
     "date": "2026-09-30",
     "changes": [

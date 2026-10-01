@@ -11,7 +11,13 @@ import { accountCiFilter, isUniqueViolation, pgGet, pgPost, pgRpc } from '@/lib/
 import { encryptSecret } from '@/lib/crypto';
 import { normalizeOrcanosUrl } from '@/lib/orcanos';
 import { traceTenantForAccount } from '@/lib/orcanos-url';
-import { startProvisioning, toJobView } from '@/lib/provisioning';
+import {
+  findResumableJob,
+  ProvisioningError,
+  resumeWithPayload,
+  startProvisioning,
+  toJobView,
+} from '@/lib/provisioning';
 import { logSecurityEvent } from '@/lib/audit';
 import { mergeAccounts } from '@/lib/modules';
 import { DEFAULT_REGION, parseRegion, traceApiUrlFor } from '@/lib/regions';
@@ -377,6 +383,28 @@ export async function POST(req: Request) {
     // tenant whose provisioning may still fail — and Ask Paul, the only module
     // that can be ticked on this path, is exactly the one that would then point
     // at a database that was never created.
+    // A failed earlier attempt for this name already made the Supabase project.
+    // Finish that one: a fresh start would ask Supabase for a second project
+    // with the same name, which it refuses, and the first stays billed.
+    const resumable = await findResumableJob(accountName);
+    if (resumable) {
+      let job;
+      try {
+        job = await resumeWithPayload(resumable, { ...payload, modules }, region);
+      } catch (e) {
+        if (e instanceof ProvisioningError) {
+          return Response.json({ detail: e.message }, { status: 409 });
+        }
+        throw e;
+      }
+      await logSecurityEvent('account_provisioning_retried', {
+        user,
+        accountName,
+        detail: { job_id: job.id, project_ref: job.project_ref, resumed_at: job.state, region },
+      });
+      return Response.json({ job: toJobView(job) }, { status: 202 });
+    }
+
     const job = await startProvisioning(accountName, { ...payload, modules }, user.email, region);
     await logSecurityEvent('account_provisioning_started', {
       user,
