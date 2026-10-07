@@ -1,5 +1,13 @@
 [
   {
+    "version": "1.2.0",
+    "date": "2026-10-06",
+    "changes": [
+      "✨ **A tidier accounts list.** The Modules column now shows only the modules an account is licensed for. Click it to open a panel with an on/off switch for every module, and a note under any switch that can't be changed explaining why.",
+      "💄 Regions show as US and EU. The Tenant column and the \"Trace only\" label are gone; a tenant is shown under the name only when it differs from it. *Manage* is now a gear icon."
+    ]
+  },
+  {
     "version": "1.1.1",
     "date": "2026-10-01",
     "changes": [

@@ -9,6 +9,30 @@ Newest first.
 
 ---
 
+**1.2.0** (2026-10-06) — **Accounts list: modules in a popover.**
+
+Five modules as one clickable pill each wrapped every row onto two lines, and an unlicensed
+module took as much room as a licensed one.
+
+- **Modules cell** shows only licensed modules (read-only pills) plus an `n/5 ▾` count. The
+  whole cell opens a popover (`ModulesCell` in `AccountsClient.tsx`) with one switch per
+  module. Unchanged rules: a module with no source row is a hatched dash, not off; a switch
+  that cannot be written is disabled, and its `disabledReason` is now visible text under it,
+  not only a tooltip. `scopeNote` (e.g. "this also ADDS the tenant to the allowlist") is shown
+  the same way, before the click.
+- The popover is `position: fixed`, flips above the trigger when there is no room below, and
+  closes on outside click, Escape, scroll or resize.
+- A refresh no longer swaps the table for "Loading…" once rows exist, so the popover stays
+  open while several modules are toggled one after another.
+- **Tenant column removed** — it repeated the account name on every row since the 2026-08-29
+  rename. The tenant is shown under the name only when it differs. Search still matches it.
+- **"Trace only" badge removed.**
+- **Region** shows `US` / `EU` (`REGION_LABELS[*].short`); the full name is in the tooltip.
+  Modals keep the long form.
+- **Manage…** is a gear icon button (`.btn-icon`) with an `aria-label`.
+
+---
+
 **1.1.1** (2026-10-01) — **New accounts get orca60's schema.**
 
 `sql/bootstrap_new_account.sql` was a hand copy of the QMS file taken at the 2026-08-28

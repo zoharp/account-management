@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import AccountManageModal from './AccountManageModal';
 import CreateAccountModal from './CreateAccountModal';
 import { MODULES } from '@/lib/module-catalog';
@@ -17,8 +17,10 @@ import type { MergedAccountRow, ModuleKey, TraceSourceStatus } from '@/lib/types
  *   Status  — master `is_active`, which is QMS AI's kill switch and NOTHING
  *             else. It does not gate traceability. Read the warning in
  *             `lib/modules.ts` before relabelling or reusing it.
- *   Modules — which products the account is licensed for, all three from
- *             `account_access`. Ask Paul IS the QMS AI app.
+ *   Modules — which products the account is licensed for, all from
+ *             `account_access`. Ask Paul IS the QMS AI app. The cell shows
+ *             only what is licensed; the switches live in a popover so the
+ *             row does not grow with every module added to the catalog.
  *
  * Two things this component has to get right, both of which are about not
  * lying to the operator:
@@ -145,7 +147,7 @@ export default function AccountsClient() {
         <div className="acl-toolbar">
           <input
             className="acl-search"
-            placeholder="Search accounts or tenants…"
+            placeholder="Search accounts…"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
@@ -160,7 +162,7 @@ export default function AccountsClient() {
               {loadError}
             </div>
           </div>
-        ) : loading ? (
+        ) : loading && accounts.length === 0 ? (
           <p className="acl-empty">Loading…</p>
         ) : filtered.length === 0 ? (
           <p className="acl-empty">{accounts.length === 0 ? 'No accounts yet.' : 'No matches.'}</p>
@@ -169,7 +171,6 @@ export default function AccountsClient() {
             <thead>
               <tr>
                 <th>Account Name</th>
-                <th>Tenant</th>
                 <th>Region</th>
                 <th>Modules</th>
                 <th style={{ textAlign: 'right' }}>Spend</th>
@@ -190,30 +191,28 @@ export default function AccountsClient() {
                       <button className="acl-name-link" onClick={() => setManage(row)}>
                         {row.account_name}
                       </button>
-                      {!row.id && (
-                        <span
-                          className="acl-badge acl-badge--muted"
-                          style={{ marginLeft: 8 }}
-                          title="Present in the traceability allowlist only — it has no master account record."
-                        >
-                          Trace only
-                        </span>
-                      )}
+                      {/* The tenant column repeated the name on every row since
+                          the 2026-08-29 rename, so the tenant is only shown when
+                          it actually says something different. */}
+                      {row.tenant &&
+                        row.tenant.toLowerCase() !== row.account_name.toLowerCase() && (
+                          <div className="acl-tenant" title="Orcanos tenant">
+                            {row.tenant}
+                          </div>
+                        )}
                     </td>
-
-                    <td className="acl-tenant">{row.tenant || '—'}</td>
 
                     <td>
                       {row.region ? (
                         <span
                           className="acl-badge acl-badge--region"
-                          title={
+                          title={`${REGION_LABELS[coerceRegion(row.region)].label} — ${
                             row.region_source === 'instance'
-                              ? 'Read from the traceability instance that actually holds this data.'
-                              : 'Recorded on the master account record.'
-                          }
+                              ? 'read from the traceability instance that actually holds this data.'
+                              : 'recorded on the master account record.'
+                          }`}
                         >
-                          {REGION_LABELS[coerceRegion(row.region)].label}
+                          {REGION_LABELS[coerceRegion(row.region)].short}
                         </span>
                       ) : (
                         <span className="acl-muted" title="No region on record for this account.">
@@ -234,19 +233,12 @@ export default function AccountsClient() {
                     </td>
 
                     <td>
-                      <div className="acl-mods">
-                        {MODULES.map((m) => (
-                          <ModuleCell
-                            key={m.key}
-                            label={m.label}
-                            state={row.modules[m.key]}
-                            busy={busy === `${row.key}:${m.key}`}
-                            reason={disabledReason(row, m.key, trace)}
-                            note={scopeNote(row, m.key, trace)}
-                            onToggle={(next) => void toggleModule(row, m.key, next)}
-                          />
-                        ))}
-                      </div>
+                      <ModulesCell
+                        row={row}
+                        trace={trace}
+                        busy={busy}
+                        onToggle={(key, next) => void toggleModule(row, key, next)}
+                      />
                     </td>
 
                     <td className="acl-num">
@@ -275,8 +267,13 @@ export default function AccountsClient() {
                       <div className="acl-row-actions">
                         <OpenLink label="Ask Paul" row={row} app="ask_paul" />
                         <OpenLink label="Traceability" row={row} app="traceability" />
-                        <button className="btn-sm" onClick={() => setManage(row)}>
-                          Manage…
+                        <button
+                          className="btn-icon"
+                          onClick={() => setManage(row)}
+                          title={`Manage ${row.account_name}`}
+                          aria-label={`Manage ${row.account_name}`}
+                        >
+                          <GearIcon />
                         </button>
                       </div>
                     </td>
@@ -435,7 +432,124 @@ function scopeNote(row: MergedAccountRow, key: ModuleKey, trace: TraceSourceStat
   return '';
 }
 
-function ModuleCell({
+/**
+ * The licensed modules as read-only pills, with the switches for all of them in
+ * a popover. One clickable pill per module stopped scaling at five — the column
+ * wrapped onto two lines and an unlicensed module took as much room as a
+ * licensed one.
+ *
+ * The popover keeps both rules from the header: a module whose source has no
+ * row renders as a dash, not as off; and a switch that cannot be written shows
+ * its reason as visible text, not only in a tooltip.
+ */
+function ModulesCell({
+  row,
+  trace,
+  busy,
+  onToggle,
+}: {
+  row: MergedAccountRow;
+  trace: TraceSourceStatus | null;
+  busy: string | null;
+  onToggle: (key: ModuleKey, next: boolean) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pos, setPos] = useState<CSSProperties>({ visibility: 'hidden' });
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+
+  const licensed = MODULES.filter((m) => row.modules[m.key] === true);
+  const rowBusy = busy?.startsWith(`${row.key}:`) ?? false;
+
+  // Fixed positioning so the table card cannot clip it; flips above the trigger
+  // when there is no room below.
+  useLayoutEffect(() => {
+    if (!open || !triggerRef.current) return;
+    const r = triggerRef.current.getBoundingClientRect();
+    const width = 320;
+    const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
+    const h = popRef.current?.offsetHeight ?? 300;
+    setPos(
+      r.bottom + h + 8 > window.innerHeight && r.top > h + 8
+        ? { left, width, bottom: window.innerHeight - r.top + 6 }
+        : { left, width, top: r.bottom + 6 },
+    );
+  }, [open]);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      const t = e.target as Node;
+      if (!popRef.current?.contains(t) && !triggerRef.current?.contains(t)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false);
+    };
+    const close = () => setOpen(false);
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    window.addEventListener('resize', close);
+    window.addEventListener('scroll', close, true);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+      window.removeEventListener('resize', close);
+      window.removeEventListener('scroll', close, true);
+      setPos({ visibility: 'hidden' });
+    };
+  }, [open]);
+
+  return (
+    <>
+      <button
+        ref={triggerRef}
+        className={`acl-mods-trigger${open ? ' acl-mods-trigger--open' : ''}`}
+        onClick={() => setOpen((o) => !o)}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        title="Change module licences"
+      >
+        {licensed.length === 0 ? (
+          <span className="acl-muted">No modules</span>
+        ) : (
+          licensed.map((m) => (
+            <span key={m.key} className="acl-mod acl-mod--on">
+              {m.label}
+            </span>
+          ))
+        )}
+        <span className="acl-mods-count">
+          {rowBusy ? '⋯' : `${licensed.length}/${MODULES.length}`} ▾
+        </span>
+      </button>
+
+      {open && (
+        <div
+          ref={popRef}
+          className="acl-mods-pop"
+          style={pos}
+          role="dialog"
+          aria-label={`Modules for ${row.account_name}`}
+        >
+          <div className="acl-mods-pop-head">Modules · {row.account_name}</div>
+          {MODULES.map((m) => (
+            <ModuleSwitch
+              key={m.key}
+              label={m.label}
+              state={row.modules[m.key]}
+              busy={busy === `${row.key}:${m.key}`}
+              reason={disabledReason(row, m.key, trace)}
+              note={scopeNote(row, m.key, trace)}
+              onToggle={(next) => onToggle(m.key, next)}
+            />
+          ))}
+        </div>
+      )}
+    </>
+  );
+}
+
+function ModuleSwitch({
   label,
   state,
   busy,
@@ -452,22 +566,56 @@ function ModuleCell({
 }) {
   // null is "this source has no row for the tenant" — deliberately not the same
   // rendering as off, which is a decision somebody made.
-  const cls = state === null ? 'acl-mod--na' : state ? 'acl-mod--on' : 'acl-mod--off';
+  const cls = state === null ? 'acl-switch--na' : state ? 'acl-switch--on' : 'acl-switch--off';
   // `null` is not "off", so it must not read as "not licensed" — that is the same
   // conflation the dash exists to avoid.
-  const status = state === null ? 'no licence on record' : state ? 'licensed' : 'not licensed';
-  const title = reason || `${label}: ${status} — click to change${note}`;
+  const status = busy
+    ? 'Saving…'
+    : state === null
+      ? 'No licence on record'
+      : state
+        ? 'Licensed'
+        : 'Not licensed';
 
   return (
-    <button
-      className={`acl-mod ${cls}`}
-      disabled={Boolean(reason) || busy}
-      title={title}
-      onClick={() => onToggle(!state)}
+    <div className="acl-mods-pop-row">
+      <div className="acl-mods-pop-text">
+        <div className="acl-mods-pop-label">{label}</div>
+        <div className={`acl-mods-pop-status${reason ? ' acl-mods-pop-status--blocked' : ''}`}>
+          {reason || `${status}${note}`}
+        </div>
+      </div>
+      <button
+        role="switch"
+        aria-checked={state === true}
+        aria-label={label}
+        className={`acl-switch ${cls}`}
+        disabled={Boolean(reason) || busy}
+        title={reason || `${label}: ${status.toLowerCase()} — click to change`}
+        onClick={() => onToggle(!state)}
+      >
+        <span className="acl-switch-knob">{state === null ? '–' : ''}</span>
+      </button>
+    </div>
+  );
+}
+
+function GearIcon() {
+  return (
+    <svg
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
     >
-      <span className="acl-mod-mark">{busy ? '⋯' : state === null ? '–' : state ? '✓' : '✗'}</span>
-      {label}
-    </button>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+    </svg>
   );
 }
 

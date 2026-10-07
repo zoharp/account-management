@@ -38,13 +38,15 @@ export const DATA_REGIONS: readonly DataRegion[] = ['us', 'eu'] as const;
 export const DEFAULT_REGION: DataRegion = 'us';
 
 /** What a person sees. The second line is the reason they are choosing it. */
-export const REGION_LABELS: Record<DataRegion, { label: string; hint: string }> = {
+export const REGION_LABELS: Record<DataRegion, { label: string; short: string; hint: string }> = {
   us: {
     label: 'United States',
+    short: 'US',
     hint: 'Data at rest in us-east-1 (N. Virginia). The default for every account created before residency existed.',
   },
   eu: {
     label: 'European Union',
+    short: 'EU',
     hint: 'Data at rest in eu-central-1 (Frankfurt). Required for customers who contract for GDPR residency.',
   },
 };
