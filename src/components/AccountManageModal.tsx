@@ -292,6 +292,9 @@ function Overview({
             Training: <ModuleState value={row.modules.training} />
           </li>
           <li>
+            Doc Review: <ModuleState value={row.modules.review} />
+          </li>
+          <li>
             BOM: <ModuleState value={row.modules.bom} />
           </li>
           <li>

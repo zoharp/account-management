@@ -26,6 +26,7 @@ import {
   listTraceAccounts,
   supportsAskPaul,
   supportsBom,
+  supportsReview,
   supportsModules,
   TraceApiError,
   traceConfigured,
@@ -82,6 +83,7 @@ export async function GET() {
     supports_modules: false,
     supports_ask_paul: false,
     supports_bom: false,
+    supports_review: false,
     url: process.env.TRACE_API_URL ?? null,
     message: '',
   };
@@ -96,6 +98,7 @@ export async function GET() {
       trace.supports_modules = supportsModules(traceRows);
       trace.supports_ask_paul = supportsAskPaul(traceRows);
       trace.supports_bom = supportsBom(traceRows);
+      trace.supports_review = supportsReview(traceRows);
       if (!trace.supports_modules) {
         // Production Fly is 3.21.0 and has no allow_trace / allow_training.
         // `moduleFlag()` reads their absence as licensed (fail-open, matching
@@ -115,6 +118,11 @@ export async function GET() {
         trace.message =
           'This traceability instance predates the BOM licence (needs 3.46.0) — BOM cannot be ' +
           'licensed until it is deployed.';
+      } else if (!trace.supports_review) {
+        // 3.46–4.7: every other column is real, allow_review is not (opt-in, reads as off).
+        trace.message =
+          'This traceability instance predates the Doc Review licence (needs 4.8.0) — Doc Review ' +
+          'cannot be licensed until it is deployed.';
       }
     } catch (e) {
       trace.message = e instanceof Error ? e.message : String(e);

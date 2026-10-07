@@ -71,6 +71,8 @@ export interface TraceAccountRow {
    * `undefined` (an instance that predates it) reads as NOT licensed.
    */
   allow_bom?: number;
+  /** Doc Review licence, added in 4.8.0. OPT-IN like BOM: `undefined` reads as NOT licensed. */
+  allow_review?: number;
   /** Ask Paul (QMS AI) licence and name override, added in 3.27.0. */
   allow_ask_paul?: number;
   /**
@@ -106,6 +108,8 @@ export function moduleFlag(row: TraceAccountRow | undefined, key: ModuleKey): bo
   // of a pre-3.46.0 row, write — a licence nobody gave. Mirrors
   // `MODULE_DEFAULTS` in the trace app's access_control.py.
   if (key === 'bom') return Boolean(row.allow_bom);
+  // Doc Review (4.8.0) is opt-in for the same reason.
+  if (key === 'review') return Boolean(row.allow_review);
   const value =
     key === 'trace' ? row.allow_trace : key === 'training' ? row.allow_training : row.allow_ask_paul;
   return value === undefined || value === null ? true : Boolean(value);
@@ -134,13 +138,23 @@ export function supportsBom(rows: TraceAccountRow[]): boolean {
   return rows.some((r) => r.allow_bom !== undefined);
 }
 
+/** Does it carry `allow_review`? (4.8.0) Same silent-discard reason as `supportsBom`. */
+export function supportsReview(rows: TraceAccountRow[]): boolean {
+  return rows.some((r) => r.allow_review !== undefined);
+}
+
 /**
  * Does this row hold at least one module a user can actually sign in to?
  * Ask Paul does not count (separate app). Trace/training absent = ON, BOM absent
  * = OFF — the same reading as `moduleFlag()`.
  */
 export function hasReachableModule(row: Partial<TraceAccountRow>): boolean {
-  return Boolean(row.allow_trace ?? 1) || Boolean(row.allow_training ?? 1) || Boolean(row.allow_bom ?? 0);
+  return (
+    Boolean(row.allow_trace ?? 1) ||
+    Boolean(row.allow_training ?? 1) ||
+    Boolean(row.allow_bom ?? 0) ||
+    Boolean(row.allow_review ?? 0)
+  );
 }
 
 export class TraceApiError extends Error {
@@ -478,6 +492,7 @@ export function newTraceAccountRow(tenant: string, region: DataRegion): TraceAcc
     allow_trace: 0,
     allow_training: 0,
     allow_bom: 0,
+    allow_review: 0,
     allow_ask_paul: 0,
   };
 }
@@ -539,6 +554,16 @@ export async function upsertTraceModules(
       );
     }
     changes.allow_bom = modules.bom ? 1 : 0;
+  }
+  if (modules.review !== undefined) {
+    if (modules.review && !supportsReview(rows)) {
+      throw new TraceApiError(
+        'this traceability instance predates the Doc Review licence (needs 4.8.0) and would have ' +
+          'silently discarded it',
+        409,
+      );
+    }
+    changes.allow_review = modules.review ? 1 : 0;
   }
 
   await saveTraceAccount(base, changes);

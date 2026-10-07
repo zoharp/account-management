@@ -44,6 +44,7 @@ export default function TraceabilityPanel({
   const [row, setRow] = useState<TraceRow | null>(null);
   const [supportsModules, setSupportsModules] = useState(false);
   const [supportsBom, setSupportsBom] = useState(false);
+  const [supportsReview, setSupportsReview] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ kind: 'ok' | 'bad' | ''; text: string }>({
     kind: '',
@@ -56,6 +57,7 @@ export default function TraceabilityPanel({
   const [allowTrace, setAllowTrace] = useState(true);
   const [allowTraining, setAllowTraining] = useState(true);
   const [allowBom, setAllowBom] = useState(false);
+  const [allowReview, setAllowReview] = useState(false);
   const [note, setNote] = useState('');
 
   const load = useCallback(async () => {
@@ -71,6 +73,7 @@ export default function TraceabilityPanel({
       setRow(data.row);
       setSupportsModules(data.supports_modules);
       setSupportsBom(Boolean(data.supports_bom));
+      setSupportsReview(Boolean(data.supports_review));
       const r = data.row;
       setAllowAccess(r ? Boolean(r.allow_access) : true);
       setAllowAi(r ? Boolean(r.allow_ai) : false);
@@ -78,6 +81,7 @@ export default function TraceabilityPanel({
       setAllowTrace(on(r?.allow_trace));
       setAllowTraining(on(r?.allow_training));
       setAllowBom(on(r?.allow_bom, false));
+      setAllowReview(on(r?.allow_review, false));
       setNote(r?.note ?? '');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -89,7 +93,8 @@ export default function TraceabilityPanel({
     void load();
   }, [load]);
 
-  const noModule = !allowTrace && !allowTraining && !(supportsBom && allowBom);
+  const noModule =
+    !allowTrace && !allowTraining && !(supportsBom && allowBom) && !(supportsReview && allowReview);
 
   async function save() {
     if (noModule) {
@@ -109,6 +114,7 @@ export default function TraceabilityPanel({
           // there succeeds and silently drops them, so the route refuses it.
           ...(supportsModules ? { allow_trace: allowTrace, allow_training: allowTraining } : {}),
           ...(supportsBom ? { allow_bom: allowBom } : {}),
+          ...(supportsReview ? { allow_review: allowReview } : {}),
           note,
         }),
       });
@@ -179,6 +185,19 @@ export default function TraceabilityPanel({
               checked={allowTraining}
               onChange={setAllowTraining}
             />
+            {supportsReview ? (
+              <Check
+                label="Doc Review"
+                hint="Review DMS drafts with the team before routing them for signature in Orcanos. Off by default; customers do not see it until this is ticked. Panels are then set up inside the module."
+                checked={allowReview}
+                onChange={setAllowReview}
+              />
+            ) : (
+              <p className="acl-hint">
+                Doc Review needs traceability-matrix 4.8.0 on this tenant&apos;s instance before it
+                can be licensed.
+              </p>
+            )}
             {supportsBom ? (
               <Check
                 label="BOM"

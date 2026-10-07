@@ -20,6 +20,8 @@ export interface TraceRow {
   allow_training?: number;
   /** BOM licence (3.46.0) — OPT-IN: read with `on(v, false)`, never plain `on(v)`. */
   allow_bom?: number;
+  /** Doc Review licence (4.8.0) — OPT-IN: read with `on(v, false)`. */
+  allow_review?: number;
   allow_ask_paul?: number;
   ask_paul_account?: string;
   note?: string;
@@ -59,6 +61,8 @@ export interface TraceSettingsResponse {
   supports_modules: boolean;
   /** False on an instance older than 3.46.0 — the BOM tick is hidden rather than silently dropped. */
   supports_bom: boolean;
+  /** False on an instance older than 4.8.0 — the Doc Review tick is hidden rather than silently dropped. */
+  supports_review: boolean;
   master_account_name: string | null;
   master_has_database: boolean;
   detail?: string;
