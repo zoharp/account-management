@@ -67,7 +67,7 @@ export interface AccountListRow extends AccountRow {
 }
 
 /** The modules an account can be licensed for. See `lib/modules.ts`. */
-export type ModuleKey = 'ask_paul' | 'trace' | 'training' | 'review' | 'bom';
+export type ModuleKey = 'ask_paul' | 'trace' | 'training' | 'review' | 'risk' | 'bom';
 
 /**
  * `null` means the source that owns this module has no row for this tenant —
@@ -154,6 +154,8 @@ export interface TraceSourceStatus {
   supports_bom: boolean;
   /** False when the instance predates `allow_review` (< 4.8.0). Doc Review is opt-in, so absent reads as OFF. */
   supports_review: boolean;
+  /** False when the instance predates `allow_risk` (< 4.12.0). Risk is opt-in, so absent reads as OFF. */
+  supports_risk: boolean;
   /** Which instance answered — shown in the UI so local-vs-Fly is never a guess. */
   url: string | null;
   message: string;

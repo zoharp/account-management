@@ -9,6 +9,23 @@ Newest first.
 
 ---
 
+**1.3.0** (2026-10-08) — **Risk Management licence.**
+
+traceability-matrix 4.12.0 added the Risk Management module, licensed by
+`account_access.allow_risk` (opt-in, default 0). It is now managed here exactly like Doc Review:
+
+- `ModuleKey` gains `risk`; `MODULES` lists it (so the accounts-list popover shows a *Risk*
+  switch and the count reads `n/6`); `mergeAccounts` reports it; Overview shows its state.
+- `moduleFlag()` reads an absent `allow_risk` as OFF; `hasReachableModule()` counts it, so a
+  Risk-only tenant is a valid licence.
+- `supportsRisk()` detects the column. On an older instance every write path
+  (`PUT /api/accounts/modules`, `PUT /api/accounts/trace/:tenant`, create via
+  `upsertTraceModules`) refuses a Risk change with 409 rather than letting it be silently
+  dropped; the list shows why the switch is disabled, and the Traceability tab hides the tick.
+- Create form: *Risk Management* checkbox, never pre-ticked.
+
+---
+
 **1.2.0** (2026-10-06) — **Accounts list: modules in a popover.**
 
 Five modules as one clickable pill each wrapped every row onto two lines, and an unlicensed

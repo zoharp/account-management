@@ -295,6 +295,9 @@ function Overview({
             Doc Review: <ModuleState value={row.modules.review} />
           </li>
           <li>
+            Risk: <ModuleState value={row.modules.risk} />
+          </li>
+          <li>
             BOM: <ModuleState value={row.modules.bom} />
           </li>
           <li>

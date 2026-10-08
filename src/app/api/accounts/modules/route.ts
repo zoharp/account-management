@@ -7,6 +7,7 @@
  *   training  → trace `account_access.allow_training`
  *   bom       → trace `account_access.allow_bom` (opt-in; absent reads as OFF, needs 3.46.0)
  *   review    → trace `account_access.allow_review` (Doc Review; opt-in, needs 4.8.0)
+ *   risk      → trace `account_access.allow_risk` (Risk Management; opt-in, needs 4.12.0)
  *   ask_paul  → BOTH master `accounts.is_active` AND trace `allow_ask_paul`
  *
  * ## Why Ask Paul writes two systems
@@ -45,6 +46,7 @@ import {
   supportsAskPaul,
   supportsBom,
   supportsReview,
+  supportsRisk,
   supportsModules,
   hasReachableModule,
   traceConfigured,
@@ -73,17 +75,18 @@ async function regionForNewRow(accountId: string | null | undefined): Promise<Da
   return coerceRegion(rows[0]?.region);
 }
 
-const MODULE_KEYS: ModuleKey[] = ['ask_paul', 'trace', 'training', 'review', 'bom'];
+const MODULE_KEYS: ModuleKey[] = ['ask_paul', 'trace', 'training', 'review', 'risk', 'bom'];
 
 /** The `account_access` column each module is licensed by. */
 const MODULE_COLUMN: Record<
   ModuleKey,
-  'allow_ask_paul' | 'allow_trace' | 'allow_training' | 'allow_review' | 'allow_bom'
+  'allow_ask_paul' | 'allow_trace' | 'allow_training' | 'allow_review' | 'allow_risk' | 'allow_bom'
 > = {
   ask_paul: 'allow_ask_paul',
   trace: 'allow_trace',
   training: 'allow_training',
   review: 'allow_review',
+  risk: 'allow_risk',
   bom: 'allow_bom',
 };
 
@@ -274,6 +277,18 @@ export async function PUT(req: Request) {
       );
     }
 
+    // Risk Management's column landed in 4.12.0 — same again.
+    if (module === 'risk' && !supportsRisk(rows)) {
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the Risk Management licence and would silently ' +
+            'discard the change. Deploy traceability-matrix 4.12.0 first.',
+        },
+        { status: 409 },
+      );
+    }
+
     const current = rows.find((r) => r.account.toLowerCase() === tenant);
     if (!current && !enabled) {
       return Response.json(
@@ -308,7 +323,7 @@ export async function PUT(req: Request) {
         {
           detail:
             `'${tenant}' would be left with no module and could sign in to nothing. ` +
-            'License Traceability, Training, Doc Review or BOM first.',
+            'License Traceability, Training, Doc Review, Risk or BOM first.',
         },
         { status: 400 },
       );

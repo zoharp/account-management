@@ -398,6 +398,9 @@ function disabledReason(
   if (key === 'review' && !trace.supports_review && row.modules.review !== true) {
     return 'This traceability instance predates the Doc Review licence — deploy 4.8.0 first.';
   }
+  if (key === 'risk' && !trace.supports_risk && row.modules.risk !== true) {
+    return 'This traceability instance predates the Risk Management licence — deploy 4.12.0 first.';
+  }
   if (!row.tenant) return 'No Orcanos tenant on this account — set its Orcanos API URL first.';
   // A tenant with no allowlist row is NOT a dead end any more: licensing either
   // traceability-owned module creates the row (api/accounts/modules). It stays

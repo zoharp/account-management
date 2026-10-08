@@ -84,6 +84,7 @@ export default function CreateAccountModal({
   // Opt-in like everywhere else — never pre-ticked.
   const [modBom, setModBom] = useState(false);
   const [modReview, setModReview] = useState(false);
+  const [modRisk, setModRisk] = useState(false);
   const [modAskPaul, setModAskPaul] = useState(false);
 
   // Off by default. Only Ask Paul needs a per-tenant database, and provisioning
@@ -226,7 +227,7 @@ export default function CreateAccountModal({
           ...body,
           region,
           provision: provisionDb,
-          modules: { trace: modTrace, training: modTraining, review: modReview, bom: modBom, ask_paul: modAskPaul },
+          modules: { trace: modTrace, training: modTraining, review: modReview, risk: modRisk, bom: modBom, ask_paul: modAskPaul },
         }),
       });
       const data = (await res.json().catch(() => ({}))) as {
@@ -452,6 +453,18 @@ export default function CreateAccountModal({
               <span>
                 <strong>Doc Review</strong> — review DMS drafts with the team before routing for
                 signature. <em>Needs traceability 4.8.0.</em>
+              </span>
+            </label>
+            <label className="acl-check">
+              <input
+                type="checkbox"
+                checked={modRisk}
+                onChange={(e) => setModRisk(e.target.checked)}
+                disabled={creating || done}
+              />
+              <span>
+                <strong>Risk Management</strong> — FMEA risk analysis linked to requirements and
+                tests. <em>Needs traceability 4.12.0.</em>
               </span>
             </label>
             <label className="acl-check">

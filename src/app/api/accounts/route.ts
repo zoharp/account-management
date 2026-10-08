@@ -27,6 +27,7 @@ import {
   supportsAskPaul,
   supportsBom,
   supportsReview,
+  supportsRisk,
   supportsModules,
   TraceApiError,
   traceConfigured,
@@ -84,6 +85,7 @@ export async function GET() {
     supports_ask_paul: false,
     supports_bom: false,
     supports_review: false,
+    supports_risk: false,
     url: process.env.TRACE_API_URL ?? null,
     message: '',
   };
@@ -99,6 +101,7 @@ export async function GET() {
       trace.supports_ask_paul = supportsAskPaul(traceRows);
       trace.supports_bom = supportsBom(traceRows);
       trace.supports_review = supportsReview(traceRows);
+      trace.supports_risk = supportsRisk(traceRows);
       if (!trace.supports_modules) {
         // Production Fly is 3.21.0 and has no allow_trace / allow_training.
         // `moduleFlag()` reads their absence as licensed (fail-open, matching
@@ -122,6 +125,11 @@ export async function GET() {
         // 3.46–4.7: every other column is real, allow_review is not (opt-in, reads as off).
         trace.message =
           'This traceability instance predates the Doc Review licence (needs 4.8.0) — Doc Review ' +
+          'cannot be licensed until it is deployed.';
+      } else if (!trace.supports_risk) {
+        // 4.8–4.11: every other column is real, allow_risk is not (opt-in, reads as off).
+        trace.message =
+          'This traceability instance predates the Risk Management licence (needs 4.12.0) — Risk ' +
           'cannot be licensed until it is deployed.';
       }
     } catch (e) {

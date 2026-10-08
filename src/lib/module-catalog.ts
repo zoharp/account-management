@@ -30,6 +30,9 @@ export const MODULES: readonly ModuleDef[] = [
   // Doc Review (traceability-matrix 4.8.0), `account_access.allow_review`. OPT-IN
   // like BOM: the column defaults to 0 and an absent value reads as OFF.
   { key: 'review', label: 'Doc Review', source: 'trace' },
+  // Risk Management (traceability-matrix 4.12.0), `account_access.allow_risk`. OPT-IN
+  // like BOM and Doc Review.
+  { key: 'risk', label: 'Risk', source: 'trace' },
   // BOM viewer (traceability-matrix 3.46.0), `account_access.allow_bom`. The one
   // OPT-IN module: its column defaults to 0 and an absent value reads as OFF —
   // see `moduleFlag()` in lib/trace.ts. Hidden from a customer until ticked here.

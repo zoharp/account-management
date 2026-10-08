@@ -32,6 +32,7 @@ import {
   saveTraceAccount,
   supportsBom,
   supportsReview,
+  supportsRisk,
   supportsModules,
   hasReachableModule,
   traceConfigured,
@@ -121,6 +122,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ tenant: string
       supports_modules: supportsModules(rows),
       supports_bom: supportsBom(rows),
       supports_review: supportsReview(rows),
+      supports_risk: supportsRisk(rows),
     });
   } catch (e) {
     return failed(e);
@@ -185,6 +187,18 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       );
     }
 
+    if (!supportsRisk(rows) && body.allow_risk !== undefined) {
+      // And for Risk Management, added in 4.12.0.
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the Risk Management licence and would silently ' +
+            'discard the change. Deploy traceability-matrix 4.12.0 first.',
+        },
+        { status: 409 },
+      );
+    }
+
     // A row this app has never seen starts from the trace API's own defaults,
     // which are the fail-open ones. Everything else starts from what is stored.
     //
@@ -203,6 +217,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       allow_bom: 0,
       // Doc Review is opt-in too.
       allow_review: 0,
+      // So is Risk Management.
+      allow_risk: 0,
       allow_ask_paul: 1,
       ask_paul_account: '',
       note: '',
@@ -217,6 +233,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       // Absent → keep what is stored, and absent-and-unstored → 0 (opt-in).
       allow_bom: flag('allow_bom', base.allow_bom ?? 0),
       allow_review: flag('allow_review', base.allow_review ?? 0),
+      allow_risk: flag('allow_risk', base.allow_risk ?? 0),
       allow_ask_paul: flag('allow_ask_paul', base.allow_ask_paul ?? 1),
       note: typeof body.note === 'string' ? body.note : (base.note ?? ''),
     };
@@ -243,7 +260,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
     // rather than a licensing decision.
     if (!hasReachableModule(next)) {
       return Response.json(
-        { detail: 'An account needs at least one module — Traceability, Training, Doc Review or BOM.' },
+        { detail: 'An account needs at least one module — Traceability, Training, Doc Review, Risk or BOM.' },
         { status: 400 },
       );
     }

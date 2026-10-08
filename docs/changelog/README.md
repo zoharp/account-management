@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `1.3.0` | 2026-10-08 | Risk Management licence (`account_access.allow_risk`, traceability 4.12.0) — opt-in like Doc Review/BOM: list popover switch, Traceability tab tick, create form, Overview state. Refused with 409 on an older instance. |
 | `1.2.0` | 2026-10-06 | Accounts list: module switches move into a popover (cell shows licensed modules only); Tenant column and *Trace only* badge removed; regions US/EU; Manage is a gear icon. |
 | `1.1.1` | 2026-10-01 | The bootstrap is generated from orca60 (the schema master) by `scripts/snapshot-bootstrap.mjs` — new accounts were missing QMS migrations 010–041. Provisioning reports drift vs orca60's `schema_migrations`. |
 | `1.1.0` | 2026-10-01 | Full account delete: Overview → *Delete this account…*, typed `DELETE`, `POST /api/accounts/delete` purges traceability, the Supabase project(s) and all master rows (audit log kept). Replaces the master-only delete on the Ask Paul tab. |

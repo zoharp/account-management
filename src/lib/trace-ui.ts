@@ -22,6 +22,8 @@ export interface TraceRow {
   allow_bom?: number;
   /** Doc Review licence (4.8.0) — OPT-IN: read with `on(v, false)`. */
   allow_review?: number;
+  /** Risk Management licence (4.12.0) — OPT-IN: read with `on(v, false)`. */
+  allow_risk?: number;
   allow_ask_paul?: number;
   ask_paul_account?: string;
   note?: string;
@@ -63,6 +65,8 @@ export interface TraceSettingsResponse {
   supports_bom: boolean;
   /** False on an instance older than 4.8.0 — the Doc Review tick is hidden rather than silently dropped. */
   supports_review: boolean;
+  /** False on an instance older than 4.12.0 — the Risk tick is hidden rather than silently dropped. */
+  supports_risk: boolean;
   master_account_name: string | null;
   master_has_database: boolean;
   detail?: string;

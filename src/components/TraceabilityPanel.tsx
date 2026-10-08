@@ -45,6 +45,7 @@ export default function TraceabilityPanel({
   const [supportsModules, setSupportsModules] = useState(false);
   const [supportsBom, setSupportsBom] = useState(false);
   const [supportsReview, setSupportsReview] = useState(false);
+  const [supportsRisk, setSupportsRisk] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ kind: 'ok' | 'bad' | ''; text: string }>({
     kind: '',
@@ -58,6 +59,7 @@ export default function TraceabilityPanel({
   const [allowTraining, setAllowTraining] = useState(true);
   const [allowBom, setAllowBom] = useState(false);
   const [allowReview, setAllowReview] = useState(false);
+  const [allowRisk, setAllowRisk] = useState(false);
   const [note, setNote] = useState('');
 
   const load = useCallback(async () => {
@@ -74,6 +76,7 @@ export default function TraceabilityPanel({
       setSupportsModules(data.supports_modules);
       setSupportsBom(Boolean(data.supports_bom));
       setSupportsReview(Boolean(data.supports_review));
+      setSupportsRisk(Boolean(data.supports_risk));
       const r = data.row;
       setAllowAccess(r ? Boolean(r.allow_access) : true);
       setAllowAi(r ? Boolean(r.allow_ai) : false);
@@ -82,6 +85,7 @@ export default function TraceabilityPanel({
       setAllowTraining(on(r?.allow_training));
       setAllowBom(on(r?.allow_bom, false));
       setAllowReview(on(r?.allow_review, false));
+      setAllowRisk(on(r?.allow_risk, false));
       setNote(r?.note ?? '');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -94,7 +98,11 @@ export default function TraceabilityPanel({
   }, [load]);
 
   const noModule =
-    !allowTrace && !allowTraining && !(supportsBom && allowBom) && !(supportsReview && allowReview);
+    !allowTrace &&
+    !allowTraining &&
+    !(supportsBom && allowBom) &&
+    !(supportsReview && allowReview) &&
+    !(supportsRisk && allowRisk);
 
   async function save() {
     if (noModule) {
@@ -115,6 +123,7 @@ export default function TraceabilityPanel({
           ...(supportsModules ? { allow_trace: allowTrace, allow_training: allowTraining } : {}),
           ...(supportsBom ? { allow_bom: allowBom } : {}),
           ...(supportsReview ? { allow_review: allowReview } : {}),
+          ...(supportsRisk ? { allow_risk: allowRisk } : {}),
           note,
         }),
       });
@@ -196,6 +205,19 @@ export default function TraceabilityPanel({
               <p className="acl-hint">
                 Doc Review needs traceability-matrix 4.8.0 on this tenant&apos;s instance before it
                 can be licensed.
+              </p>
+            )}
+            {supportsRisk ? (
+              <Check
+                label="Risk Management"
+                hint="FMEA risk analysis on Orcanos risk items, linked to requirements and tests. Off by default; customers do not see it until this is ticked. Panels are then set up inside the module."
+                checked={allowRisk}
+                onChange={setAllowRisk}
+              />
+            ) : (
+              <p className="acl-hint">
+                Risk Management needs traceability-matrix 4.12.0 on this tenant&apos;s instance
+                before it can be licensed.
               </p>
             )}
             {supportsBom ? (
