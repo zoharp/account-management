@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `1.3.0`
+- **App:** `1.3.1`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v1.md`](docs/changelog/CHANGELOG-v1.md) (long form; v0.x in `CHANGELOG-v0.md`) and
@@ -574,10 +574,14 @@ deployment. Until `TRACE_API_URL_EU` is set, `POST /api/accounts` refuses `regio
     the account name — true since the 2026-08-29 rename, a guess otherwise.
     `traceTenantForAccount()` (`lib/orcanos-url.ts`, client-safe) returns how it
     decided; the create form shows it and the audit event records `tenant_from`.
-    An account with **no** Orcanos API URL therefore has no tenant and its
-    Traceability/Training pills stay disabled — set the URL on the **Orcanos**
-    tab, which shows the tenant it derives and flags the fallback. The real
-    fix is an `accounts.orcanos_tenant` column (flagged in `lib/modules.ts`).
+    ⚠️ **Every reader must use that same rule** — `tenantOf` in `lib/modules.ts`
+    delegates to it since 1.3.1. Before that the list's merge had no name
+    fallback, so an account created without a URL never claimed the row its own
+    create wrote and was **listed twice** (one row with no modules, one
+    "trace-only" with the licences) — which reads exactly like create running
+    twice, and is not. A new tenant derivation anywhere brings that back. Set
+    the URL on the **Orcanos** tab, which shows the tenant it derives and flags
+    the fallback. The real fix is an `accounts.orcanos_tenant` column.
 
 13. **The login screen's failure message is deliberately useless.** Every path
     in `api/auth/local/login` returns `Invalid credentials` — missing row, no

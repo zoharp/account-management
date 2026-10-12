@@ -20,10 +20,13 @@
  * extracts and what `access_control.account_from_url()` extracts on the Python
  * side — the two agree by construction.
  *
- * A master row with no `orcanos_api_url` has no tenant and therefore cannot be
- * matched. It still appears, with its traceability half blank. A dedicated
- * `accounts.orcanos_tenant` column is the fix and is planned; deriving it keeps
- * this read-only for now.
+ * A master row with no `orcanos_api_url` falls back to its `account_name` —
+ * the same rule `traceTenantForAccount()` applies when create writes the
+ * allowlist row. Until 1.3.1 this side returned no tenant instead, so an
+ * account created without a URL never claimed the row its own create had just
+ * written, and the list showed it twice (once with no modules, once "trace
+ * only" with the licences). Every reader of the tenant must use the one rule.
+ * A dedicated `accounts.orcanos_tenant` column is still the real fix.
  *
  * ## Where each licence lives
  *
@@ -64,7 +67,7 @@
  * off means off. Full record in INTERNAL_TRACE_MERGE.md §4.4.
  */
 
-import { orcanosVirtualDirFromUrl } from './orcanos-url';
+import { traceTenantForAccount } from './orcanos-url';
 import { pgGet } from './supabase';
 import { moduleFlag, type TraceAccountRow } from './trace';
 import type { AccountListRow, MergedAccountRow } from './types';
@@ -114,8 +117,8 @@ export async function askPaulDatabaseExists(opts: {
   if (opts.tenant) {
     const tenant = opts.tenant.toLowerCase();
     const rows = await pgGet<
-      Array<{ orcanos_api_url: string | null; db_host: string | null; vector_db_host: string | null }>
-    >('accounts?select=orcanos_api_url,db_host,vector_db_host');
+      Array<{ account_name: string; orcanos_api_url: string | null; db_host: string | null; vector_db_host: string | null }>
+    >('accounts?select=account_name,orcanos_api_url,db_host,vector_db_host');
     const row = rows.find((r) => tenantOf(r) === tenant);
     return row ? hasAskPaulDatabase(row) : false;
   }
@@ -125,11 +128,19 @@ export async function askPaulDatabaseExists(opts: {
 // The catalog itself lives in `module-catalog.ts` because the accounts table
 // renders it from a client component and this file reaches the admin password.
 
-/** The master-side tenant, or null when the account has no Orcanos REST URL configured. */
-export function tenantOf(account: Pick<AccountListRow, 'orcanos_api_url'>): string | null {
-  const url = account.orcanos_api_url;
-  if (!url) return null;
-  return orcanosVirtualDirFromUrl(url)?.toLowerCase() ?? null;
+/**
+ * The master-side tenant, lower-cased: the URL's tenant segment, else the
+ * account name — exactly what create keyed the allowlist row on
+ * (`traceTenantForAccount`). Null only for a blank name.
+ */
+export function tenantOf(
+  account: Pick<AccountListRow, 'orcanos_api_url' | 'account_name'>,
+): string | null {
+  const { tenant } = traceTenantForAccount({
+    orcanosApiUrl: account.orcanos_api_url,
+    accountName: account.account_name ?? '',
+  });
+  return tenant ? tenant.toLowerCase() : null;
 }
 
 /**

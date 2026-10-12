@@ -9,6 +9,26 @@ Newest first.
 
 ---
 
+**1.3.1** (2026-10-12) — **An account created without an Orcanos URL is listed once.**
+
+Create keys the traceability `account_access` row on `traceTenantForAccount()`, which falls back
+to the account name when there is no `orcanos_api_url`. The list's merge (`tenantOf` in
+`lib/modules.ts`) had no fallback — no URL meant no tenant — so the master row never claimed the
+row its own create had just written. Result: two rows per such account, one master-only showing
+no modules and one "trace-only" carrying the licences. Seen on 2026-10-12 (`equashield`: one
+`account_created` event, `tenant_from: account_name`; the purge removed one master row and one
+trace row).
+
+- `tenantOf` now delegates to `traceTenantForAccount`, so the merge, `askPaulDatabaseExists`
+  and `GET /api/accounts/trace/:tenant`'s master lookup all use the rule create and delete
+  already used. `askPaulDatabaseExists` selects `account_name` for it.
+- Side effect, intended: an account with no Orcanos URL now has a tenant (its name), so its
+  module switches are no longer disabled with "set its Orcanos API URL first" — they write the
+  row create made.
+- Verified with `mergeAccounts` on the `equashield` shape: one row, `trace` + `risk` on.
+
+---
+
 **1.3.0** (2026-10-08) — **Risk Management licence.**
 
 traceability-matrix 4.12.0 added the Risk Management module, licensed by
