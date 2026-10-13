@@ -52,7 +52,8 @@ import {
   traceConfigured,
   TraceApiError,
 } from '@/lib/trace';
-import type { DataRegion, ModuleKey } from '@/lib/types';
+import { isRegulatoryModule, REGULATORY_DEFAULTS } from '@/lib/module-catalog';
+import type { DataRegion, ModuleKey, RegulatoryModuleKey } from '@/lib/types';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -75,11 +76,21 @@ async function regionForNewRow(accountId: string | null | undefined): Promise<Da
   return coerceRegion(rows[0]?.region);
 }
 
-const MODULE_KEYS: ModuleKey[] = ['ask_paul', 'trace', 'training', 'review', 'risk', 'bom'];
+const MODULE_KEYS: ModuleKey[] = [
+  'ask_paul',
+  'trace',
+  'training',
+  'review',
+  'risk',
+  'bom',
+  'fda_510k',
+  'mdsap',
+  'standards',
+];
 
 /** The `account_access` column each module is licensed by. */
 const MODULE_COLUMN: Record<
-  ModuleKey,
+  Exclude<ModuleKey, RegulatoryModuleKey>,
   'allow_ask_paul' | 'allow_trace' | 'allow_training' | 'allow_review' | 'allow_risk' | 'allow_bom'
 > = {
   ask_paul: 'allow_ask_paul',
@@ -108,6 +119,59 @@ export async function PUT(req: Request) {
   const enabled = Boolean(body.enabled);
 
   const tenant = (body.tenant ?? '').trim().toLowerCase();
+
+  // ── Regulatory sub-modules (510(k), MDSAP, Standards): master only.
+  // The switch is `accounts.regulatory_modules` (sql/007) and nothing else — Ask Paul reads
+  // it per request and answers 403 for a hidden module. No traceability write is involved,
+  // so none of the trace checks below apply. The jsonb is read-modify-written so toggling
+  // one module never drops another's explicit setting.
+  if (isRegulatoryModule(module)) {
+    if (!body.account_id) {
+      return Response.json(
+        { detail: 'This tenant has no master account record, so there is nowhere to store the switch.' },
+        { status: 409 },
+      );
+    }
+    try {
+      const rows = await pgGet<Array<{ regulatory_modules?: Record<string, boolean> | null }>>(
+        `accounts?id=eq.${encodeURIComponent(body.account_id)}&select=regulatory_modules`,
+      );
+      if (!rows.length) return Response.json({ detail: 'Account not found' }, { status: 404 });
+      const next = { ...(rows[0].regulatory_modules ?? {}), [module]: enabled };
+      await pgPatch(`accounts?id=eq.${encodeURIComponent(body.account_id)}`, {
+        regulatory_modules: next,
+      });
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      const missing = /regulatory_modules|42703|PGRST204/i.test(msg);
+      await logSecurityEvent('account_module_changed', {
+        user,
+        accountName: tenant || undefined,
+        success: false,
+        detail: { module, enabled, account_id: body.account_id, error: msg },
+      });
+      return Response.json(
+        {
+          detail: missing
+            ? 'The master database has no regulatory_modules column yet — run sql/007_regulatory_modules.sql first.'
+            : msg,
+        },
+        { status: missing ? 409 : 502 },
+      );
+    }
+    await logSecurityEvent('account_module_changed', {
+      user,
+      accountName: tenant || undefined,
+      detail: {
+        module,
+        enabled,
+        account_id: body.account_id,
+        source: 'master',
+        default: REGULATORY_DEFAULTS[module as RegulatoryModuleKey],
+      },
+    });
+    return Response.json({ ok: true, module, enabled });
+  }
 
   // ── Ask Paul: the master half first, because it is the real kill switch.
   // A tenant with only one of the two halves present is the NORMAL case here —

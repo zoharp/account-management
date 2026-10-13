@@ -30,6 +30,8 @@ export interface AccountRow {
   id: string;
   account_name: string;
   is_active: boolean;
+  /** Absent before sql/007 — a missing key means the module's default (module-catalog.ts). */
+  regulatory_modules?: Partial<Record<RegulatoryModuleKey, boolean>> | null;
   /** Absent on a row written before 003_account_region.sql — read as 'us'. */
   region?: DataRegion | null;
   created_at?: string | null;
@@ -67,7 +69,21 @@ export interface AccountListRow extends AccountRow {
 }
 
 /** The modules an account can be licensed for. See `lib/modules.ts`. */
-export type ModuleKey = 'ask_paul' | 'trace' | 'training' | 'review' | 'risk' | 'bom';
+/**
+ * Ask Paul's regulatory sub-modules. Unlike the others they have no licence in the
+ * traceability instance: the switch is `accounts.regulatory_modules` (master DB,
+ * sql/007), read by Ask Paul on every request. See `module-catalog.ts` for defaults.
+ */
+export type RegulatoryModuleKey = 'fda_510k' | 'mdsap' | 'standards';
+
+export type ModuleKey =
+  | 'ask_paul'
+  | 'trace'
+  | 'training'
+  | 'review'
+  | 'risk'
+  | 'bom'
+  | RegulatoryModuleKey;
 
 /**
  * `null` means the source that owns this module has no row for this tenant —

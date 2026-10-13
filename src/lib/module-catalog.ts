@@ -9,13 +9,29 @@
  * Adding a module is an entry here plus a source that can answer for it.
  */
 
-import type { ModuleKey } from './types';
+import type { ModuleKey, RegulatoryModuleKey } from './types';
 
 export interface ModuleDef {
   key: ModuleKey;
   label: string;
   /** Which system owns this module's licence — see `lib/modules.ts`. */
   source: 'master' | 'trace';
+}
+
+/**
+ * What a regulatory module reads as when `accounts.regulatory_modules` has no key for
+ * it. 510(k) and MDSAP shipped to everyone, so absent = ON (applying sql/007 must not
+ * take anything away); Standards is new, so absent = OFF until someone opens it.
+ * Mirror of `REGULATORY_MODULE_DEFAULTS` in Ask Paul's backend/api.py.
+ */
+export const REGULATORY_DEFAULTS: Record<RegulatoryModuleKey, boolean> = {
+  fda_510k: true,
+  mdsap: true,
+  standards: false,
+};
+
+export function isRegulatoryModule(key: ModuleKey): key is RegulatoryModuleKey {
+  return key in REGULATORY_DEFAULTS;
 }
 
 export const MODULES: readonly ModuleDef[] = [
@@ -37,4 +53,9 @@ export const MODULES: readonly ModuleDef[] = [
   // OPT-IN module: its column defaults to 0 and an absent value reads as OFF —
   // see `moduleFlag()` in lib/trace.ts. Hidden from a customer until ticked here.
   { key: 'bom', label: 'BOM', source: 'trace' },
+  // Ask Paul's regulatory sub-modules — master `accounts.regulatory_modules`. Hiding one
+  // removes its sidebar entry and makes its routes answer 403 (enforced in Ask Paul).
+  { key: 'fda_510k', label: '510(k)', source: 'master' },
+  { key: 'mdsap', label: 'MDSAP', source: 'master' },
+  { key: 'standards', label: 'Standards', source: 'master' },
 ];

@@ -68,6 +68,7 @@
  */
 
 import { traceTenantForAccount } from './orcanos-url';
+import { REGULATORY_DEFAULTS } from './module-catalog';
 import { pgGet } from './supabase';
 import { moduleFlag, type TraceAccountRow } from './trace';
 import type { AccountListRow, MergedAccountRow } from './types';
@@ -179,6 +180,15 @@ export function mergeAccounts(
   );
 }
 
+function regulatoryFlag(
+  master: AccountListRow | null,
+  key: keyof typeof REGULATORY_DEFAULTS,
+): boolean | null {
+  if (!master) return null;
+  const stored = master.regulatory_modules?.[key];
+  return typeof stored === 'boolean' ? stored : REGULATORY_DEFAULTS[key];
+}
+
 function buildRow(args: {
   master: AccountListRow | null;
   tenant: string | null;
@@ -257,6 +267,10 @@ function buildRow(args: {
       review: reviewModule,
       risk: riskModule,
       bom: bomModule,
+      // Master-owned: no master row = no answer (a dash), never "off".
+      fda_510k: regulatoryFlag(master, 'fda_510k'),
+      mdsap: regulatoryFlag(master, 'mdsap'),
+      standards: regulatoryFlag(master, 'standards'),
     },
   };
 }

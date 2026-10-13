@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties } from 'react';
 import AccountManageModal from './AccountManageModal';
 import CreateAccountModal from './CreateAccountModal';
-import { MODULES } from '@/lib/module-catalog';
+import { isRegulatoryModule, MODULES } from '@/lib/module-catalog';
 import { APP_URLS, REGION_LABELS, coerceRegion } from '@/lib/regions';
 import type { MergedAccountRow, ModuleKey, TraceSourceStatus } from '@/lib/types';
 
@@ -353,6 +353,14 @@ function disabledReason(
   key: ModuleKey,
   trace: TraceSourceStatus | null,
 ): string {
+  // Regulatory sub-modules live only in the master `accounts` row — traceability is not
+  // involved, so none of its availability checks apply.
+  if (isRegulatoryModule(key)) {
+    return row.id
+      ? ''
+      : 'No master account record — this tenant has nowhere to store the switch. Create the account first.';
+  }
+
   // Ask Paul is clickable if EITHER half can be written; the tooltip below says
   // which. Falling through to the traceability branches would wrongly disable it
   // for a master-only account whose kill switch is perfectly writable.

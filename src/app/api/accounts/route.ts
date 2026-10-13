@@ -59,6 +59,19 @@ export async function GET() {
       '&order=account_name.asc',
   );
 
+  // `regulatory_modules` (sql/007) is read separately and tolerantly: selecting a column
+  // that does not exist yet would 400 the whole list, and a blank Accounts page is a far
+  // worse failure than three missing switches. Absent = each module's default.
+  try {
+    const flags = await pgGet<Array<{ id: string; regulatory_modules?: AccountListRow['regulatory_modules'] }>>(
+      'accounts?select=id,regulatory_modules',
+    );
+    const byId = new Map(flags.map((f) => [f.id, f.regulatory_modules ?? null]));
+    for (const a of accounts) a.regulatory_modules = byId.get(a.id) ?? null;
+  } catch {
+    /* migration 007 not applied yet */
+  }
+
   // The RPC aggregates every account in one call. A failure here must not blank
   // the list — the QMS version swallows it the same way and shows zeros.
   let totalsById = new Map<string, CostTotal>();
