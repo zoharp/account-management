@@ -471,9 +471,21 @@ export async function findResumableJob(accountName: string): Promise<JobRow | nu
   const rows = await pgGet<JobRow[]>(
     `account_provisioning?account_name=${accountCiFilter(accountName)}` +
       `&state=eq.error&project_ref=not.is.null&account_id=is.null` +
-      `&order=created_at.desc&limit=1&select=*`,
+      `&order=created_at.desc&limit=5&select=*`,
   );
-  return rows[0] ?? null;
+  // A job whose project has since been deleted by hand is history, not work to
+  // resume — "resuming" it fails forever and blocks every fresh create for the
+  // name (pcure: project klrgfaddrnnawvagomxr, removed after its 2026-08-31 run).
+  // Only a definite 404 skips a job; any other answer keeps it, since a wrongly
+  // skipped job means a second billed project.
+  for (const job of rows) {
+    const res = await fetch(`${MANAGEMENT_API}/projects/${encodeURIComponent(job.project_ref!)}`, {
+      headers: mgmtHeaders(),
+      cache: 'no-store',
+    }).catch(() => null);
+    if (res?.status !== 404) return job;
+  }
+  return null;
 }
 
 /**

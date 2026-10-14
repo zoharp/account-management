@@ -27,6 +27,11 @@ would work but sends every module tick, rewriting the tenant's existing licences
 - `AccountsClient` re-points the open account window at the fresh row after every reload (by tenant
   for a row that gained a master id, else by key). Before, the window kept its stale snapshot, so a
   tenant that just became an account still showed as trace-only until reopened.
+- `findResumableJob` skips a failed job whose Supabase project answers **404**. pcure's 2026-08-31
+  job still pointed at `klrgfaddrnnawvagomxr`, which had since been deleted, so every new create for
+  the name tried to "resume" it and was refused ("already created in the US region … delete the
+  project in Supabase first" — it already was). Any answer other than a definite 404 still resumes,
+  since wrongly skipping a live job bills a second project.
 - Not verified against live provisioning — typecheck and build only.
 
 ---
