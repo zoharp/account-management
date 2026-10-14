@@ -687,6 +687,9 @@ a.btn-sm {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-modal);
   padding: 6px 0;
+  /* max-height is set inline to the room left in the viewport. */
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .acl-mods-pop-head {

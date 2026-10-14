@@ -488,18 +488,25 @@ function ModulesCell({
   const licensed = MODULES.filter((m) => row.modules[m.key] === true);
   const rowBusy = busy?.startsWith(`${row.key}:`) ?? false;
 
-  // Fixed positioning so the table card cannot clip it; flips above the trigger
-  // when there is no room below.
+  // Fixed positioning so the table card cannot clip it. Opens below when it
+  // fits, else above when it fits, else on the roomier side capped to that
+  // space and scrolling — nine switches are taller than half a laptop screen,
+  // so "flip only if it fits above" left mid-page rows cut off at the bottom.
   useLayoutEffect(() => {
     if (!open || !triggerRef.current) return;
     const r = triggerRef.current.getBoundingClientRect();
     const width = 320;
-    const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8));
-    const h = popRef.current?.offsetHeight ?? 300;
+    const gap = 6;
+    const margin = 8;
+    const left = Math.max(margin, Math.min(r.left, window.innerWidth - width - margin));
+    const h = popRef.current?.scrollHeight ?? 300;
+    const below = window.innerHeight - r.bottom - gap - margin;
+    const above = r.top - gap - margin;
+    const placeBelow = h <= below || (h > above && below >= above);
     setPos(
-      r.bottom + h + 8 > window.innerHeight && r.top > h + 8
-        ? { left, width, bottom: window.innerHeight - r.top + 6 }
-        : { left, width, top: r.bottom + 6 },
+      placeBelow
+        ? { left, width, top: r.bottom + gap, maxHeight: below }
+        : { left, width, bottom: window.innerHeight - r.top + gap, maxHeight: above },
     );
   }, [open]);
 
@@ -513,15 +520,20 @@ function ModulesCell({
       if (e.key === 'Escape') setOpen(false);
     };
     const close = () => setOpen(false);
+    // Scrolling the page moves the trigger out from under a fixed popover, so
+    // it closes — but not when the scroll is the popover's own list.
+    const onScroll = (e: Event) => {
+      if (!popRef.current?.contains(e.target as Node)) setOpen(false);
+    };
     document.addEventListener('mousedown', onDown);
     document.addEventListener('keydown', onKey);
     window.addEventListener('resize', close);
-    window.addEventListener('scroll', close, true);
+    window.addEventListener('scroll', onScroll, true);
     return () => {
       document.removeEventListener('mousedown', onDown);
       document.removeEventListener('keydown', onKey);
       window.removeEventListener('resize', close);
-      window.removeEventListener('scroll', close, true);
+      window.removeEventListener('scroll', onScroll, true);
       setPos({ visibility: 'hidden' });
     };
   }, [open]);

@@ -9,6 +9,22 @@ Newest first.
 
 ---
 
+**1.4.2** (2026-10-14) — **Modules popover no longer truncates at the bottom of the screen.**
+
+The popover flipped above its trigger only when its *whole* height fitted above. With nine switches
+(and two-line blocked reasons) it is taller than either half of a laptop viewport, so for any row near
+the middle neither side fitted, it stayed below, and the lower switches ran off-screen with no way to
+reach them — the page scroll closed it.
+
+- `ModulesCell` now opens below if it fits, else above if it fits, else on the roomier side with
+  `max-height` set to that space; `.acl-mods-pop` scrolls (`overflow-y: auto`,
+  `overscroll-behavior: contain`). Height is measured with `scrollHeight`.
+- The capture-phase scroll listener that closes the popover ignores scrolls originating inside it —
+  otherwise the first wheel tick on the new scrollable list would have closed it.
+- Typecheck and build only; not checked in a browser.
+
+---
+
 **1.4.1** (2026-10-13) — **Create an Ask Paul database from a traceability-only tenant.**
 
 A tenant that exists only in traceability has no master `accounts` row, so the Ask Paul tab never

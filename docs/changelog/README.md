@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `1.4.2` | 2026-10-14 | Modules popover opens on the side with room and scrolls instead of running off the bottom of the screen. |
 | `1.4.1` | 2026-10-13 | Ask Paul tab: **Create Ask Paul database** for traceability-only tenants (provisions in the tenant's region, keeps its licences); the open account window refreshes after a reload. |
 | `1.4.0` | 2026-10-13 | Per-account show/hide for 510(k), MDSAP and Standards (`accounts.regulatory_modules`, `sql/007`). |
 | `1.3.1` | 2026-10-12 | An account created without an Orcanos URL was listed twice (master row + its own trace row): `tenantOf` now falls back to the account name like `traceTenantForAccount`. |

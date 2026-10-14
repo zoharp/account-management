@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.4.2",
+    "date": "2026-10-14",
+    "changes": [
+      "🐛 **The Modules popover is no longer cut off.** On rows in the middle or bottom of the accounts list, the lower switches ran off the bottom of the screen. The popover now opens on whichever side has room and scrolls when the screen is too short for all nine switches."
+    ]
+  },
+  {
     "version": "1.4.1",
     "date": "2026-10-13",
     "changes": [
