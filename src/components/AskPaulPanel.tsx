@@ -1,10 +1,22 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import Check from './Check';
 import TestResult from './TestResult';
 import { ASK_PAUL_NEEDS_DB_HINT, type TraceRow, type TraceSettingsResponse } from '@/lib/trace-ui';
-import type { AccountRow, ConnectionTestResult } from '@/lib/types';
+import type { AccountRow, ConnectionTestResult, DataRegion } from '@/lib/types';
+
+/** Same cadence as CreateAccountModal — each poll advances the job one step. */
+const POLL_MS = 4000;
+
+interface JobView {
+  id: string;
+  state: string;
+  project_ref: string | null;
+  project_status: string | null;
+  message: string | null;
+  account_id: string | null;
+}
 
 /**
  * The Ask Paul tab — everything about the QMS AI application for this customer,
@@ -42,11 +54,20 @@ import type { AccountRow, ConnectionTestResult } from '@/lib/types';
  *  3. **Ask Paul cannot be turned ON without a database**, on either control:
  *     the licence and the Status switch are two doors to the same thing. Turning
  *     it OFF is never blocked. Both routes enforce the same transition.
+ *  4. **A traceability-only tenant gets its database here by becoming an
+ *     account.** It has no master record, so there is no row for a Vector DB to
+ *     live on. "Create Ask Paul database" runs the ordinary provisioning job
+ *     (`POST /api/accounts`, `provision: true`) named after the tenant, which
+ *     adopts the existing traceability row. It sends `modules: {}` on purpose:
+ *     an absent key leaves that licence untouched (`upsertTraceModules`), so the
+ *     tenant's current licences survive. The create form's ticks would rewrite
+ *     every one of them — which is why this is not just "use Create account".
  */
 export default function AskPaulPanel({
   accountId,
   accountName,
   tenant,
+  region,
   onSaved,
   onClose,
 }: {
@@ -55,6 +76,8 @@ export default function AskPaulPanel({
   accountName: string;
   /** null when the account has no Orcanos tenant, so no trace row holds the licence. */
   tenant: string | null;
+  /** Where the tenant's data lives; a new database is created in the same region. */
+  region: DataRegion | null;
   onSaved: (patch?: Partial<AccountRow>) => void;
   onClose: () => void;
 }) {
@@ -86,6 +109,15 @@ export default function AskPaulPanel({
   const [vectorResult, setVectorResult] = useState<ConnectionTestResult | null>(null);
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState('');
+
+  // ── Database for a traceability-only tenant (rule 4) ────────────────────
+  const [jobId, setJobId] = useState<string | null>(null);
+  const [provisioning, setProvisioning] = useState(false);
+  const [provisionMsg, setProvisionMsg] = useState('');
+  const [provisionError, setProvisionError] = useState('');
+  const [canRetry, setCanRetry] = useState(false);
+  const onSavedRef = useRef(onSaved);
+  onSavedRef.current = onSaved;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -238,6 +270,105 @@ export default function AskPaulPanel({
     setSaving(false);
   }
 
+  function describeJob(job: JobView): string {
+    switch (job.state) {
+      case 'creating_project':
+        return job.message || 'Creating Supabase project…';
+      case 'waiting_healthy':
+        return `Waiting for the database to come online (${job.project_status || 'starting'})…`;
+      case 'fetching_keys':
+        return 'Fetching API keys…';
+      case 'running_schema':
+        return 'Setting up schema…';
+      case 'saving_account':
+        return 'Saving the account…';
+      case 'done':
+        return '✓ Database created.';
+      default:
+        return job.message || job.state;
+    }
+  }
+
+  function applyJob(job: JobView) {
+    setProvisionMsg(describeJob(job));
+    if (job.state === 'done') {
+      setProvisioning(false);
+      // The parent reloads the list and hands this panel the new account id,
+      // which re-runs `load()` and shows the Vector DB section filled in.
+      onSavedRef.current();
+    } else if (job.state === 'error') {
+      setProvisioning(false);
+      setProvisionError(job.message || 'Creating the database failed.');
+      setCanRetry(Boolean(job.project_ref) && !job.account_id);
+    }
+  }
+
+  async function createDatabase() {
+    if (!tenant || !region) return;
+    setProvisioning(true);
+    setProvisionError('');
+    setCanRetry(false);
+    setProvisionMsg('Starting…');
+    try {
+      const res = await fetch('/api/accounts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ account_name: tenant, region, provision: true, modules: {} }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { job?: JobView; detail?: string };
+      if (!res.ok || !data.job) throw new Error(data.detail || `HTTP ${res.status}`);
+      setJobId(data.job.id);
+      applyJob(data.job);
+    } catch (e) {
+      setProvisioning(false);
+      setProvisionMsg('');
+      setProvisionError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  /** Resume from the failed step — a fresh create would bill a second project. */
+  async function retryDatabase() {
+    if (!jobId) return;
+    setProvisionError('');
+    setCanRetry(false);
+    try {
+      const res = await fetch(`/api/accounts/provision/${jobId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ retry: true }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { job?: JobView; detail?: string };
+      if (!res.ok || !data.job) throw new Error(data.detail || `HTTP ${res.status}`);
+      setProvisioning(data.job.state !== 'done' && data.job.state !== 'error');
+      applyJob(data.job);
+    } catch (e) {
+      setProvisionError(e instanceof Error ? e.message : String(e));
+    }
+  }
+
+  // Drive the job: each POST advances it one step. A failed poll is retried on
+  // the next tick — the work continues server-side regardless.
+  useEffect(() => {
+    if (!jobId || !provisioning) return;
+    let cancelled = false;
+    const timer = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/accounts/provision/${jobId}`, { method: 'POST' });
+        if (!res.ok || cancelled) return;
+        const data = (await res.json()) as { job: JobView };
+        if (!cancelled) applyJob(data.job);
+      } catch {
+        // Transient — the next tick retries.
+      }
+    }, POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+    // applyJob only touches setters and a ref.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [jobId, provisioning]);
+
   if (loading) {
     return (
       <div className="acl-detail-body">
@@ -302,9 +433,13 @@ export default function AskPaulPanel({
                 {accountId
                   ? `“${accountName}” has no vector database, so Ask Paul has nowhere to read from.`
                   : 'No master account is linked to this tenant, so it has no Ask Paul database.'}{' '}
-                {allowAskPaul
-                  ? 'The licence is stored but the hand-off leads nowhere — fill in the Vector DB section below, or turn it off.'
-                  : 'Fill in the Vector DB section below before licensing it.'}
+                {accountId
+                  ? allowAskPaul
+                    ? 'The licence is stored but the hand-off leads nowhere — fill in the Vector DB section below, or turn it off.'
+                    : 'Fill in the Vector DB section below before licensing it.'
+                  : allowAskPaul
+                    ? 'The licence is stored but the hand-off leads nowhere — create its database below, or turn it off.'
+                    : 'Create its database below (Create Ask Paul database), then license it.'}
               </p>
             )}
 
@@ -380,9 +515,50 @@ export default function AskPaulPanel({
         <section className="acl-section">
           <h3 className="acl-section-title">Database</h3>
           <p className="acl-hint">
-            This tenant exists in traceability only — it has no master account record, so it has no
-            Ask Paul database, no kill switch and nothing to delete.
+            This tenant exists in traceability only — it has no master account record, so there is
+            nowhere for an Ask Paul database to be recorded. Creating one makes it a full account
+            named <code>{tenant ?? accountName}</code> with a new Supabase project
+            {region ? ` in the ${region.toUpperCase()} region` : ''}, set up with Ask Paul&rsquo;s
+            schema. Its current traceability licences are left as they are. It takes a few minutes
+            and adds a billed Supabase project.
           </p>
+          {region === 'eu' && (
+            <p className="acl-hint acl-hint--warn">
+              EU tenant: the database will be in the EU, but the EU traceability deployment has no
+              Ask Paul hand-off configured yet, so its users still won&rsquo;t see the button.
+            </p>
+          )}
+          {!tenant || !region ? (
+            <p className="acl-hint acl-hint--warn">
+              {!tenant
+                ? 'No Orcanos tenant to name the account after.'
+                : 'No region on record for this tenant, so there is no telling where its database belongs.'}
+            </p>
+          ) : (
+            <div className="acl-inline-actions">
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={() => void createDatabase()}
+                disabled={provisioning || Boolean(jobId)}
+              >
+                {provisioning ? 'Creating…' : 'Create Ask Paul database'}
+              </button>
+              {canRetry && (
+                <button type="button" className="acl-btn-cancel" onClick={() => void retryDatabase()}>
+                  Retry
+                </button>
+              )}
+            </div>
+          )}
+          {provisionMsg && <p className="acl-hint">{provisionMsg}</p>}
+          {provisionError && <div className="acl-error">{provisionError}</div>}
+          {provisioning && (
+            <p className="acl-hint">
+              Closing this window does not cancel it — the job carries on and the account appears
+              in the list when it finishes.
+            </p>
+          )}
         </section>
       ) : (
         <>

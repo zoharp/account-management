@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `1.3.1`
+- **App:** `1.4.1`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v1.md`](docs/changelog/CHANGELOG-v1.md) (long form; v0.x in `CHANGELOG-v0.md`) and
@@ -552,7 +552,12 @@ deployment. Until `TRACE_API_URL_EU` is set, `POST /api/accounts` refuses `regio
     Until 1.0.0 `running_schema` could not run from Vercel (see
     *Provisioning* above), so Ask Paul could not be licensed at creation time;
     the fallback still works: create the account, add the DB on the account
-    window's **Ask Paul** tab (*Vector DB*), then use the pill. Since 0.6.0 all four Ask Paul controls —
+    window's **Ask Paul** tab (*Vector DB*), then use the pill. **A
+    traceability-only tenant has no *Vector DB* section** (no master row to hold
+    it); since 1.4.1 that tab offers **Create Ask Paul database** instead, which
+    runs provisioning named after the tenant with `modules: {}` so its existing
+    licences are untouched. Don't route it through the Create account form — that
+    sends every module tick and would rewrite them. Since 0.6.0 all four Ask Paul controls —
     licence, kill switch, database, delete — are on that one tab; before it, the
     licence was inside the Traceability dialog and the database under
     *Account & databases*, which is why this note used to name two screens.

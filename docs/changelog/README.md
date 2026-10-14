@@ -9,6 +9,8 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `1.4.1` | 2026-10-13 | Ask Paul tab: **Create Ask Paul database** for traceability-only tenants (provisions in the tenant's region, keeps its licences); the open account window refreshes after a reload. |
+| `1.4.0` | 2026-10-13 | Per-account show/hide for 510(k), MDSAP and Standards (`accounts.regulatory_modules`, `sql/007`). |
 | `1.3.1` | 2026-10-12 | An account created without an Orcanos URL was listed twice (master row + its own trace row): `tenantOf` now falls back to the account name like `traceTenantForAccount`. |
 | `1.3.0` | 2026-10-08 | Risk Management licence (`account_access.allow_risk`, traceability 4.12.0) — opt-in like Doc Review/BOM: list popover switch, Traceability tab tick, create form, Overview state. Refused with 409 on an older instance. |
 | `1.2.0` | 2026-10-06 | Accounts list: module switches move into a popover (cell shows licensed modules only); Tenant column and *Trace only* badge removed; regions US/EU; Manage is a gear icon. |

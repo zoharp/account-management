@@ -9,6 +9,48 @@ Newest first.
 
 ---
 
+**1.4.1** (2026-10-13) — **Create an Ask Paul database from a traceability-only tenant.**
+
+A tenant that exists only in traceability has no master `accounts` row, so the Ask Paul tab never
+rendered the *Vector DB* section — yet its licence warning told the operator to "fill in the Vector DB
+section below". There was no in-dialog way to get Ask Paul onto such a tenant; the Create account form
+would work but sends every module tick, rewriting the tenant's existing licences.
+
+- `AskPaulPanel` (trace-only branch) gains **Create Ask Paul database**: `POST /api/accounts` with
+  `account_name = tenant`, the row's region, `provision: true` and `modules: {}`. An absent module key
+  leaves that licence alone (`upsertTraceModules`), and the route already adopts a same-region
+  trace-only tenant. It drives the same resumable job as the create modal (4 s poll; *Retry* resumes
+  a failed job rather than billing a second project).
+- Blocked with an explanation when the row has no tenant or no region. EU tenants get a warning that
+  the EU deployment has no Ask Paul hand-off yet.
+- The licence warning now points at the right control for each case.
+- `AccountsClient` re-points the open account window at the fresh row after every reload (by tenant
+  for a row that gained a master id, else by key). Before, the window kept its stale snapshot, so a
+  tenant that just became an account still showed as trace-only until reopened.
+- Not verified against live provisioning — typecheck and build only.
+
+---
+
+**1.4.0** (2026-10-13) — **Per-account show/hide for Ask Paul's regulatory modules.**
+
+510(k), MDSAP and the new Standards workspace are sub-modules of Ask Paul with no traceability licence,
+so their switch lives only in the master `accounts` row, not in `account_access`.
+
+- `sql/007_regulatory_modules.sql` adds `accounts.regulatory_modules jsonb not null default '{}'`.
+  A missing key means the default (`REGULATORY_DEFAULTS` in `lib/module-catalog.ts`): `fda_510k` and
+  `mdsap` ON, `standards` OFF, so applying the migration changes nothing by itself. Ask Paul mirrors
+  the defaults in `REGULATORY_MODULE_DEFAULTS` (`backend/api.py`); change both together.
+- `PUT /api/accounts/modules` handles the three keys before any traceability logic: it needs
+  `account_id` (409 without a master row), read-modify-writes the jsonb so one toggle never drops another,
+  and writes `account_module_changed`. A missing column answers 409 "run sql/007 first".
+- The accounts list reads `regulatory_modules` in a separate, tolerant query, so an unapplied migration
+  cannot blank the page.
+- `ModuleKey` gained `RegulatoryModuleKey`; `MODULE_COLUMN` excludes it. Enforcement is in Ask Paul
+  (403 on the module's routes, cached 30 s) — hiding here is not just cosmetic.
+- Not done: agent tools for a hidden module are still offered.
+
+---
+
 **1.3.1** (2026-10-12) — **An account created without an Orcanos URL is listed once.**
 
 Create keys the traceability `account_access` row on `traceTenantForAccount()`, which falls back

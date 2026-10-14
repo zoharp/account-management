@@ -81,6 +81,22 @@ export default function AccountsClient() {
     void load();
   }, [load]);
 
+  // The open account window holds a snapshot of its row. Re-point it at the
+  // fresh one after every reload — by key, else by tenant, because a
+  // traceability-only tenant that just got its master account changes key
+  // (and gains the `id` its tabs need).
+  useEffect(() => {
+    setManage((prev) => {
+      if (!prev) return prev;
+      const t = prev.tenant?.toLowerCase();
+      return (
+        (t ? accounts.find((a) => a.id && a.tenant?.toLowerCase() === t) : undefined) ??
+        accounts.find((a) => a.key === prev.key) ??
+        prev
+      );
+    });
+  }, [accounts]);
+
   /**
    * Why a reload instead of an optimistic flip: a trace write is a
    * read-modify-write of the whole row, so the authoritative state after a save

@@ -174,6 +174,7 @@ export default function AccountManageModal({
             accountId={row.id ?? null}
             accountName={row.account_name}
             tenant={row.tenant ?? null}
+            region={row.region ?? null}
             onSaved={(patch) => onChanged(patch)}
             onClose={onClose}
           />
