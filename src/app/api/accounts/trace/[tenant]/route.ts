@@ -33,6 +33,7 @@ import {
   supportsBom,
   supportsReview,
   supportsRisk,
+  supportsIntegrations,
   supportsModules,
   hasReachableModule,
   traceConfigured,
@@ -123,6 +124,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ tenant: string
       supports_bom: supportsBom(rows),
       supports_review: supportsReview(rows),
       supports_risk: supportsRisk(rows),
+      supports_integrations: supportsIntegrations(rows),
     });
   } catch (e) {
     return failed(e);
@@ -199,6 +201,18 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       );
     }
 
+    if (!supportsIntegrations(rows) && body.allow_integrations !== undefined) {
+      // And for Integrations (Jira), added in 4.25.0.
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the Integrations (Jira) licence and would ' +
+            'silently discard the change. Deploy traceability-matrix 4.25.0 first.',
+        },
+        { status: 409 },
+      );
+    }
+
     // A row this app has never seen starts from the trace API's own defaults,
     // which are the fail-open ones. Everything else starts from what is stored.
     //
@@ -219,6 +233,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       allow_review: 0,
       // So is Risk Management.
       allow_risk: 0,
+      // And Integrations (Jira).
+      allow_integrations: 0,
       allow_ask_paul: 1,
       ask_paul_account: '',
       note: '',
@@ -234,6 +250,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       allow_bom: flag('allow_bom', base.allow_bom ?? 0),
       allow_review: flag('allow_review', base.allow_review ?? 0),
       allow_risk: flag('allow_risk', base.allow_risk ?? 0),
+      allow_integrations: flag('allow_integrations', base.allow_integrations ?? 0),
       allow_ask_paul: flag('allow_ask_paul', base.allow_ask_paul ?? 1),
       note: typeof body.note === 'string' ? body.note : (base.note ?? ''),
     };

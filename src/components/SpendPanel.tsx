@@ -33,6 +33,7 @@ export default function SpendPanel({
   const [logs, setLogs] = useState<UsageLogRow[]>([]);
   const [totalTokens, setTotalTokens] = useState(0);
   const [totalCost, setTotalCost] = useState(0);
+  const [totalCredits, setTotalCredits] = useState(0);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [logsError, setLogsError] = useState('');
 
@@ -54,10 +55,12 @@ export default function SpendPanel({
         logs: UsageLogRow[];
         total_tokens: number;
         total_cost_usd: number;
+        total_credits?: number;
       };
       setLogs(data.logs ?? []);
       setTotalTokens(data.total_tokens ?? 0);
       setTotalCost(data.total_cost_usd ?? 0);
+      setTotalCredits(data.total_credits ?? 0);
     } catch (e) {
       setLogsError(`Error loading Ask Paul usage: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -189,6 +192,10 @@ export default function SpendPanel({
               <div className="analytics-total-card">
                 <div className="analytics-total-label">Tokens (shown)</div>
                 <div className="analytics-total-value">{totalTokens.toLocaleString()}</div>
+              </div>
+              <div className="analytics-total-card">
+                <div className="analytics-total-label">Credits (shown)</div>
+                <div className="analytics-total-value">{totalCredits.toFixed(1)}</div>
               </div>
               <div className="analytics-total-card highlight">
                 <div className="analytics-total-label">Cost (shown)</div>

@@ -213,6 +213,8 @@ function buildRow(args: {
   const reviewModule = unknown ? null : signedIn && moduleFlag(trace, 'review');
   // Opt-in as well: an absent `allow_risk` (pre-4.12.0 instance) reads as OFF.
   const riskModule = unknown ? null : signedIn && moduleFlag(trace, 'risk');
+  // And Integrations / Jira: an absent `allow_integrations` (pre-4.25.0 instance) reads as OFF.
+  const integrationsModule = unknown ? null : signedIn && moduleFlag(trace, 'integrations');
 
   // Ask Paul has two halves and is licensed only when BOTH say yes — `is_active`
   // (the app itself) and `allow_ask_paul` (the door in from traceability). Off in
@@ -266,6 +268,7 @@ function buildRow(args: {
       training: trainingModule,
       review: reviewModule,
       risk: riskModule,
+      integrations: integrationsModule,
       bom: bomModule,
       // Master-owned: no master row = no answer (a dash), never "off".
       fda_510k: regulatoryFlag(master, 'fda_510k'),

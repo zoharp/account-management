@@ -49,6 +49,11 @@ export const MODULES: readonly ModuleDef[] = [
   // Risk Management (traceability-matrix 4.12.0), `account_access.allow_risk`. OPT-IN
   // like BOM and Doc Review.
   { key: 'risk', label: 'Risk', source: 'trace' },
+  // Integrations — the Jira connector (traceability-matrix 4.25.0),
+  // `account_access.allow_integrations`. OPT-IN like Risk. The Jira secrets are NOT
+  // set here: each account enters its own on its Integrations screen (encrypted,
+  // per account) — this is only the licence switch.
+  { key: 'integrations', label: 'Jira', source: 'trace' },
   // BOM viewer (traceability-matrix 3.46.0), `account_access.allow_bom`. The one
   // OPT-IN module: its column defaults to 0 and an absent value reads as OFF —
   // see `moduleFlag()` in lib/trace.ts. Hidden from a customer until ticked here.

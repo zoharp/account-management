@@ -75,6 +75,12 @@ export interface TraceAccountRow {
   allow_review?: number;
   /** Risk Management licence, added in 4.12.0. OPT-IN like BOM: `undefined` reads as NOT licensed. */
   allow_risk?: number;
+  /**
+   * Integrations (Jira connector) licence, added in 4.25.0. OPT-IN like BOM. Only the
+   * switch lives here — the account's Jira credentials are entered and encrypted on
+   * its own Integrations screen in the trace app, per account.
+   */
+  allow_integrations?: number;
   /** Ask Paul (QMS AI) licence and name override, added in 3.27.0. */
   allow_ask_paul?: number;
   /**
@@ -114,6 +120,8 @@ export function moduleFlag(row: TraceAccountRow | undefined, key: ModuleKey): bo
   if (key === 'review') return Boolean(row.allow_review);
   // So is Risk Management (4.12.0).
   if (key === 'risk') return Boolean(row.allow_risk);
+  // And Integrations / Jira (4.25.0).
+  if (key === 'integrations') return Boolean(row.allow_integrations);
   const value =
     key === 'trace' ? row.allow_trace : key === 'training' ? row.allow_training : row.allow_ask_paul;
   return value === undefined || value === null ? true : Boolean(value);
@@ -150,6 +158,11 @@ export function supportsReview(rows: TraceAccountRow[]): boolean {
 /** Does it carry `allow_risk`? (4.12.0) Same silent-discard reason as `supportsBom`. */
 export function supportsRisk(rows: TraceAccountRow[]): boolean {
   return rows.some((r) => r.allow_risk !== undefined);
+}
+
+/** Does it carry `allow_integrations`? (4.25.0) Same silent-discard reason as `supportsBom`. */
+export function supportsIntegrations(rows: TraceAccountRow[]): boolean {
+  return rows.some((r) => r.allow_integrations !== undefined);
 }
 
 /**
@@ -504,6 +517,7 @@ export function newTraceAccountRow(tenant: string, region: DataRegion): TraceAcc
     allow_bom: 0,
     allow_review: 0,
     allow_risk: 0,
+    allow_integrations: 0,
     allow_ask_paul: 0,
   };
 }
@@ -585,6 +599,16 @@ export async function upsertTraceModules(
       );
     }
     changes.allow_risk = modules.risk ? 1 : 0;
+  }
+  if (modules.integrations !== undefined) {
+    if (modules.integrations && !supportsIntegrations(rows)) {
+      throw new TraceApiError(
+        'this traceability instance predates the Integrations (Jira) licence (needs 4.25.0) and ' +
+          'would have silently discarded it',
+        409,
+      );
+    }
+    changes.allow_integrations = modules.integrations ? 1 : 0;
   }
 
   await saveTraceAccount(base, changes);

@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.6.0",
+    "date": "2026-10-15",
+    "changes": [
+      "✨ **Turn the Jira integration on or off per account.** A new **Jira** switch in the Modules popover on the accounts list, and an **Integrations (Jira)** tick on the account's Traceability tab. It is off for every account until you turn it on. Only the switch lives here: each account connects its own Jira and enters its own Jira secrets on its Integrations screen, stored encrypted for that account only. Needs traceability-matrix 4.25.0 on the account's region."
+    ]
+  },
+  {
+    "version": "1.5.0",
+    "date": "2026-10-15",
+    "changes": [
+      "✨ **Credits setting.** A new **Credits** page sets how dollars become the credits customers see in Ask Paul: credits per $1 (default 100) and a markup (default 1.0). One setting for every account; it takes effect in Ask Paul within 30 seconds. The Spend tab now also shows credits. Needs `sql/008` applied to the master database first."
+    ]
+  },
+  {
     "version": "1.4.2",
     "date": "2026-10-14",
     "changes": [
@@ -10,7 +24,7 @@
     "version": "1.4.1",
     "date": "2026-10-13",
     "changes": [
-      "🔧 **Ask Paul for traceability-only tenants.** A tenant with no master account had no way to get an Ask Paul database — the tab pointed at a Vector DB section it never showed. The Ask Paul tab now has a **Create Ask Paul database** button that creates the account and its database in the tenant's region, keeping its current module licences."
+      "🔧 **Ask Paul for traceability-only tenants.** A tenant with no master account had no way to get an Ask Paul database — the tab pointed at a Vector DB section it never showed. The Ask Paul tab now has a **Create Ask Paul database** button that creates the account and its database in the tenant's region, keeping its current module licences. Also fixes a stale earlier attempt blocking it with \"already created in the US region\"."
     ]
   },
   {

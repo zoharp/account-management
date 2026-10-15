@@ -9,6 +9,30 @@ Newest first.
 
 ---
 
+**1.6.0** (2026-10-15) — **Integrations (Jira) licence.** `account_access.allow_integrations`
+(traceability-matrix 4.25.0) is now switchable here, wired exactly like Risk (1.3.0): module key
+`integrations` (label **Jira**) in `module-catalog.ts`, `moduleFlag` / `supportsIntegrations` /
+`newTraceAccountRow` / `upsertTraceModules` in `lib/trace.ts`, `mergeAccounts`, the module pill route,
+`/api/accounts/trace/[tenant]` GET + PUT, and the Traceability tab tick. OPT-IN: an absent column reads
+as OFF; turning it on against an instance older than 4.25.0 answers 409 instead of being silently dropped.
+It does not count as a reachable module (an account with only Jira still needs Traceability or another
+module to sign in to). **Only the licence switch lives here** — every Jira credential (Atlassian app, API
+token, the integration's Orcanos user) is entered on the account's own Integrations screen in the trace
+app and stored encrypted under that account's `account_id`. The create-account form does not offer it;
+switch it on after creation.
+
+---
+
+**1.5.0** (2026-10-15) — **Credits setting, one for all accounts.** New `sql/008_platform_settings.sql`
+(master DB, table `platform_settings`, seeded `credits` = `{credits_per_usd: 100, markup: 1.0}`), new
+`/credits` page + nav item, `GET/PUT /api/settings/credits` (platform staff only, audited as
+`platform_setting_changed`, 409 naming the migration when the table is missing). Ask Paul reads the row
+(30 s cache) and shows customers credits = cost USD x markup x credits per $1, computed at read time, so a
+change re-prices history. `GET /api/accounts/:id/usage-logs` returns `total_credits` and the Spend tab
+shows it beside the $ figure. Defaults are mirrored in Ask Paul's `CREDIT_DEFAULTS` — change both together.
+
+---
+
 **1.4.2** (2026-10-14) — **Modules popover no longer truncates at the bottom of the screen.**
 
 The popover flipped above its trigger only when its *whole* height fitted above. With nine switches
@@ -48,7 +72,10 @@ would work but sends every module tick, rewriting the tenant's existing licences
   the name tried to "resume" it and was refused ("already created in the US region … delete the
   project in Supabase first" — it already was). Any answer other than a definite 404 still resumes,
   since wrongly skipping a live job bills a second project.
-- Not verified against live provisioning — typecheck and build only.
+- **Verified 2026-10-14 in production:** pcure (EU, traceability-only) went through the button — job
+  `done`, account `389b1ec7-…` active in `eu`, project `askpaul-pcure` (`eqpjdpshfltlqtxxskgk`) in
+  eu-central-1. The first end-to-end provisioning run recorded. The EU deployment still has no Ask
+  Paul hand-off, so pcure users do not see the button yet.
 
 ---
 

@@ -425,6 +425,9 @@ function disabledReason(
   if (key === 'risk' && !trace.supports_risk && row.modules.risk !== true) {
     return 'This traceability instance predates the Risk Management licence — deploy 4.12.0 first.';
   }
+  if (key === 'integrations' && !trace.supports_integrations && row.modules.integrations !== true) {
+    return 'This traceability instance predates the Integrations (Jira) licence — deploy 4.25.0 first.';
+  }
   if (!row.tenant) return 'No Orcanos tenant on this account — set its Orcanos API URL first.';
   // A tenant with no allowlist row is NOT a dead end any more: licensing either
   // traceability-owned module creates the row (api/accounts/modules). It stays

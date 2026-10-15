@@ -39,6 +39,7 @@ export const AUDIT_EVENT_GROUPS: readonly AuditEventGroup[] = [
     hint: 'Which modules an account may reach — Ask Paul, Traceability, Training.',
     types: [
       'account_module_changed',
+      'platform_setting_changed',
       'trace_account_created',
       'trace_account_updated',
       'trace_account_deleted',

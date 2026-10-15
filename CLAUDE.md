@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `1.4.2`
+- **App:** `1.6.0`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v1.md`](docs/changelog/CHANGELOG-v1.md) (long form; v0.x in `CHANGELOG-v0.md`) and
@@ -49,7 +49,7 @@ everything that writes is not.** Full record in [TESTING.md](TESTING.md).
 | ✅ Verified 2026-08-30 | **Module licences against the live traceability instance** — `TRACE_API_URL` now points at Fly, not localhost. |
 | ✅ Applied 2026-08-29 | **All three migrations are now in master**, via the Supabase Management API (`database/query`) rather than the SQL editor — same effect: `sql/002_orcanos_identity.sql`, `Orcanos QMS/design/sql/009_security_audit_log.sql`, `sql/001_account_provisioning.sql` |
 | ⬜ Untested | **Audit log.** The table now exists and `GET` answers 200 — but it starts **empty**, and nothing retroactive is recoverable. No event either app produced before 2026-08-29 was ever recorded. |
-| ⬜ Untested | **Create account.** `account_provisioning` now exists; the provisioning job has still never run end to end. Read the provisioning section below before the first real run. |
+| ✅ Verified 2026-10-14 | **Provisioning, end to end, in the EU.** pcure (traceability-only) got its Ask Paul database from the Ask Paul tab's *Create Ask Paul database* (1.4.1): job `done`, account `389b1ec7-…` (`region='eu'`, active), project `askpaul-pcure` = `eqpjdpshfltlqtxxskgk` in eu-central-1. The **Create account** form's own path is still unexercised. |
 | ⬜ Untested | Account detail, connection tests, billing, sign-out. The **accounts list** now renders live, with module licences from Fly. |
 
 ### Why Orcanos sign-in had never worked (2026-08-30)
@@ -402,8 +402,8 @@ Things to keep:
 That hostname publishes **only an AAAA record** and Vercel functions are
 IPv4-only, so it fails with `getaddrinfo ENOTFOUND` — which reads like a wrong
 hostname, not a missing address family. Until 1.0.0 `running_schema` did exactly
-that and failed on every real run (orphans `klrgfaddrnnawvagomxr` 2026-08-31,
-`aiydgrmdhecxwnzlddmd` 2026-09-30). **Since 1.0.0 it POSTs the bootstrap file to
+that and failed on every real run (orphans `klrgfaddrnnawvagomxr` 2026-08-31 — since
+deleted, verified 2026-10-14 — and `aiydgrmdhecxwnzlddmd` 2026-09-30). **Since 1.0.0 it POSTs the bootstrap file to
 the Management API `/projects/<ref>/database/query` route** — HTTPS, same org
 token, no DB password needed. Keep it that way.
 
@@ -412,7 +412,12 @@ refuse the second project (*"Project with name … already exists"*) while the
 first stays billed. `retryProvisioning()` / `POST …/provision/:jobId {retry:true}`
 / the modal's *Retry* button resume a job that has a `project_ref` and no
 `account_id` — and since 1.0.1 so does **Create** for the same name
-(`findResumableJob`), since a closed dialog loses the Retry button. Still open: the `accounts` row is written *last*, so a job
+(`findResumableJob`), since a closed dialog loses the Retry button. **Since 1.4.1
+`findResumableJob` skips a job whose project answers a definite 404** — a project
+deleted by hand otherwise turns its dead job into a permanent block on that name
+(pcure: `klrgfaddrnnawvagomxr`, deleted, made every create answer "already created in
+the US region … delete the project first"). Any other answer still resumes — a
+wrongly skipped live job bills a second project. Still open: the `accounts` row is written *last*, so a job
 abandoned before *Retry* is an orphan findable only via the query in
 `sql/001_account_provisioning.sql`.
 
@@ -605,7 +610,26 @@ deployment. Until `TRACE_API_URL_EU` is set, `POST /api/accounts` refuses `regio
     invisible to both. Verify a new insert shape by actually running it against
     the live table and deleting the row, not by building.
 
+15. **The regulatory-module defaults live in two repos and must match.**
+    `accounts.regulatory_modules` (`sql/007`, 1.4.0) stores only the switches
+    someone changed; a missing key means the default. This app's default is
+    `REGULATORY_DEFAULTS` (`src/lib/module-catalog.ts`); Ask Paul enforces with
+    its own `REGULATORY_MODULE_DEFAULTS` (`backend/api.py` in Orcanos QMS:
+    `fda_510k` and `mdsap` on, `standards` off). Change one without the other and
+    the console shows a module as on while Ask Paul hides it, or the reverse.
+    Adding a fourth module means changing the key in both places plus Ask Paul's
+    `_REGULATORY_ROUTE_PREFIXES`. The Standards module itself is specified in
+    Orcanos QMS `MD files/STANDARDS_MODULE.md`.
+
 ---
+
+## Credits setting (1.5.0)
+
+`/credits` edits master `platform_settings` key `credits` (`credits_per_usd`, `markup`; `sql/008`) — one
+setting for every account, read by Ask Paul (`credit_settings()` in its `backend/api.py`, 30 s cache) to show
+customers credits instead of $/tokens. Defaults (100 / 1.0) live in three places — the route, `CREDITS`
+fallback in `usage-logs/route.ts`, and Ask Paul's `CREDIT_DEFAULTS` — change them together. A missing table
+reads as defaults and saving answers 409; the migration is applied by hand, not by this app.
 
 ## Known deltas from QMS
 

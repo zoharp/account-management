@@ -46,6 +46,7 @@ export default function TraceabilityPanel({
   const [supportsBom, setSupportsBom] = useState(false);
   const [supportsReview, setSupportsReview] = useState(false);
   const [supportsRisk, setSupportsRisk] = useState(false);
+  const [supportsIntegrations, setSupportsIntegrations] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ kind: 'ok' | 'bad' | ''; text: string }>({
     kind: '',
@@ -60,6 +61,7 @@ export default function TraceabilityPanel({
   const [allowBom, setAllowBom] = useState(false);
   const [allowReview, setAllowReview] = useState(false);
   const [allowRisk, setAllowRisk] = useState(false);
+  const [allowIntegrations, setAllowIntegrations] = useState(false);
   const [note, setNote] = useState('');
 
   const load = useCallback(async () => {
@@ -77,6 +79,7 @@ export default function TraceabilityPanel({
       setSupportsBom(Boolean(data.supports_bom));
       setSupportsReview(Boolean(data.supports_review));
       setSupportsRisk(Boolean(data.supports_risk));
+      setSupportsIntegrations(Boolean(data.supports_integrations));
       const r = data.row;
       setAllowAccess(r ? Boolean(r.allow_access) : true);
       setAllowAi(r ? Boolean(r.allow_ai) : false);
@@ -86,6 +89,7 @@ export default function TraceabilityPanel({
       setAllowBom(on(r?.allow_bom, false));
       setAllowReview(on(r?.allow_review, false));
       setAllowRisk(on(r?.allow_risk, false));
+      setAllowIntegrations(on(r?.allow_integrations, false));
       setNote(r?.note ?? '');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -124,6 +128,7 @@ export default function TraceabilityPanel({
           ...(supportsBom ? { allow_bom: allowBom } : {}),
           ...(supportsReview ? { allow_review: allowReview } : {}),
           ...(supportsRisk ? { allow_risk: allowRisk } : {}),
+          ...(supportsIntegrations ? { allow_integrations: allowIntegrations } : {}),
           note,
         }),
       });
@@ -217,6 +222,19 @@ export default function TraceabilityPanel({
             ) : (
               <p className="acl-hint">
                 Risk Management needs traceability-matrix 4.12.0 on this tenant&apos;s instance
+                before it can be licensed.
+              </p>
+            )}
+            {supportsIntegrations ? (
+              <Check
+                label="Integrations (Jira)"
+                hint="Two-way sync between Orcanos items and Jira Cloud issues. Off by default. Each account connects its OWN Jira — its Jira site, sign-in and secrets are entered by the account's Orcanos administrator on its Integrations screen, stored encrypted for this account only. Nothing Jira-related is set here."
+                checked={allowIntegrations}
+                onChange={setAllowIntegrations}
+              />
+            ) : (
+              <p className="acl-hint">
+                Integrations (Jira) needs traceability-matrix 4.25.0 on this tenant&apos;s instance
                 before it can be licensed.
               </p>
             )}

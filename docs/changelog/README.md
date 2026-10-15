@@ -9,6 +9,8 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `1.6.0` | 2026-10-15 | Integrations (Jira) licence (`account_access.allow_integrations`, traceability 4.25.0) — opt-in like Risk: list popover switch **Jira**, Traceability tab tick, Overview state. Refused with 409 on an older instance. Jira credentials stay per account in the trace app. |
+| `1.5.0` | 2026-10-15 | **Credits** page: one platform-wide setting (credits per $1, markup) in master `platform_settings` (`sql/008`) that Ask Paul uses to show customers credits instead of $/tokens; Spend tab shows credits. |
 | `1.4.2` | 2026-10-14 | Modules popover opens on the side with room and scrolls instead of running off the bottom of the screen. |
 | `1.4.1` | 2026-10-13 | Ask Paul tab: **Create Ask Paul database** for traceability-only tenants (provisions in the tenant's region, keeps its licences); the open account window refreshes after a reload. |
 | `1.4.0` | 2026-10-13 | Per-account show/hide for 510(k), MDSAP and Standards (`accounts.regulatory_modules`, `sql/007`). |

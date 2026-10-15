@@ -196,6 +196,23 @@ Three things to preserve:
 Orphans are findable: the query is at the bottom of
 `sql/001_account_provisioning.sql`. Check it after any failed run.
 
+**Resuming instead of restarting.** `POST /api/accounts` for a name with a failed
+job that has a `project_ref` and no `account_id` resumes that job
+(`findResumableJob` → `resumeWithPayload`) rather than asking Supabase for a
+second project, which it refuses by name while the first stays billed. Since
+1.4.1 a candidate whose project answers **404** is skipped: a project deleted
+by hand would otherwise block every future create for that name, and the
+region check in `resumeWithPayload` would refuse it with advice ("delete the
+project first") that is already done. Only a definite 404 skips — a timeout
+or 5xx keeps the job, because skipping a live one bills a duplicate.
+
+**Two callers start a job.** The Create account modal, and — since 1.4.1 — the
+Ask Paul tab of a traceability-only tenant (*Create Ask Paul database*), which
+posts `account_name = tenant`, the tenant's region, `provision: true` and
+`modules: {}`. The empty object matters: `upsertTraceModules` leaves an absent
+key's licence untouched, so the tenant keeps its licences. The modal sends
+every tick and would rewrite them.
+
 ## 7. Connection testing
 
 Three independent tests, all returning `ConnectionTestResult`:

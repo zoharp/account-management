@@ -79,7 +79,7 @@ saving a credential, provisioning, billing and delete remain untested.
 | Account **detail** rendered while authenticated | The list renders; opening an account, and every connection test on it, is still unexercised. |
 | Any differential comparison against the QMS panel | This is the correctness argument, and none of it has been run. |
 | Any connection test against a real account | Vector DB, SQL Server and Orcanos REST all unexercised. |
-| A provisioning run | `readServiceKey()` has still never seen a live Management API response. |
+| ~~A provisioning run~~ | **Done 2026-10-14** via the Ask Paul tab (1.4.1) for pcure, EU: job reached `done`, `askpaul-pcure` (`eqpjdpshfltlqtxxskgk`) is `ACTIVE_HEALTHY` in eu-central-1, the master row has `vector_db_host` set, and `readServiceKey()` therefore read a live api-keys response. Still not run: the Create account modal's path, and a resume of a failed job. |
 | `sql/001_account_provisioning.sql` applied | Not applied to the master DB. Account creation will fail until it is. |
 | Deployment to Vercel | Never deployed. Every Vercel-specific claim (function limits, `mssql` reachability) is reasoning, not observation. |
 | **0.3.2 and 0.3.3, all of it** | Deployed 2026-08-31, verified by nothing but `tsc` and `next build`. Both releases change **write** paths — the Ask Paul database rule on four surfaces, and the traceability allowlist row on the module pill and both create paths. §5a is the plan; none of it has been run. The allowlist steps write to the live Fly instance. |

@@ -36,10 +36,23 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
     const totalTokens = logs.reduce((sum, l) => sum + (Number(l.tokens) || 0), 0);
     const totalCost = logs.reduce((sum, l) => sum + (Number(l.cost_usd) || 0), 0);
 
+    // Same formula Ask Paul shows customers (platform_settings key `credits`; missing = 100 / 1.0).
+    let factor = 100;
+    try {
+      const s = await pgGet<Array<{ value?: { credits_per_usd?: number; markup?: number } }>>(
+        'platform_settings?key=eq.credits&select=value',
+      );
+      const v = s[0]?.value;
+      if (Number(v?.credits_per_usd) > 0) factor = Number(v?.credits_per_usd) * (Number(v?.markup) > 0 ? Number(v?.markup) : 1);
+    } catch {
+      /* table not created yet — defaults */
+    }
+
     return Response.json({
       logs,
       total_tokens: totalTokens,
       total_cost_usd: Math.round(totalCost * 1e6) / 1e6,
+      total_credits: Math.round(totalCost * factor * 100) / 100,
     });
   } catch (e) {
     return Response.json({ detail: e instanceof Error ? e.message : String(e) }, { status: 500 });

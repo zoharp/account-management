@@ -51,7 +51,11 @@ const REFERENCE_TABLES = [
   { table: 'standards' },
   { table: 'standard_sections' },
   { table: 'predefined_questions' },
-  { table: 'rag_settings' },
+  // `account_*` and `agent_default_*` keys are the master tenant's OWN state, not product config:
+  // company profile, AI instructions, selected standard, QMS-in-use, AI-disclaimer acceptance (with
+  // the acceptor's email), Orcanos project ids. Copying them showed orca60's company data to pcure
+  // (2026-10-14). Everything else in rag_settings (thresholds, models) is tunable product config.
+  { table: 'rag_settings', skip: (r) => /^(account_|agent_default_)/.test(r.key) },
   { table: 'account_skills' },
   { table: 'account_section_keywords' },
   { table: 'settings_510k', reset: { default_repository_ids: [], fda_identifiers: {} } },
@@ -285,10 +289,11 @@ for (const t of tables) {
 // ── Reference rows ────────────────────────────────────────────────────────────
 
 section('Reference data');
-for (const { table, reset } of REFERENCE_TABLES) {
+for (const { table, reset, skip } of REFERENCE_TABLES) {
   if (!tableNames.has(table)) throw new Error(`Reference table '${table}' does not exist in ${ACCOUNT}`);
   const insertable = (cols[table] ?? []).filter((c) => c.generated !== 's');
-  const [{ rows }] = query(ref, `select coalesce(json_agg(t), '[]') as rows from public.${qi(table)} t`);
+  const [{ rows: allRows }] = query(ref, `select coalesce(json_agg(t), '[]') as rows from public.${qi(table)} t`);
+  const rows = skip ? allRows.filter((r) => !skip(r)) : allRows;
   if (!rows.length) {
     emit(`-- ${table}: no rows in ${ACCOUNT}`);
     continue;

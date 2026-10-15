@@ -28,6 +28,7 @@ import {
   supportsBom,
   supportsReview,
   supportsRisk,
+  supportsIntegrations,
   supportsModules,
   TraceApiError,
   traceConfigured,
@@ -99,6 +100,7 @@ export async function GET() {
     supports_bom: false,
     supports_review: false,
     supports_risk: false,
+    supports_integrations: false,
     url: process.env.TRACE_API_URL ?? null,
     message: '',
   };
@@ -115,6 +117,7 @@ export async function GET() {
       trace.supports_bom = supportsBom(traceRows);
       trace.supports_review = supportsReview(traceRows);
       trace.supports_risk = supportsRisk(traceRows);
+      trace.supports_integrations = supportsIntegrations(traceRows);
       if (!trace.supports_modules) {
         // Production Fly is 3.21.0 and has no allow_trace / allow_training.
         // `moduleFlag()` reads their absence as licensed (fail-open, matching
@@ -144,6 +147,11 @@ export async function GET() {
         trace.message =
           'This traceability instance predates the Risk Management licence (needs 4.12.0) — Risk ' +
           'cannot be licensed until it is deployed.';
+      } else if (!trace.supports_integrations) {
+        // 4.12–4.24: every other column is real, allow_integrations is not (opt-in, reads as off).
+        trace.message =
+          'This traceability instance predates the Integrations (Jira) licence (needs 4.25.0) — ' +
+          'Jira cannot be licensed until it is deployed.';
       }
     } catch (e) {
       trace.message = e instanceof Error ? e.message : String(e);

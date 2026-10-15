@@ -47,6 +47,7 @@ import {
   supportsBom,
   supportsReview,
   supportsRisk,
+  supportsIntegrations,
   supportsModules,
   hasReachableModule,
   traceConfigured,
@@ -82,6 +83,7 @@ const MODULE_KEYS: ModuleKey[] = [
   'training',
   'review',
   'risk',
+  'integrations',
   'bom',
   'fda_510k',
   'mdsap',
@@ -91,13 +93,14 @@ const MODULE_KEYS: ModuleKey[] = [
 /** The `account_access` column each module is licensed by. */
 const MODULE_COLUMN: Record<
   Exclude<ModuleKey, RegulatoryModuleKey>,
-  'allow_ask_paul' | 'allow_trace' | 'allow_training' | 'allow_review' | 'allow_risk' | 'allow_bom'
+  'allow_ask_paul' | 'allow_trace' | 'allow_training' | 'allow_review' | 'allow_risk' | 'allow_integrations' | 'allow_bom'
 > = {
   ask_paul: 'allow_ask_paul',
   trace: 'allow_trace',
   training: 'allow_training',
   review: 'allow_review',
   risk: 'allow_risk',
+  integrations: 'allow_integrations',
   bom: 'allow_bom',
 };
 
@@ -348,6 +351,18 @@ export async function PUT(req: Request) {
           detail:
             'This traceability instance predates the Risk Management licence and would silently ' +
             'discard the change. Deploy traceability-matrix 4.12.0 first.',
+        },
+        { status: 409 },
+      );
+    }
+
+    // Integrations (Jira)'s column landed in 4.25.0 — same again.
+    if (module === 'integrations' && !supportsIntegrations(rows)) {
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the Integrations (Jira) licence and would ' +
+            'silently discard the change. Deploy traceability-matrix 4.25.0 first.',
         },
         { status: 409 },
       );
