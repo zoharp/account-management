@@ -151,6 +151,14 @@ For at least two accounts, one with an Orcanos DB configured and one without:
 
 ## 5a. Module licences and the traceability allowlist
 
+Since **1.2.0** the module switches are not in the row: the Modules cell shows
+only licensed modules plus an `n/N ▾` count, and clicking it opens a popover
+with one switch per module. A switch that cannot be written is disabled with
+its reason as text under it; the "also adds the tenant to the allowlist" note
+is shown the same way. "Pill" and "click" below mean that switch. Also check:
+the popover stays open across several toggles (the table no longer blanks to
+*Loading…* on a refresh) and closes on outside click, Escape, scroll or resize.
+
 Added for **0.3.3**, which made the module pill able to *create* an
 `account_access` row rather than only edit one. Everything here writes to the
 **live Fly instance** — there is no staging traceability either. Use a
@@ -172,11 +180,14 @@ tenant*, which means it cannot sign in to traceability at all. It is not "off".
 3. **Ask Paul does not create the row.** On another tenant with no row, click
    Ask Paul → refused, naming Traceability or Training as the fix. No row is
    created (check `/admin`).
-4. **No tenant, no licence.** An account with no `orcanos_api_url` shows `–` and
-   both pills stay **disabled**, tooltip *"No Orcanos tenant on this
-   account"*. Set the Orcanos REST URL on the account window's **Orcanos** tab,
-   reload — the pills become
-   clickable. (This is the covaris case that prompted 0.3.3.)
+4. **No URL → keyed on the name, listed ONCE** (changed in 1.3.1). Create an
+   account with no Orcanos API URL and one module ticked. The list must show
+   **one** row for it, carrying that module — not a no-modules master row plus
+   a second row with the licence (the pre-1.3.1 bug, which reads like create
+   running twice). `/audit` shows a single `account_created` with
+   `tenant_from: account_name`. Its module switches are clickable. (The old
+   step — pills disabled with *"No Orcanos tenant on this account"* — only
+   applies now to an account with a blank name, which create refuses.)
 5. **Creation always writes the row.** Create an account with **every module
    unticked**. A row must appear on the trace `/admin` page with all three
    module columns 0. Before 0.3.3 no row was written at all.

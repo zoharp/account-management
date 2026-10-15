@@ -117,10 +117,11 @@ Still **not** verified:
 ### 4.1 `accounts.orcanos_tenant` — the merge key is currently derived
 
 The union keys on the Orcanos tenant, and on the master side that is **parsed out of
-`orcanos_api_url`** by `tenantOf()` at read time. It works for all three live accounts, but:
+`orcanos_api_url`** by `tenantOf()` at read time, falling back to the **account name** when there
+is no URL (since 1.3.1 — the same rule as `traceTenantForAccount()`, see below). But:
 
-- a master account with no `orcanos_api_url` **cannot be matched at all** and shows a blank
-  traceability half with no way to fix it from the UI;
+- a master account with no `orcanos_api_url` is matched on its name — right for every account
+  created since the 2026-08-29 rename, a guess for anything older;
 - the key silently changes if someone edits the API URL;
 - there is no uniqueness constraint, so two accounts could resolve to one tenant.
 
@@ -136,15 +137,27 @@ the trace instance's own `/admin` page. Now the pill creates the row (Traceabili
 only — never Ask Paul, which would produce a tenant that can sign in and reach nothing), and every
 account creation writes the row whether or not a module was ticked.
 
-What that does **not** fix is a master account with **no `orcanos_api_url`**: there is still no
-tenant to key the row on, so its pills stay disabled and the only fix is to set the URL. And when
-an account is created without one, the licences are keyed on the **account name** as a fallback —
-now surfaced rather than silent (`traceTenantForAccount()`, shown in the create form, recorded as
-`tenant_from` on the audit event), but still a guess. The column above remains the actual fix.
+When an account is created without an `orcanos_api_url`, the licences are keyed on the
+**account name** as a fallback — surfaced rather than silent (`traceTenantForAccount()`, shown in
+the create form, recorded as `tenant_from` on the audit event), but still a guess. The column above
+remains the actual fix.
+
+⚠️ **Until 1.3.1 the read side did not share that fallback — and that looked like create running
+twice.** `tenantOf()` returned `null` for a row with no URL, so the merge never matched the master
+row to the `account_access` row its own create had just written. Every such account was listed
+**twice**: the master row with no modules, and a "trace only" row carrying the licences. Reported
+on 2026-10-12 as "create creates the account twice" (`equashield`); the audit log showed one
+`account_created` (`tenant_from: account_name`) and the purge removed one master row and one trace
+row. Fix: `tenantOf()` delegates to `traceTenantForAccount()`, so the merge,
+`askPaulDatabaseExists()` and `GET /api/accounts/trace/:tenant` all use one rule with create and
+delete. **Any new place that derives a tenant must call the same function** or the duplicate comes
+back. Side effect, intended: a URL-less account's pills are no longer disabled for "no tenant".
 
 ### 4.2 The 12 traceability-only accounts have no master row
 
-D3 says create them. Not done — the console renders them read-side with a **Trace only** badge.
+D3 says create them. Not done — the console renders them read-side. The **Trace only** badge was
+removed in 1.2.0; such a row is now recognisable only by its spend being plain text rather than a
+billing link (it has no master `id`).
 Until they exist in master they have no `account_name` and no billing. Since §4.3 they *can* be
 licensed for every module, Ask Paul included — those licences live in `account_access`, which is
 exactly where a trace-only tenant does exist.
