@@ -9,6 +9,15 @@ Newest first.
 
 ---
 
+**1.6.1** (2026-10-16) — **New accounts start with 510(k) and MDSAP off.** Both create paths
+(`POST /api/accounts` without provisioning, and `tickSavingAccount` in `lib/provisioning.ts`) now
+write `regulatory_modules: NEW_ACCOUNT_REGULATORY` (`lib/module-catalog.ts`, all three `false`)
+into the new row. `REGULATORY_DEFAULTS` and Ask Paul's `REGULATORY_MODULE_DEFAULTS` are deliberately
+unchanged: they are what every existing account with no stored key reads as, so flipping them would
+have turned 510(k)/MDSAP off for all of those accounts. Needs `sql/007` (already applied since 1.4.0).
+
+---
+
 **1.6.0** (2026-10-15) — **Integrations (Jira) licence.** `account_access.allow_integrations`
 (traceability-matrix 4.25.0) is now switchable here, wired exactly like Risk (1.3.0): module key
 `integrations` (label **Jira**) in `module-catalog.ts`, `moduleFlag` / `supportsIntegrations` /

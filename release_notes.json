@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.6.1",
+    "date": "2026-10-16",
+    "changes": [
+      "🔧 **New accounts start with 510(k) and MDSAP off.** A newly created account no longer has 510(k) and MDSAP switched on by itself — turn them on in the Modules popover when the customer has them. Existing accounts are unchanged."
+    ]
+  },
+  {
     "version": "1.6.0",
     "date": "2026-10-15",
     "changes": [

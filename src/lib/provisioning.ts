@@ -34,6 +34,7 @@ import path from 'node:path';
 import { encryptSecret, generateDbPassword } from './crypto';
 import { supabaseOrgAccessToken, supabaseOrgId } from './env';
 import { traceTenantForAccount } from './orcanos-url';
+import { NEW_ACCOUNT_REGULATORY } from './module-catalog';
 import { coerceRegion, supabaseRegionFor } from './regions';
 import { accountCiFilter, isUniqueViolation, pgGet, pgPatch, pgPost } from './supabase';
 import { upsertRegionDirectory, upsertTraceModules } from './trace';
@@ -565,6 +566,8 @@ async function tickSavingAccount(job: JobRow): Promise<JobRow> {
     orcanos_db_user: body.orcanos_db_user ?? '',
     orcanos_api_url: body.orcanos_api_url || null,
     orcanos_username: body.orcanos_username || null,
+    // 510(k)/MDSAP/Standards start off — see NEW_ACCOUNT_REGULATORY.
+    regulatory_modules: NEW_ACCOUNT_REGULATORY,
   };
 
   // Passwords arrive already encrypted — they were encrypted at job-start so

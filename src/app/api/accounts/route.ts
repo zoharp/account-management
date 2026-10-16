@@ -20,6 +20,7 @@ import {
 } from '@/lib/provisioning';
 import { logSecurityEvent } from '@/lib/audit';
 import { mergeAccounts } from '@/lib/modules';
+import { NEW_ACCOUNT_REGULATORY } from '@/lib/module-catalog';
 import { DEFAULT_REGION, parseRegion, traceApiUrlFor } from '@/lib/regions';
 import {
   findTraceAccount,
@@ -370,6 +371,7 @@ export async function POST(req: Request) {
       db_name: '',
       db_user: '',
       db_password_encrypted: '',
+      regulatory_modules: NEW_ACCOUNT_REGULATORY,
     };
     // Only non-empty values from the form: writing '' over a supplied value
     // would blank it, and the UI reads '' as "configured, empty".

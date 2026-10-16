@@ -30,6 +30,18 @@ export const REGULATORY_DEFAULTS: Record<RegulatoryModuleKey, boolean> = {
   standards: false,
 };
 
+/**
+ * What a NEW account is created with — every regulatory module off until someone turns it
+ * on. Written explicitly into the row rather than changing REGULATORY_DEFAULTS: those
+ * defaults are what every existing account without a stored key reads as, here and in Ask
+ * Paul, and flipping them would switch 510(k)/MDSAP off for all of them.
+ */
+export const NEW_ACCOUNT_REGULATORY: Record<RegulatoryModuleKey, boolean> = {
+  fda_510k: false,
+  mdsap: false,
+  standards: false,
+};
+
 export function isRegulatoryModule(key: ModuleKey): key is RegulatoryModuleKey {
   return key in REGULATORY_DEFAULTS;
 }

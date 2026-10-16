@@ -41,7 +41,7 @@ One row per customer. The column groups matter more than the individual names:
 | Vector DB | `vector_db_type`, `vector_db_host`, `vector_db_name`, `vector_db_user`, `vector_db_password_encrypted`, `vector_connection_string` | The account's own provisioned Supabase project. `vector_db_password_encrypted` holds its `service_role` key. |
 | Orcanos SQL Server | `orcanos_db_type`, `orcanos_db_host`, `orcanos_db_name`, `orcanos_db_user`, `orcanos_db_password_encrypted`, `orcanos_connection_string` | The customer's own Orcanos database, read-only. |
 | Orcanos REST | `orcanos_api_url`, `orcanos_username`, `orcanos_password_encrypted` | QMS `SCHEMA.md` §16. |
-| Regulatory modules | `regulatory_modules` (jsonb) | `{fda_510k, mdsap, standards}` booleans. A missing key means the default: 510(k) and MDSAP on, Standards off. **Owned by this app** — `sql/007_regulatory_modules.sql`. Read by Ask Paul per request. |
+| Regulatory modules | `regulatory_modules` (jsonb) | `{fda_510k, mdsap, standards}` booleans. A missing key means the default: 510(k) and MDSAP on, Standards off. Accounts created from 1.6.1 on get all three written as `false`. **Owned by this app** — `sql/007_regulatory_modules.sql`. Read by Ask Paul per request. |
 
 **Five `*_encrypted` columns**, all AES-256-GCM under the shared
 `ENCRYPTION_KEY`: `db_password_encrypted`, `vector_db_password_encrypted`,
