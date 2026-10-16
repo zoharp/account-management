@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `1.6.0`
+- **App:** `1.6.1`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v1.md`](docs/changelog/CHANGELOG-v1.md) (long form; v0.x in `CHANGELOG-v0.md`) and
@@ -617,6 +617,10 @@ deployment. Until `TRACE_API_URL_EU` is set, `POST /api/accounts` refuses `regio
     its own `REGULATORY_MODULE_DEFAULTS` (`backend/api.py` in Orcanos QMS:
     `fda_510k` and `mdsap` on, `standards` off). Change one without the other and
     the console shows a module as on while Ask Paul hides it, or the reverse.
+    **New accounts don't use the defaults:** both create paths (`POST /api/accounts` and
+    provisioning's `tickSavingAccount`) write `NEW_ACCOUNT_REGULATORY` (all off, 1.6.1)
+    into the row. Never flip `REGULATORY_DEFAULTS` to get that — it would switch 510(k)
+    and MDSAP off for every existing account with no stored key.
     Adding a fourth module means changing the key in both places plus Ask Paul's
     `_REGULATORY_ROUTE_PREFIXES`. The Standards module itself is specified in
     Orcanos QMS `MD files/STANDARDS_MODULE.md`.
@@ -630,6 +634,30 @@ setting for every account, read by Ask Paul (`credit_settings()` in its `backend
 customers credits instead of $/tokens. Defaults (100 / 1.0) live in three places — the route, `CREDITS`
 fallback in `usage-logs/route.ts`, and Ask Paul's `CREDIT_DEFAULTS` — change them together. A missing table
 reads as defaults and saving answers 409; the migration is applied by hand, not by this app.
+
+## Jira (Integrations) licence (1.6.0) — and taking over the trace `/admin` page
+
+**The switch.** Module key `integrations` (label **Jira**) = trace `account_access.allow_integrations`
+(traceability-matrix 4.25.0+). OPT-IN like Risk/BOM: absent reads as OFF, and turning it on against an older
+instance answers 409 instead of being silently dropped. It is in the Modules popover and the Traceability
+tab; the create form does not offer it. It is **not** a reachable module on its own.
+
+**No Jira secrets here — ever.** Many customers share each trace database, so every Jira credential (the
+account's own Atlassian app, API tokens, the integration's Orcanos user) is entered by that account's admin
+on its Integrations screen in the trace app and stored encrypted under its `account_id`. There is no shared
+Orcanos Atlassian app any more (trace 4.26.0, its Critical Note #105). Don't add one back here.
+
+**The trace `/admin` page is retired (trace 4.26.0)** and redirects here. This app now owns everything it
+did. Still **to build** (per region, over the existing `/api/admin/*` routes in `lib/trace.ts`'s `call()`):
+1. a platform **Traceability** settings page (nav item + `src/app/traceability/`): the **global default AI
+   engine** — `saveTraceAiConfig('*', …)` / `testTraceAiConfig` / `getTraceEngine().global_default` (closes
+   G3 in INTERNAL_TRACE_MERGE.md) — and **blocked addresses** (`GET /api/admin/blocked` →
+   `{blocked, paused, stages}`; `DELETE /api/admin/blocked/{ip}`). Paused entries are per machine.
+2. a **traceability section on `/disaster-recovery`** (today Supabase only): `GET /api/admin/dr/status`
+   (database, disk, replication, session_crypto, local copies, keys), `GET /dr/replica`, `GET /dr/runbook`,
+   `POST /dr/verify`, `POST /dr/checkpoint`, `GET|POST /dr/local`, `DELETE /dr/local/{name}`. Never proxy the
+   backup **download** (the whole multi-tenant DB through Vercel) — leave it off.
+Every write audited (`platform_setting_changed` / a new `trace_dr_*` event in `audit-events.ts`).
 
 ## Known deltas from QMS
 
