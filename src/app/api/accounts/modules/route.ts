@@ -48,6 +48,8 @@ import {
   supportsReview,
   supportsRisk,
   supportsIntegrations,
+  supportsGithub,
+  supportsSbom,
   supportsModules,
   hasReachableModule,
   traceConfigured,
@@ -84,7 +86,9 @@ const MODULE_KEYS: ModuleKey[] = [
   'review',
   'risk',
   'integrations',
+  'github',
   'bom',
+  'sbom',
   'fda_510k',
   'mdsap',
   'standards',
@@ -93,7 +97,7 @@ const MODULE_KEYS: ModuleKey[] = [
 /** The `account_access` column each module is licensed by. */
 const MODULE_COLUMN: Record<
   Exclude<ModuleKey, RegulatoryModuleKey>,
-  'allow_ask_paul' | 'allow_trace' | 'allow_training' | 'allow_review' | 'allow_risk' | 'allow_integrations' | 'allow_bom'
+  'allow_ask_paul' | 'allow_trace' | 'allow_training' | 'allow_review' | 'allow_risk' | 'allow_integrations' | 'allow_github' | 'allow_bom' | 'allow_sbom'
 > = {
   ask_paul: 'allow_ask_paul',
   trace: 'allow_trace',
@@ -101,7 +105,9 @@ const MODULE_COLUMN: Record<
   review: 'allow_review',
   risk: 'allow_risk',
   integrations: 'allow_integrations',
+  github: 'allow_github',
   bom: 'allow_bom',
+  sbom: 'allow_sbom',
 };
 
 export async function PUT(req: Request) {
@@ -351,6 +357,30 @@ export async function PUT(req: Request) {
           detail:
             'This traceability instance predates the Risk Management licence and would silently ' +
             'discard the change. Deploy traceability-matrix 4.12.0 first.',
+        },
+        { status: 409 },
+      );
+    }
+
+    // The GitHub connector's column landed in 4.28.0 — same again.
+    if (module === 'github' && !supportsGithub(rows)) {
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the GitHub licence and would silently discard ' +
+            'the change. Deploy traceability-matrix 4.28.0 first.',
+        },
+        { status: 409 },
+      );
+    }
+
+    // The Software BOM's column landed in 4.30.0 — same again.
+    if (module === 'sbom' && !supportsSbom(rows)) {
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the Software BOM licence and would silently ' +
+            'discard the change. Deploy traceability-matrix 4.30.0 first.',
         },
         { status: 409 },
       );

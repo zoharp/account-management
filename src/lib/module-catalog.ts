@@ -66,10 +66,17 @@ export const MODULES: readonly ModuleDef[] = [
   // set here: each account enters its own on its Integrations screen (encrypted,
   // per account) — this is only the licence switch.
   { key: 'integrations', label: 'Jira', source: 'trace' },
+  // The GitHub connector (traceability-matrix 4.28.0), `account_access.allow_github`. OPT-IN.
+  // Either this or Jira opens the trace app's Integrations module; each connector needs its own.
+  // Like Jira, the GitHub sign-in is the account's own, entered on its Integrations screen.
+  { key: 'github', label: 'GitHub', source: 'trace' },
   // BOM viewer (traceability-matrix 3.46.0), `account_access.allow_bom`. The one
   // OPT-IN module: its column defaults to 0 and an absent value reads as OFF —
   // see `moduleFlag()` in lib/trace.ts. Hidden from a customer until ticked here.
   { key: 'bom', label: 'BOM', source: 'trace' },
+  // Software BOM (traceability-matrix 4.30.0), `account_access.allow_sbom`. OPT-IN. A SECOND
+  // licence that also opens the trace app's BOM module; the hardware BOM still needs `bom`.
+  { key: 'sbom', label: 'SBOM', source: 'trace' },
   // Ask Paul's regulatory sub-modules — master `accounts.regulatory_modules`. Hiding one
   // removes its sidebar entry and makes its routes answer 403 (enforced in Ask Paul).
   { key: 'fda_510k', label: '510(k)', source: 'master' },

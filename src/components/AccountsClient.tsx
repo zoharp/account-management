@@ -428,6 +428,12 @@ function disabledReason(
   if (key === 'integrations' && !trace.supports_integrations && row.modules.integrations !== true) {
     return 'This traceability instance predates the Integrations (Jira) licence — deploy 4.25.0 first.';
   }
+  if (key === 'github' && !trace.supports_github && row.modules.github !== true) {
+    return 'This traceability instance predates the GitHub licence — deploy 4.28.0 first.';
+  }
+  if (key === 'sbom' && !trace.supports_sbom && row.modules.sbom !== true) {
+    return 'This traceability instance predates the Software BOM licence — deploy 4.30.0 first.';
+  }
   if (!row.tenant) return 'No Orcanos tenant on this account — set its Orcanos API URL first.';
   // A tenant with no allowlist row is NOT a dead end any more: licensing either
   // traceability-owned module creates the row (api/accounts/modules). It stays

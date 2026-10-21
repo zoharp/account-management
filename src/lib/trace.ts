@@ -81,6 +81,10 @@ export interface TraceAccountRow {
    * its own Integrations screen in the trace app, per account.
    */
   allow_integrations?: number;
+  /** GitHub connector licence, added in 4.28.0. OPT-IN like Jira (`allow_integrations`). */
+  allow_github?: number;
+  /** Software BOM licence, added in 4.30.0. OPT-IN; opens the BOM module on its own. */
+  allow_sbom?: number;
   /** Ask Paul (QMS AI) licence and name override, added in 3.27.0. */
   allow_ask_paul?: number;
   /**
@@ -122,6 +126,10 @@ export function moduleFlag(row: TraceAccountRow | undefined, key: ModuleKey): bo
   if (key === 'risk') return Boolean(row.allow_risk);
   // And Integrations / Jira (4.25.0).
   if (key === 'integrations') return Boolean(row.allow_integrations);
+  // And the GitHub connector (4.28.0).
+  if (key === 'github') return Boolean(row.allow_github);
+  // And the Software BOM (4.30.0).
+  if (key === 'sbom') return Boolean(row.allow_sbom);
   const value =
     key === 'trace' ? row.allow_trace : key === 'training' ? row.allow_training : row.allow_ask_paul;
   return value === undefined || value === null ? true : Boolean(value);
@@ -165,6 +173,16 @@ export function supportsIntegrations(rows: TraceAccountRow[]): boolean {
   return rows.some((r) => r.allow_integrations !== undefined);
 }
 
+/** Does it carry `allow_github`? (4.28.0) Same silent-discard reason as `supportsBom`. */
+export function supportsGithub(rows: TraceAccountRow[]): boolean {
+  return rows.some((r) => r.allow_github !== undefined);
+}
+
+/** Does it carry `allow_sbom`? (4.30.0) Same silent-discard reason as `supportsBom`. */
+export function supportsSbom(rows: TraceAccountRow[]): boolean {
+  return rows.some((r) => r.allow_sbom !== undefined);
+}
+
 /**
  * Does this row hold at least one module a user can actually sign in to?
  * Ask Paul does not count (separate app). Trace/training absent = ON, BOM absent
@@ -175,6 +193,8 @@ export function hasReachableModule(row: Partial<TraceAccountRow>): boolean {
     Boolean(row.allow_trace ?? 1) ||
     Boolean(row.allow_training ?? 1) ||
     Boolean(row.allow_bom ?? 0) ||
+    // A Software-BOM-only tenant still reaches the BOM module (4.30.0).
+    Boolean(row.allow_sbom ?? 0) ||
     Boolean(row.allow_review ?? 0) ||
     Boolean(row.allow_risk ?? 0)
   );
@@ -518,6 +538,8 @@ export function newTraceAccountRow(tenant: string, region: DataRegion): TraceAcc
     allow_review: 0,
     allow_risk: 0,
     allow_integrations: 0,
+    allow_github: 0,
+    allow_sbom: 0,
     allow_ask_paul: 0,
   };
 }
@@ -609,6 +631,26 @@ export async function upsertTraceModules(
       );
     }
     changes.allow_integrations = modules.integrations ? 1 : 0;
+  }
+  if (modules.github !== undefined) {
+    if (modules.github && !supportsGithub(rows)) {
+      throw new TraceApiError(
+        'this traceability instance predates the GitHub licence (needs 4.28.0) and would have ' +
+          'silently discarded it',
+        409,
+      );
+    }
+    changes.allow_github = modules.github ? 1 : 0;
+  }
+  if (modules.sbom !== undefined) {
+    if (modules.sbom && !supportsSbom(rows)) {
+      throw new TraceApiError(
+        'this traceability instance predates the Software BOM licence (needs 4.30.0) and would ' +
+          'have silently discarded it',
+        409,
+      );
+    }
+    changes.allow_sbom = modules.sbom ? 1 : 0;
   }
 
   await saveTraceAccount(base, changes);

@@ -30,6 +30,8 @@ import {
   supportsReview,
   supportsRisk,
   supportsIntegrations,
+  supportsGithub,
+  supportsSbom,
   supportsModules,
   TraceApiError,
   traceConfigured,
@@ -102,6 +104,8 @@ export async function GET() {
     supports_review: false,
     supports_risk: false,
     supports_integrations: false,
+    supports_github: false,
+    supports_sbom: false,
     url: process.env.TRACE_API_URL ?? null,
     message: '',
   };
@@ -119,6 +123,8 @@ export async function GET() {
       trace.supports_review = supportsReview(traceRows);
       trace.supports_risk = supportsRisk(traceRows);
       trace.supports_integrations = supportsIntegrations(traceRows);
+      trace.supports_github = supportsGithub(traceRows);
+      trace.supports_sbom = supportsSbom(traceRows);
       if (!trace.supports_modules) {
         // Production Fly is 3.21.0 and has no allow_trace / allow_training.
         // `moduleFlag()` reads their absence as licensed (fail-open, matching

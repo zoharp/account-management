@@ -215,6 +215,10 @@ function buildRow(args: {
   const riskModule = unknown ? null : signedIn && moduleFlag(trace, 'risk');
   // And Integrations / Jira: an absent `allow_integrations` (pre-4.25.0 instance) reads as OFF.
   const integrationsModule = unknown ? null : signedIn && moduleFlag(trace, 'integrations');
+  // And the GitHub connector: an absent `allow_github` (pre-4.28.0 instance) reads as OFF.
+  const githubModule = unknown ? null : signedIn && moduleFlag(trace, 'github');
+  // And the Software BOM: an absent `allow_sbom` (pre-4.30.0 instance) reads as OFF.
+  const sbomModule = unknown ? null : signedIn && moduleFlag(trace, 'sbom');
 
   // Ask Paul has two halves and is licensed only when BOTH say yes — `is_active`
   // (the app itself) and `allow_ask_paul` (the door in from traceability). Off in
@@ -269,7 +273,9 @@ function buildRow(args: {
       review: reviewModule,
       risk: riskModule,
       integrations: integrationsModule,
+      github: githubModule,
       bom: bomModule,
+      sbom: sbomModule,
       // Master-owned: no master row = no answer (a dash), never "off".
       fda_510k: regulatoryFlag(master, 'fda_510k'),
       mdsap: regulatoryFlag(master, 'mdsap'),

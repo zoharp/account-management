@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.8.0",
+    "date": "2026-10-21",
+    "changes": [
+      "✨ **Turn the Software BOM on or off per account.** A new **SBOM** switch in the Modules popover on the accounts list, and a **Software BOM (SBOM)** tick on the account's Traceability tab. It is off for every account until you turn it on, and is separate from the BOM switch. Needs traceability 4.30.0."
+    ]
+  },
+  {
+    "version": "1.7.0",
+    "date": "2026-10-16",
+    "changes": [
+      "✨ **Turn the GitHub integration on or off per account.** A new **GitHub** switch in the Modules popover on the accounts list, and an **Integrations (GitHub)** tick on the account's Traceability tab. It is off for every account until you turn it on, and is separate from the Jira switch. Needs traceability 4.28.0."
+    ]
+  },
+  {
     "version": "1.6.1",
     "date": "2026-10-16",
     "changes": [

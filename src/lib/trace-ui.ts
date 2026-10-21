@@ -26,6 +26,10 @@ export interface TraceRow {
   allow_risk?: number;
   /** Integrations (Jira) licence (4.25.0) — OPT-IN: read with `on(v, false)`. */
   allow_integrations?: number;
+  /** GitHub connector licence (4.28.0) — OPT-IN: read with `on(v, false)`. */
+  allow_github?: number;
+  /** Software BOM licence (4.30.0) — OPT-IN: read with `on(v, false)`. */
+  allow_sbom?: number;
   allow_ask_paul?: number;
   ask_paul_account?: string;
   note?: string;
@@ -71,6 +75,10 @@ export interface TraceSettingsResponse {
   supports_risk: boolean;
   /** False on an instance older than 4.25.0 — the Jira tick is hidden rather than silently dropped. */
   supports_integrations?: boolean;
+  /** False on an instance older than 4.28.0 — the GitHub tick is hidden rather than silently dropped. */
+  supports_github?: boolean;
+  /** False on an instance older than 4.30.0 — the SBOM tick is hidden rather than silently dropped. */
+  supports_sbom?: boolean;
   master_account_name: string | null;
   master_has_database: boolean;
   detail?: string;

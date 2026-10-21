@@ -9,6 +9,8 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `1.8.0` | 2026-10-21 | **Software BOM licence switch** (`allow_sbom`, traceability 4.30.0): module pill *SBOM* + *Software BOM (SBOM)* tick; counts as a reachable module; refuses (409) on an instance without the column. |
+| `1.7.0` | 2026-10-16 | **GitHub licence switch** (`allow_github`, traceability 4.28.0): module pill *GitHub* + *Integrations (GitHub)* tick; refuses (409) on an instance without the column, like every opt-in licence. |
 | `1.6.1` | 2026-10-16 | New accounts are created with 510(k), MDSAP and Standards **off** (`NEW_ACCOUNT_REGULATORY` written into the row); defaults for existing accounts unchanged. |
 | `1.6.0` | 2026-10-15 | Integrations (Jira) licence (`account_access.allow_integrations`, traceability 4.25.0) — opt-in like Risk: list popover switch **Jira**, Traceability tab tick, Overview state. Refused with 409 on an older instance. Jira credentials stay per account in the trace app. |
 | `1.5.0` | 2026-10-15 | **Credits** page: one platform-wide setting (credits per $1, markup) in master `platform_settings` (`sql/008`) that Ask Paul uses to show customers credits instead of $/tokens; Spend tab shows credits. |

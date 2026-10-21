@@ -83,7 +83,9 @@ export type ModuleKey =
   | 'review'
   | 'risk'
   | 'integrations'
+  | 'github'
   | 'bom'
+  | 'sbom'
   | RegulatoryModuleKey;
 
 /**
@@ -175,6 +177,10 @@ export interface TraceSourceStatus {
   supports_risk: boolean;
   /** False when the instance predates `allow_integrations` (< 4.25.0). Opt-in, so absent reads as OFF. */
   supports_integrations: boolean;
+  /** False when the instance predates `allow_github` (< 4.28.0). Opt-in, so absent reads as OFF. */
+  supports_github: boolean;
+  /** False when the instance predates `allow_sbom` (< 4.30.0). Opt-in, so absent reads as OFF. */
+  supports_sbom: boolean;
   /** Which instance answered — shown in the UI so local-vs-Fly is never a guess. */
   url: string | null;
   message: string;

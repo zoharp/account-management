@@ -34,6 +34,8 @@ import {
   supportsReview,
   supportsRisk,
   supportsIntegrations,
+  supportsGithub,
+  supportsSbom,
   supportsModules,
   hasReachableModule,
   traceConfigured,
@@ -125,6 +127,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ tenant: string
       supports_review: supportsReview(rows),
       supports_risk: supportsRisk(rows),
       supports_integrations: supportsIntegrations(rows),
+      supports_github: supportsGithub(rows),
+      supports_sbom: supportsSbom(rows),
     });
   } catch (e) {
     return failed(e);
@@ -213,6 +217,30 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       );
     }
 
+    if (!supportsGithub(rows) && body.allow_github !== undefined) {
+      // And for the GitHub connector, added in 4.28.0.
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the GitHub licence and would silently discard ' +
+            'the change. Deploy traceability-matrix 4.28.0 first.',
+        },
+        { status: 409 },
+      );
+    }
+
+    if (!supportsSbom(rows) && body.allow_sbom !== undefined) {
+      // And for the Software BOM, added in 4.30.0.
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the Software BOM licence and would silently ' +
+            'discard the change. Deploy traceability-matrix 4.30.0 first.',
+        },
+        { status: 409 },
+      );
+    }
+
     // A row this app has never seen starts from the trace API's own defaults,
     // which are the fail-open ones. Everything else starts from what is stored.
     //
@@ -235,6 +263,9 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       allow_risk: 0,
       // And Integrations (Jira).
       allow_integrations: 0,
+      allow_github: 0,
+      // And the Software BOM.
+      allow_sbom: 0,
       allow_ask_paul: 1,
       ask_paul_account: '',
       note: '',
@@ -251,6 +282,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       allow_review: flag('allow_review', base.allow_review ?? 0),
       allow_risk: flag('allow_risk', base.allow_risk ?? 0),
       allow_integrations: flag('allow_integrations', base.allow_integrations ?? 0),
+      allow_github: flag('allow_github', base.allow_github ?? 0),
+      allow_sbom: flag('allow_sbom', base.allow_sbom ?? 0),
       allow_ask_paul: flag('allow_ask_paul', base.allow_ask_paul ?? 1),
       note: typeof body.note === 'string' ? body.note : (base.note ?? ''),
     };

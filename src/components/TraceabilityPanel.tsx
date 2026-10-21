@@ -47,6 +47,8 @@ export default function TraceabilityPanel({
   const [supportsReview, setSupportsReview] = useState(false);
   const [supportsRisk, setSupportsRisk] = useState(false);
   const [supportsIntegrations, setSupportsIntegrations] = useState(false);
+  const [supportsGithub, setSupportsGithub] = useState(false);
+  const [supportsSbom, setSupportsSbom] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ kind: 'ok' | 'bad' | ''; text: string }>({
     kind: '',
@@ -62,6 +64,8 @@ export default function TraceabilityPanel({
   const [allowReview, setAllowReview] = useState(false);
   const [allowRisk, setAllowRisk] = useState(false);
   const [allowIntegrations, setAllowIntegrations] = useState(false);
+  const [allowGithub, setAllowGithub] = useState(false);
+  const [allowSbom, setAllowSbom] = useState(false);
   const [note, setNote] = useState('');
 
   const load = useCallback(async () => {
@@ -80,6 +84,8 @@ export default function TraceabilityPanel({
       setSupportsReview(Boolean(data.supports_review));
       setSupportsRisk(Boolean(data.supports_risk));
       setSupportsIntegrations(Boolean(data.supports_integrations));
+      setSupportsGithub(Boolean(data.supports_github));
+      setSupportsSbom(Boolean(data.supports_sbom));
       const r = data.row;
       setAllowAccess(r ? Boolean(r.allow_access) : true);
       setAllowAi(r ? Boolean(r.allow_ai) : false);
@@ -90,6 +96,8 @@ export default function TraceabilityPanel({
       setAllowReview(on(r?.allow_review, false));
       setAllowRisk(on(r?.allow_risk, false));
       setAllowIntegrations(on(r?.allow_integrations, false));
+      setAllowGithub(on(r?.allow_github, false));
+      setAllowSbom(on(r?.allow_sbom, false));
       setNote(r?.note ?? '');
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
@@ -105,6 +113,7 @@ export default function TraceabilityPanel({
     !allowTrace &&
     !allowTraining &&
     !(supportsBom && allowBom) &&
+    !(supportsSbom && allowSbom) &&
     !(supportsReview && allowReview) &&
     !(supportsRisk && allowRisk);
 
@@ -129,6 +138,8 @@ export default function TraceabilityPanel({
           ...(supportsReview ? { allow_review: allowReview } : {}),
           ...(supportsRisk ? { allow_risk: allowRisk } : {}),
           ...(supportsIntegrations ? { allow_integrations: allowIntegrations } : {}),
+          ...(supportsGithub ? { allow_github: allowGithub } : {}),
+          ...(supportsSbom ? { allow_sbom: allowSbom } : {}),
           note,
         }),
       });
@@ -238,6 +249,19 @@ export default function TraceabilityPanel({
                 before it can be licensed.
               </p>
             )}
+            {supportsGithub ? (
+              <Check
+                label="Integrations (GitHub)"
+                hint="Two-way sync between Orcanos items and GitHub issues. Off by default. Each account connects its OWN GitHub — its sign-in (an OAuth App or a token) is entered by the account's Orcanos administrator on its Integrations screen, stored encrypted for this account only. Nothing GitHub-related is set here."
+                checked={allowGithub}
+                onChange={setAllowGithub}
+              />
+            ) : (
+              <p className="acl-hint">
+                Integrations (GitHub) needs traceability-matrix 4.28.0 on this tenant&apos;s instance
+                before it can be licensed.
+              </p>
+            )}
             {supportsBom ? (
               <Check
                 label="BOM"
@@ -249,6 +273,19 @@ export default function TraceabilityPanel({
               <p className="acl-hint">
                 BOM needs traceability-matrix 3.46.0 on this tenant&apos;s instance before it can be
                 licensed.
+              </p>
+            )}
+            {supportsSbom ? (
+              <Check
+                label="Software BOM (SBOM)"
+                hint="The Software BOM — import a release's CycloneDX / SPDX / Excel SBOM, see its component tree, compare releases. Off by default. Its own licence: it opens the BOM module on its own, and the hardware BOM above still needs its own tick. Its Orcanos types and filters are then set inside the module by an Orcanos administrator."
+                checked={allowSbom}
+                onChange={setAllowSbom}
+              />
+            ) : (
+              <p className="acl-hint">
+                Software BOM needs traceability-matrix 4.30.0 on this tenant&apos;s instance before it
+                can be licensed.
               </p>
             )}
             {noModule && (
