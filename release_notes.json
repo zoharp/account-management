@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.9.0",
+    "date": "2026-10-23",
+    "changes": [
+      "✨ **Staff screen.** A new **Staff** page lists who can sign in to this console and lets you add a person (their email and Orcanos username), change their Orcanos username, remove their access or restore it. Before this, a new person could not sign in until their access was added by hand in the database. They still need to be an admin in Orcanos."
+    ]
+  },
+  {
     "version": "1.8.0",
     "date": "2026-10-21",
     "changes": [

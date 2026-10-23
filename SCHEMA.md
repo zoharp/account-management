@@ -214,15 +214,19 @@ after any failed provisioning run.
 
 `users` is global — one row per person across every account, keyed by email, with
 `role` ∈ `admin` | `user`. This app reads `id, email, display_name, role,
-auth_method, last_login_at` and writes only `last_login_at` (and `display_name`
-on sign-in). It **never inserts a row**: an identity with no existing `users` row
-is refused at sign-in rather than auto-provisioned.
+auth_method, last_login_at` and writes `last_login_at` (and `display_name`
+on sign-in). Sign-in **never inserts a row**: an identity with no existing `users` row
+is refused rather than auto-provisioned. The **Staff** page (1.9.0, `lib/staff.ts`) is the only
+writer of rows: it inserts `{email, display_name, auth_method: 'orcanos', role: 'admin',
+orcanos_user_name}` (shape verified against the live table 2026-10-23), sets `role`/
+`orcanos_user_name`/`display_name`, and clears `orcanos_account` when the username changes. It
+never deletes — removal is `role = 'user'`.
 
 **`orcanos_user_name` / `orcanos_account`** (`sql/002_orcanos_identity.sql`) are
 the join key `POST /api/auth/local/login` uses to verify a password via
 `QW_Login` instead of bcrypt — see CLAUDE.md "Orcanos sign-in". Unique on
 `(orcanos_account, lower(orcanos_user_name))` where both are non-null.
-`orcanos_user_name` is admin-set (SQL editor, no UI yet); `orcanos_account` is
+`orcanos_user_name` is admin-set (the **Staff** page since 1.9.0); `orcanos_account` is
 filled by the app itself on that row's first successful `QW_Login`.
 
 `auth_methods` is read for exactly one account — the one named by

@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `1.8.0`
+- **App:** `1.9.0`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v1.md`](docs/changelog/CHANGELOG-v1.md) (long form; v0.x in `CHANGELOG-v0.md`) and
@@ -358,9 +358,18 @@ and this app still reads `local_enabled` as the gate for whether the "sign in
 with email" form appears at all — only what happens *inside* that route
 changed.
 
-**Not yet built:** an admin UI to set `orcanos_user_name`/`role` on a `users`
-row. Today that is a manual `INSERT`/`UPDATE` in the Supabase SQL editor, same
-as `auth_methods` and `PLATFORM_ACCOUNT` already are.
+**Staff screen (1.9.0)** — `/staff`, `api/staff`, `lib/staff.ts` — sets `orcanos_user_name`/`role`
+on a `users` row; no more SQL editor. Things to keep:
+- **Staff = `users` rows on `@PLATFORM_EMAIL_DOMAIN`.** Not a table of its own. Adding an email that
+  already has a row (QMS may own one) re-admits that row instead of inserting a duplicate.
+- **Remove = `role = 'user'`, never a delete.** `users` is shared with QMS and keyed by email; demoting
+  is the gate's instant kill switch here *and* in QMS (same check), and *Restore* undoes it.
+- **Changing the username clears `orcanos_account`** — a stale tenant would refuse the next sign-in as
+  `orcanos_identity_mismatch`; it is re-filled on the next successful sign-in.
+- **A username already set on another row is refused (409)** — the login looks the name up across rows.
+- **Nobody can remove themselves** — the last admin doing so locks everyone out.
+- Audited as `staff_added` / `staff_updated` / `staff_removed` (*Users & access* group).
+`auth_methods` and `PLATFORM_ACCOUNT` are still SQL-editor only.
 
 ---
 

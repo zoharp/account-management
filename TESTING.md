@@ -119,6 +119,11 @@ defence — all master-DB access uses the service key, so there is no RLS behind
    database and reload → access is refused immediately, without signing out.
    This proves `role` is read from the DB, not from the JWT.
 7. `/accounts` signed out redirects to `/login`; sign out returns to `/login`.
+8. **Staff page (1.9.0)** — ✅ verified 2026-10-23 against live master, locally (dev server, minted
+   session): `GET /api/staff` signed out → 404; non-staff email → 400; a username already on another row
+   → 409; add → change username → remove (row demoted to `role='user'`, not deleted); removing yourself →
+   400; an id off the staff domain → 404. Test row deleted afterwards. ⬜ Still to do on production: add
+   a real person and have them sign in.
 
 ## 4. Differential — accounts list and detail
 

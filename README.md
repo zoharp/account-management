@@ -163,8 +163,9 @@ caller cannot tell the routes exist. Keep it that way.
 ### Giving someone access
 
 A person needs to exist in **two places**. Being an Orcanos admin is not enough
-on its own: nothing creates the console row automatically, and there is no
-screen for adding staff yet, so it is manual SQL.
+on its own: nothing creates the console row automatically. Since 1.9.0 the
+**Staff** page adds it (email + Orcanos username) — use that rather than the SQL
+below, which is kept for when nobody can sign in at all.
 
 **1. Orcanos, tenant `orcanos`** (`app.orcanos.com/orcanos` — `ORCANOS_LOGIN_URL`)
 
@@ -173,7 +174,7 @@ screen for adding staff yet, so it is manual SQL.
   `Incorrect credentials. Try Using SSO`.
 - **Admin** in that tenant (`User_details.Is_admin`).
 
-**2. The master `users` table** (Supabase SQL editor, master project)
+**2. The master `users` table** — the **Staff** page, or the Supabase SQL editor on the master project
 
 | Column | Value | Why |
 |---|---|---|

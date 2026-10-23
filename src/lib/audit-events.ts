@@ -74,8 +74,16 @@ export const AUDIT_EVENT_GROUPS: readonly AuditEventGroup[] = [
   {
     key: 'users',
     label: 'Users & access',
-    hint: 'Platform users and repository membership. Written by QMS.',
-    types: ['user_deleted', 'repo_member_added', 'repo_member_updated', 'repo_member_removed'],
+    hint: 'Console staff added, changed or removed, plus platform users and repository membership (QMS).',
+    types: [
+      'staff_added',
+      'staff_updated',
+      'staff_removed',
+      'user_deleted',
+      'repo_member_added',
+      'repo_member_updated',
+      'repo_member_removed',
+    ],
   },
   {
     key: 'compliance',

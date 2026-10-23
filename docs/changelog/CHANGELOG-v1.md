@@ -9,6 +9,17 @@ Newest first.
 
 ---
 
+**1.9.0** (2026-10-23) — **Staff screen.** Three Orcanos staff could not sign in (`no_such_user`
+in `security_audit_log`): being an Orcanos admin was never enough — each needs a master `users` row
+with `role = 'admin'` and their `orcanos_user_name`, which until now was hand-written SQL. New nav item
+**Staff** (`/staff`, `StaffClient`), `GET|POST /api/staff`, `PATCH|DELETE /api/staff/:id`,
+`lib/staff.ts`. Staff = `users` rows on `@PLATFORM_EMAIL_DOMAIN`; adding an existing email re-admits that
+row; removing sets `role = 'user'` (never deletes — shared with QMS); *Restore* re-admits; a username
+change clears `orcanos_account`; a username held by another row → 409; removing yourself → 400. Audit
+events `staff_added` / `staff_updated` / `staff_removed` (group *Users & access*). Verified locally against
+live master: signed-out 404, validation 400/409, add → change username → remove, self-remove refused, test
+row deleted; insert shape checked against the live table. `tsc` and lint clean.
+
 **1.8.0** (2026-10-21) — **Software BOM licence switch.** traceability-matrix 4.30.0 added the Software BOM with its OWN licence, `account_access.allow_sbom` (opt-in, default 0); it opens the BOM module on its own, and the hardware BOM still needs `allow_bom`. New `ModuleKey` `sbom` (catalog label *SBOM*), `moduleFlag` / `supportsSbom` / `setTraceModules`, the modules route's column map, `supports_sbom` on the list, the *Software BOM (SBOM)* tick and the trace PUT; an instance without the column gets a 409, never a silent drop. `hasReachableModule` counts `allow_sbom` (an SBOM-only tenant reaches a module), and so does the panel's *at least one module* check. Verified: `tsc --noEmit` clean.
 
 **1.7.0** (2026-10-16) — **GitHub licence switch.** traceability-matrix 4.28.0 gave its Integrations module a GitHub connector with its OWN licence, `account_access.allow_github` (opt-in, default 0); `allow_integrations` stays Jira, either opens the module, each connector needs its own. New `ModuleKey` `github` (catalog label *GitHub*), `moduleFlag` / `supportsGithub` / `setTraceModules`, the modules route's column map, `supports_github` on the list, the *Integrations (GitHub)* tick and the trace PUT; an instance without the column gets a 409, never a silent drop. Saves spread the stored row, so an older console keeps `allow_github` as stored. Verified: `tsc --noEmit` clean.
