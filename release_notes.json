@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.10.0",
+    "date": "2026-11-06",
+    "changes": [
+      "✨ **Presentations.** A new **Presentations** page shows who opens the customer presentations: views, visitors, time spent, how far they read (views per slide), country, where they came from, device, language and which e-mail link brought them. Pick the region and the period; click a presentation for its detail. Needs the traceability app deployed with presentation tracking."
+    ]
+  },
+  {
     "version": "1.9.0",
     "date": "2026-10-23",
     "changes": [

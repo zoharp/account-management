@@ -9,6 +9,15 @@ Newest first.
 
 ---
 
+**1.10.0** (2026-11-06) — **Presentations page.** traceability-matrix now tracks its served customer decks with its own
+no-cookie beacon (`deck_analytics.py`, table `deck_events`, hashed IP, DB-IP Lite country). New nav item
+**Presentations** (`/presentations`, `PresentationsClient`), `GET /api/presentations` (`requirePlatformStaff`;
+`region`, `days`, `deck`), `getDeckStats()` in `lib/trace.ts` → trace `GET /api/admin/decks/stats` with the admin
+token. Summary table per deck; a deck's detail = KPI tiles, views + average seconds per slide, and breakdowns by
+country, referrer, device, language, day and UTM campaign / content. A trace 404 → 501 with a "deploy
+traceability-matrix first" message. Verified: `tsc --noEmit` clean; not opened in a browser (no trace build with
+the route deployed yet).
+
 **1.9.0** (2026-10-23) — **Staff screen.** Three Orcanos staff could not sign in (`no_such_user`
 in `security_audit_log`): being an Orcanos admin was never enough — each needs a master `users` row
 with `role = 'admin'` and their `orcanos_user_name`, which until now was hand-written SQL. New nav item

@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `1.9.0`
+- **App:** `1.10.0`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v1.md`](docs/changelog/CHANGELOG-v1.md) (long form; v0.x in `CHANGELOG-v0.md`) and
@@ -643,6 +643,16 @@ setting for every account, read by Ask Paul (`credit_settings()` in its `backend
 customers credits instead of $/tokens. Defaults (100 / 1.0) live in three places — the route, `CREDITS`
 fallback in `usage-logs/route.ts`, and Ask Paul's `CREDIT_DEFAULTS` — change them together. A missing table
 reads as defaults and saving answers 409; the migration is applied by hand, not by this app.
+
+## Presentations (1.10.0)
+
+`/presentations` (staff only, nav before *Audit log*) shows who opens the customer decks served by
+traceability-matrix (`/orcanos-<deck>.html`): views, visitors, average time, per-slide drop-off, country,
+referrer, device, language, views per day and UTM campaign / link. Data = trace `deck_events` (trace 2026-11-06,
+`deck_analytics.py`) through `GET /api/admin/decks/stats` via `getDeckStats()` in `lib/trace.ts` → `api/presentations`
+(`requirePlatformStaff`, region from `traceRegions()`). A trace 404 (older build) → **501**, shown as "deploy
+traceability-matrix first". Each region counts its own visitors — no merged view. Read-only, so nothing is
+audited. The DB-IP attribution line on the page is a licence condition (CC BY 4.0) — keep it.
 
 ## Jira (Integrations) licence (1.6.0) — and taking over the trace `/admin` page
 

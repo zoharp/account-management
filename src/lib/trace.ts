@@ -900,3 +900,35 @@ export async function listTraceUsage(
 export function traceConfigured(): boolean {
   return traceRegions().length > 0;
 }
+
+/**
+ * Usage of the customer presentations (`/orcanos-<deck>.html`) on one regional instance —
+ * traceability-matrix `GET /api/admin/decks/stats` (deck_analytics.py, 2026-11-06). Without
+ * `deck`: one line per deck. With `deck`: per-slide views/time, country, campaign, referrer,
+ * device and language. No cookies on the deck side; the IP is only ever a salted hash there.
+ */
+export async function getDeckStats(
+  region: DataRegion,
+  deck = '',
+  days = 90,
+): Promise<Record<string, unknown>> {
+  const q = new URLSearchParams({ days: String(days) });
+  if (deck) q.set('deck', deck);
+  return call(region, `/api/admin/decks/stats?${q.toString()}`);
+}
+
+/**
+ * Anonymous app usage statistics on one regional instance — traceability-matrix
+ * `GET /api/admin/usage/stats` (usage_analytics.py, 2026-11-07). Daily totals per account only;
+ * no user id is stored on that side. Without `account`: one line per account + totals per day.
+ * With `account`: that account by day, by page and by action.
+ */
+export async function getUsageStats(
+  region: DataRegion,
+  account = '',
+  days = 30,
+): Promise<Record<string, unknown>> {
+  const q = new URLSearchParams({ days: String(days) });
+  if (account) q.set('account', account);
+  return call(region, `/api/admin/usage/stats?${q.toString()}`);
+}

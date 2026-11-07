@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `1.10.0` | 2026-11-06 | **Presentations** page: who opens the customer decks — views, visitors, time, per-slide drop-off, country, referrer, device, language, UTM link (trace `deck_events` via `/api/admin/decks/stats`). |
 | `1.9.0` | 2026-10-23 | **Staff** page: add / re-username / remove (demote) / restore console staff — master `users` rows on the staff domain; no more SQL to give someone access. |
 | `1.8.0` | 2026-10-21 | **Software BOM licence switch** (`allow_sbom`, traceability 4.30.0): module pill *SBOM* + *Software BOM (SBOM)* tick; counts as a reachable module; refuses (409) on an instance without the column. |
 | `1.7.0` | 2026-10-16 | **GitHub licence switch** (`allow_github`, traceability 4.28.0): module pill *GitHub* + *Integrations (GitHub)* tick; refuses (409) on an instance without the column, like every opt-in licence. |
