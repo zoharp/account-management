@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.10.1",
+    "date": "2026-11-08",
+    "changes": [
+      "🐛 **Ask Paul database for existing accounts.** An account that already existed but had no Ask Paul database could only have one typed in by hand. The Ask Paul tab now offers **Create Ask Paul database** for it too: it creates the Supabase project in the account's region, fills in the Vector DB section and switches Ask Paul on. Licences are left as they are."
+    ]
+  },
+  {
     "version": "1.10.0",
     "date": "2026-11-06",
     "changes": [

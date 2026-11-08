@@ -9,6 +9,16 @@ Newest first.
 
 ---
 
+**1.10.1** (2026-11-08) — **Create Ask Paul database for an existing account.** The Ask Paul tab's
+*Create Ask Paul database* only appeared for traceability-only tenants, because `POST /api/accounts`
+(`provision: true`) can only insert a new row; an account with a master row but no database (reutsapir,
+EU) got only the manual Vector DB form. New `POST /api/accounts/:id/provision-db` (`requirePlatformStaff`)
+starts the same resumable job with `payload.attach_account_id` (`startAttachProvisioning`), region read
+from the account row. Its last step (`attachToExistingAccount`) PATCHes the db_*/vector_db_* columns and
+`is_active = true` instead of inserting, guarded so it never overwrites a database typed in meanwhile
+(job fails naming the billed project). Licences untouched. Completion audits `account_database_attached`
+(group *Provisioning*) instead of `account_created`. Verified: `tsc --noEmit` clean; not yet run end to end.
+
 **1.10.0** (2026-11-06) — **Presentations page.** traceability-matrix now tracks its served customer decks with its own
 no-cookie beacon (`deck_analytics.py`, table `deck_events`, hashed IP, DB-IP Lite country). New nav item
 **Presentations** (`/presentations`, `PresentationsClient`), `GET /api/presentations` (`requirePlatformStaff`;

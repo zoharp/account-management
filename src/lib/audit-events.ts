@@ -69,6 +69,7 @@ export const AUDIT_EVENT_GROUPS: readonly AuditEventGroup[] = [
       'account_provisioning_started',
       'account_provisioning_retried',
       'account_provisioning_failed',
+      'account_database_attached',
     ],
   },
   {

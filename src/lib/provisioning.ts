@@ -527,6 +527,104 @@ export async function retryProvisioning(jobId: string): Promise<JobRow> {
 }
 
 /**
+ * Start a job that gives an EXISTING account with no database its Ask Paul
+ * Supabase project. Same steps as a create; only the last one differs — it
+ * patches the account's database columns instead of inserting a row
+ * (`attachToExistingAccount`). The region is the account's own, read from its
+ * row by the caller, so the project lands where the account already lives.
+ *
+ * Licences are not touched: the account already has its traceability row, and
+ * the create path's "write every module" would overwrite it.
+ */
+export async function startAttachProvisioning(
+  account: { id: string; account_name: string; region: DataRegion },
+  requestedByEmail: string | null,
+): Promise<JobRow> {
+  return startProvisioning(
+    account.account_name,
+    { attach_account_id: account.id },
+    requestedByEmail,
+    account.region,
+  );
+}
+
+/**
+ * Final step of an attach job. Writes the database columns only if the account
+ * still has none — someone typing a database in by hand while this ran must not
+ * be silently overwritten; the job fails and names the billed project instead.
+ */
+async function attachToExistingAccount(
+  job: JobRow,
+  accountId: string,
+  vectorHost: string,
+  serviceKeyEncrypted: string,
+): Promise<JobRow> {
+  const rows = await pgGet<Array<{ id: string; db_host: string | null; vector_db_host: string | null }>>(
+    `accounts?id=eq.${encodeURIComponent(accountId)}&select=id,db_host,vector_db_host`,
+  );
+  const current = rows[0];
+  if (!current) {
+    return updateJob(job.id, {
+      state: 'error',
+      message:
+        `The account this database was for no longer exists. The Supabase project ` +
+        `${job.project_ref} was created and is being billed — delete it in Supabase.`,
+    });
+  }
+  if ((current.vector_db_host ?? '').trim() || (current.db_host ?? '').trim()) {
+    return updateJob(job.id, {
+      state: 'error',
+      message:
+        `'${job.account_name}' was given a database by hand while this job ran, so it was left ` +
+        `as it is. The Supabase project ${job.project_ref} was created and is being billed — ` +
+        `point the account at it, or delete it in Supabase.`,
+    });
+  }
+
+  // Same column set the create path writes, including the legacy db_* pair the
+  // QMS middleware still reads. Guarded on both hosts being empty again, so a
+  // write that raced the check above lands on nothing rather than over it.
+  const patched = await pgPatch<Array<{ id: string }>>(
+    `accounts?id=eq.${encodeURIComponent(accountId)}` +
+      `&and=(or(db_host.is.null,db_host.eq.""),or(vector_db_host.is.null,vector_db_host.eq.""))`,
+    {
+      // Ask Paul's kill switch — it could not be on without a database, and the
+      // only reason to press this button is to switch Ask Paul on.
+      is_active: true,
+      db_type: 'supabase',
+      db_host: vectorHost,
+      db_name: 'postgres',
+      db_user: 'postgres',
+      db_password_encrypted: serviceKeyEncrypted,
+      vector_db_type: 'supabase',
+      vector_db_host: vectorHost,
+      vector_db_name: 'postgres',
+      vector_db_user: 'postgres',
+      vector_db_password_encrypted: serviceKeyEncrypted,
+    },
+  );
+  if (!patched.length) {
+    return updateJob(job.id, {
+      state: 'error',
+      message:
+        `'${job.account_name}' was given a database by hand while this job ran, so it was left ` +
+        `as it is. The Supabase project ${job.project_ref} was created and is being billed — ` +
+        `point the account at it, or delete it in Supabase.`,
+    });
+  }
+
+  const note = await schemaDriftNote(job.project_ref!, job.account_name);
+  return updateJob(job.id, {
+    state: 'done',
+    message: `Database created and attached${note}`,
+    account_id: accountId,
+    db_password_encrypted: null,
+    service_key_encrypted: null,
+    payload: null,
+  });
+}
+
+/**
  * Final step — write the `accounts` row.
  *
  * Field-for-field the same row the Python builds, including writing the SAME
@@ -542,6 +640,10 @@ async function tickSavingAccount(job: JobRow): Promise<JobRow> {
   const body = (job.payload ?? {}) as Record<string, string | undefined>;
   const vectorHost = `https://${job.project_ref}.supabase.co`;
   const serviceKeyEncrypted = job.service_key_encrypted;
+
+  if (body.attach_account_id) {
+    return attachToExistingAccount(job, body.attach_account_id, vectorHost, serviceKeyEncrypted);
+  }
 
   const row: Record<string, unknown> = {
     account_name: job.account_name,

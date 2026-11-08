@@ -296,6 +296,9 @@ export default function AskPaulPanel({
       // The parent reloads the list and hands this panel the new account id,
       // which re-runs `load()` and shows the Vector DB section filled in.
       onSavedRef.current();
+      // Attaching to an existing account does not change its id, so nothing
+      // re-runs `load()` on its own.
+      if (accountId) void load();
     } else if (job.state === 'error') {
       setProvisioning(false);
       setProvisionError(job.message || 'Creating the database failed.');
@@ -304,17 +307,21 @@ export default function AskPaulPanel({
   }
 
   async function createDatabase() {
-    if (!tenant || !region) return;
+    if (!accountId && (!tenant || !region)) return;
     setProvisioning(true);
     setProvisionError('');
     setCanRetry(false);
     setProvisionMsg('Starting…');
     try {
-      const res = await fetch('/api/accounts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account_name: tenant, region, provision: true, modules: {} }),
-      });
+      // An existing account without a database gets one attached to its row;
+      // a traceability-only tenant becomes a full account with one.
+      const res = accountId
+        ? await fetch(`/api/accounts/${accountId}/provision-db`, { method: 'POST' })
+        : await fetch('/api/accounts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ account_name: tenant, region, provision: true, modules: {} }),
+          });
       const data = (await res.json().catch(() => ({}))) as { job?: JobView; detail?: string };
       if (!res.ok || !data.job) throw new Error(data.detail || `HTTP ${res.status}`);
       setJobId(data.job.id);
@@ -586,11 +593,54 @@ export default function AskPaulPanel({
             </p>
             {activateBlocked && (
               <p className="acl-hint acl-hint--warn">
-                Ask Paul needs a database. Fill in <em>Vector DB</em> below and this unlocks — the
-                two can be saved together.
+                Ask Paul needs a database. Create one below, or fill in <em>Vector DB</em> by hand
+                and this unlocks — the two can be saved together.
               </p>
             )}
           </section>
+
+          {/* ── Create a database for an account that has none ───────────── */}
+          {account && !(account.vector_db_host ?? '').trim() && !(account.db_host ?? '').trim() && (
+            <section className="acl-section">
+              <h3 className="acl-section-title">Create database</h3>
+              <p className="acl-hint">
+                Creates a new Supabase project for <code>{account?.account_name ?? accountName}</code>
+                {account?.region ? ` in the ${String(account.region).toUpperCase()} region` : ''}, sets
+                it up with Ask Paul&rsquo;s schema, fills in the Vector DB section and switches Ask
+                Paul on. Licences are left as they are. It takes a few minutes and adds a billed
+                Supabase project.
+              </p>
+              {account?.region === 'eu' && (
+                <p className="acl-hint acl-hint--warn">
+                  EU account: the database will be in the EU, but the EU traceability deployment has
+                  no Ask Paul hand-off configured yet, so its users still won&rsquo;t see the button.
+                </p>
+              )}
+              <div className="acl-inline-actions">
+                <button
+                  type="button"
+                  className="btn-primary"
+                  onClick={() => void createDatabase()}
+                  disabled={provisioning || Boolean(jobId)}
+                >
+                  {provisioning ? 'Creating…' : 'Create Ask Paul database'}
+                </button>
+                {canRetry && (
+                  <button type="button" className="acl-btn-cancel" onClick={() => void retryDatabase()}>
+                    Retry
+                  </button>
+                )}
+              </div>
+              {provisionMsg && <p className="acl-hint">{provisionMsg}</p>}
+              {provisionError && <div className="acl-error">{provisionError}</div>}
+              {provisioning && (
+                <p className="acl-hint">
+                  Closing this window does not cancel it — the job carries on and the database
+                  appears here when it finishes.
+                </p>
+              )}
+            </section>
+          )}
 
           {/* ── Vector DB ─────────────────────────────────────────────────── */}
           <section className="acl-section">

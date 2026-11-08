@@ -72,8 +72,14 @@ export async function POST(req: Request, ctx: Ctx) {
   const job = await tickProvisioning(jobId);
 
   // Audit the terminal transitions once, on the tick that causes them.
+  // An attach job (Ask Paul tab, existing account) gave a database to an
+  // account that already existed — logging it as `account_created` would put a
+  // second creation on that account's history.
+  const attached = Boolean(
+    (before.payload as { attach_account_id?: string } | null)?.attach_account_id,
+  );
   if (before.state !== 'done' && job.state === 'done') {
-    await logSecurityEvent('account_created', {
+    await logSecurityEvent(attached ? 'account_database_attached' : 'account_created', {
       user,
       accountName: job.account_name,
       detail: { account_id: job.account_id, project_ref: job.project_ref, job_id: job.id },
