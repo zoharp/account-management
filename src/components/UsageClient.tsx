@@ -15,6 +15,16 @@ interface Detail { account: string; since: string; by_day: Row[]; pages: Row[]; 
 const RANGES = [7, 30, 90, 365];
 const sum = (rows: Row[], k: string) => rows.reduce((s, r) => s + (Number(r[k]) || 0), 0);
 
+/** Where the viewer left the page (region, period, open account) — restored on refresh. Per browser only. */
+const VIEW_KEY = 'usage.view';
+interface View { region?: string; days?: number; account?: string }
+function readView(): View {
+  try { return JSON.parse(localStorage.getItem(VIEW_KEY) || '{}') as View; } catch { return {}; }
+}
+function writeView(v: View) {
+  try { localStorage.setItem(VIEW_KEY, JSON.stringify(v)); } catch { /* storage blocked — not fatal */ }
+}
+
 export default function UsageClient() {
   const [region, setRegion] = useState<string>('');
   const [regions, setRegions] = useState<string[]>([]);
@@ -24,8 +34,24 @@ export default function UsageClient() {
   const [detail, setDetail] = useState<Detail | null>(null);
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState('');
+  // Storage is read after mount (not in useState) so the server render and hydration agree;
+  // nothing is fetched until it has been read, or the first request would go to the default region.
+  const [restored, setRestored] = useState(false);
 
   useEffect(() => {
+    const v = readView();
+    if (typeof v.region === 'string') setRegion(v.region);
+    if (typeof v.days === 'number' && RANGES.includes(v.days)) setDays(v.days);
+    if (typeof v.account === 'string') setAccount(v.account);
+    setRestored(true);
+  }, []);
+
+  useEffect(() => {
+    if (restored) writeView({ region, days, account });
+  }, [restored, region, days, account]);
+
+  useEffect(() => {
+    if (!restored) return;
     let off = false;
     (async () => {
       setLoading(true);
@@ -38,7 +64,9 @@ export default function UsageClient() {
         const data = await res.json();
         if (off) return;
         if (data.regions) setRegions(data.regions);
-        if (!region && data.region) setRegion(data.region);
+        // The server answers for its own region when the asked one is not configured (e.g. a
+        // remembered EU after TRACE_API_URL_EU was removed) — follow it so the selector tells the truth.
+        if (data.region && data.region !== region) setRegion(data.region);
         if (!res.ok) throw new Error(
           res.status === 501
             ? 'This region runs a version without usage statistics yet — deploy traceability-matrix first.'
@@ -50,7 +78,7 @@ export default function UsageClient() {
       if (!off) setLoading(false);
     })();
     return () => { off = true; };
-  }, [region, days, account]);
+  }, [restored, region, days, account]);
 
   const days_ = detail?.by_day ?? summary?.totals ?? [];
   const maxUsers = Math.max(1, ...days_.map((d) => Number(d.users) || 0));

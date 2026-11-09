@@ -1,5 +1,12 @@
 [
   {
+    "version": "1.10.2",
+    "date": "2026-11-09",
+    "changes": [
+      "🐛 **Usage page remembers where you were.** Refreshing the Usage page used to jump back to the US region, the last 30 days and all accounts. It now reopens on the region, period and account you last looked at (remembered in this browser)."
+    ]
+  },
+  {
     "version": "1.10.1",
     "date": "2026-11-08",
     "changes": [

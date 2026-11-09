@@ -10,6 +10,7 @@ the `release-management` convention.
 | Version | Date | Summary |
 |---|---|---|
 | *Unreleased* | 2026-11-09 | **Azure DevOps licence switch** (`allow_azure_devops`, traceability-matrix 2026-11-09): module pill *Azure DevOps* + *Integrations (Azure DevOps)* tick; refuses (409) on an instance without the column, like GitHub. No version bump yet. |
+| `1.10.2` | 2026-11-09 | **Usage** page remembers region, period and open account across a refresh (was reset to US). |
 | `1.10.1` | 2026-11-08 | Ask Paul tab: **Create Ask Paul database** now also for an existing account with no database (`POST /api/accounts/:id/provision-db`, attaches to the row). |
 | `1.10.0` | 2026-11-06 | **Presentations** page: who opens the customer decks — views, visitors, time, per-slide drop-off, country, referrer, device, language, UTM link (trace `deck_events` via `/api/admin/decks/stats`). |
 | `1.9.0` | 2026-10-23 | **Staff** page: add / re-username / remove (demote) / restore console staff — master `users` rows on the staff domain; no more SQL to give someone access. |

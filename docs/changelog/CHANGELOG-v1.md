@@ -11,6 +11,14 @@ Newest first.
 
 **Unreleased** (2026-11-09) — **Azure DevOps licence switch.** traceability-matrix (2026-11-09) gave its Integrations module an Azure DevOps connector with its OWN licence, `account_access.allow_azure_devops` (opt-in, default 0); like GitHub, either connector opens the module and each needs its own. New `ModuleKey` `ado` (catalog label *Azure DevOps*, after GitHub), `moduleFlag` / `supportsAzureDevops` / `setTraceModules`, the modules route's column map, `supports_azure_devops` on the list, the *Integrations (Azure DevOps)* tick and the trace PUT; an instance without the column gets a 409, never a silent drop, and the panel omits the field there. Not version-bumped, not deployed. Verified: `tsc --noEmit` clean.
 
+**1.10.2** (2026-11-09) — **Usage page keeps its position on refresh.** `UsageClient` held region, period and
+open account in React state only, so a reload started over and `/api/usage` (no `region`) answered with
+`regions[0]` = US. They are now saved to `localStorage` key `usage.view` (try/catch, per browser) and restored in
+a mount effect *before* the first fetch (a `restored` flag gates the fetch, so the first request is not sent to
+the default region and hydration still matches). If the remembered region is no longer configured the route
+falls back to its first region; the client now follows `data.region` so the selector never shows one region over
+another's data. Verified: `tsc --noEmit` clean.
+
 **1.10.1** (2026-11-08) — **Create Ask Paul database for an existing account.** The Ask Paul tab's
 *Create Ask Paul database* only appeared for traceability-only tenants, because `POST /api/accounts`
 (`provision: true`) can only insert a new row; an account with a master row but no database (reutsapir,
