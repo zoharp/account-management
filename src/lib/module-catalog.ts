@@ -70,6 +70,10 @@ export const MODULES: readonly ModuleDef[] = [
   // Either this or Jira opens the trace app's Integrations module; each connector needs its own.
   // Like Jira, the GitHub sign-in is the account's own, entered on its Integrations screen.
   { key: 'github', label: 'GitHub', source: 'trace' },
+  // The Azure DevOps connector (traceability-matrix, 2026-11-09), `account_access.allow_azure_devops`.
+  // OPT-IN. Like Jira and GitHub it opens the trace app's Integrations module and needs its own
+  // licence; its sign-in is the account's own, entered on its Integrations screen.
+  { key: 'ado', label: 'Azure DevOps', source: 'trace' },
   // BOM viewer (traceability-matrix 3.46.0), `account_access.allow_bom`. The one
   // OPT-IN module: its column defaults to 0 and an absent value reads as OFF —
   // see `moduleFlag()` in lib/trace.ts. Hidden from a customer until ticked here.

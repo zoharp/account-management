@@ -84,6 +84,7 @@ export type ModuleKey =
   | 'risk'
   | 'integrations'
   | 'github'
+  | 'ado'
   | 'bom'
   | 'sbom'
   | RegulatoryModuleKey;
@@ -179,6 +180,8 @@ export interface TraceSourceStatus {
   supports_integrations: boolean;
   /** False when the instance predates `allow_github` (< 4.28.0). Opt-in, so absent reads as OFF. */
   supports_github: boolean;
+  /** False when the instance predates `allow_azure_devops` (traceability-matrix 2026-11-09). Opt-in, so absent reads as OFF. */
+  supports_azure_devops: boolean;
   /** False when the instance predates `allow_sbom` (< 4.30.0). Opt-in, so absent reads as OFF. */
   supports_sbom: boolean;
   /** Which instance answered — shown in the UI so local-vs-Fly is never a guess. */

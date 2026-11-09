@@ -9,6 +9,8 @@ Newest first.
 
 ---
 
+**Unreleased** (2026-11-09) — **Azure DevOps licence switch.** traceability-matrix (2026-11-09) gave its Integrations module an Azure DevOps connector with its OWN licence, `account_access.allow_azure_devops` (opt-in, default 0); like GitHub, either connector opens the module and each needs its own. New `ModuleKey` `ado` (catalog label *Azure DevOps*, after GitHub), `moduleFlag` / `supportsAzureDevops` / `setTraceModules`, the modules route's column map, `supports_azure_devops` on the list, the *Integrations (Azure DevOps)* tick and the trace PUT; an instance without the column gets a 409, never a silent drop, and the panel omits the field there. Not version-bumped, not deployed. Verified: `tsc --noEmit` clean.
+
 **1.10.1** (2026-11-08) — **Create Ask Paul database for an existing account.** The Ask Paul tab's
 *Create Ask Paul database* only appeared for traceability-only tenants, because `POST /api/accounts`
 (`provision: true`) can only insert a new row; an account with a master row but no database (reutsapir,

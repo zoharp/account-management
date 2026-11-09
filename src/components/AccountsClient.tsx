@@ -431,6 +431,9 @@ function disabledReason(
   if (key === 'github' && !trace.supports_github && row.modules.github !== true) {
     return 'This traceability instance predates the GitHub licence — deploy 4.28.0 first.';
   }
+  if (key === 'ado' && !trace.supports_azure_devops && row.modules.ado !== true) {
+    return 'This traceability instance predates the Azure DevOps licence — deploy the traceability-matrix Azure DevOps release (2026-11-09) first.';
+  }
   if (key === 'sbom' && !trace.supports_sbom && row.modules.sbom !== true) {
     return 'This traceability instance predates the Software BOM licence — deploy 4.30.0 first.';
   }

@@ -28,6 +28,8 @@ export interface TraceRow {
   allow_integrations?: number;
   /** GitHub connector licence (4.28.0) — OPT-IN: read with `on(v, false)`. */
   allow_github?: number;
+  /** Azure DevOps connector licence (traceability-matrix, 2026-11-09) — OPT-IN: read with `on(v, false)`. */
+  allow_azure_devops?: number;
   /** Software BOM licence (4.30.0) — OPT-IN: read with `on(v, false)`. */
   allow_sbom?: number;
   allow_ask_paul?: number;
@@ -77,6 +79,8 @@ export interface TraceSettingsResponse {
   supports_integrations?: boolean;
   /** False on an instance older than 4.28.0 — the GitHub tick is hidden rather than silently dropped. */
   supports_github?: boolean;
+  /** False on an instance older than traceability-matrix 2026-11-09 — the Azure DevOps tick is hidden rather than silently dropped. */
+  supports_azure_devops?: boolean;
   /** False on an instance older than 4.30.0 — the SBOM tick is hidden rather than silently dropped. */
   supports_sbom?: boolean;
   master_account_name: string | null;

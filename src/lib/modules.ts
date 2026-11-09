@@ -217,6 +217,9 @@ function buildRow(args: {
   const integrationsModule = unknown ? null : signedIn && moduleFlag(trace, 'integrations');
   // And the GitHub connector: an absent `allow_github` (pre-4.28.0 instance) reads as OFF.
   const githubModule = unknown ? null : signedIn && moduleFlag(trace, 'github');
+  // And the Azure DevOps connector: an absent `allow_azure_devops` (instance older than
+  // traceability-matrix 2026-11-09) reads as OFF.
+  const adoModule = unknown ? null : signedIn && moduleFlag(trace, 'ado');
   // And the Software BOM: an absent `allow_sbom` (pre-4.30.0 instance) reads as OFF.
   const sbomModule = unknown ? null : signedIn && moduleFlag(trace, 'sbom');
 
@@ -274,6 +277,7 @@ function buildRow(args: {
       risk: riskModule,
       integrations: integrationsModule,
       github: githubModule,
+      ado: adoModule,
       bom: bomModule,
       sbom: sbomModule,
       // Master-owned: no master row = no answer (a dash), never "off".

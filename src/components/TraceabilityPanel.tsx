@@ -48,6 +48,7 @@ export default function TraceabilityPanel({
   const [supportsRisk, setSupportsRisk] = useState(false);
   const [supportsIntegrations, setSupportsIntegrations] = useState(false);
   const [supportsGithub, setSupportsGithub] = useState(false);
+  const [supportsAzureDevops, setSupportsAzureDevops] = useState(false);
   const [supportsSbom, setSupportsSbom] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ kind: 'ok' | 'bad' | ''; text: string }>({
@@ -65,6 +66,7 @@ export default function TraceabilityPanel({
   const [allowRisk, setAllowRisk] = useState(false);
   const [allowIntegrations, setAllowIntegrations] = useState(false);
   const [allowGithub, setAllowGithub] = useState(false);
+  const [allowAzureDevops, setAllowAzureDevops] = useState(false);
   const [allowSbom, setAllowSbom] = useState(false);
   const [note, setNote] = useState('');
 
@@ -85,6 +87,7 @@ export default function TraceabilityPanel({
       setSupportsRisk(Boolean(data.supports_risk));
       setSupportsIntegrations(Boolean(data.supports_integrations));
       setSupportsGithub(Boolean(data.supports_github));
+      setSupportsAzureDevops(Boolean(data.supports_azure_devops));
       setSupportsSbom(Boolean(data.supports_sbom));
       const r = data.row;
       setAllowAccess(r ? Boolean(r.allow_access) : true);
@@ -97,6 +100,7 @@ export default function TraceabilityPanel({
       setAllowRisk(on(r?.allow_risk, false));
       setAllowIntegrations(on(r?.allow_integrations, false));
       setAllowGithub(on(r?.allow_github, false));
+      setAllowAzureDevops(on(r?.allow_azure_devops, false));
       setAllowSbom(on(r?.allow_sbom, false));
       setNote(r?.note ?? '');
     } catch (e) {
@@ -139,6 +143,7 @@ export default function TraceabilityPanel({
           ...(supportsRisk ? { allow_risk: allowRisk } : {}),
           ...(supportsIntegrations ? { allow_integrations: allowIntegrations } : {}),
           ...(supportsGithub ? { allow_github: allowGithub } : {}),
+          ...(supportsAzureDevops ? { allow_azure_devops: allowAzureDevops } : {}),
           ...(supportsSbom ? { allow_sbom: allowSbom } : {}),
           note,
         }),
@@ -260,6 +265,19 @@ export default function TraceabilityPanel({
               <p className="acl-hint">
                 Integrations (GitHub) needs traceability-matrix 4.28.0 on this tenant&apos;s instance
                 before it can be licensed.
+              </p>
+            )}
+            {supportsAzureDevops ? (
+              <Check
+                label="Integrations (Azure DevOps)"
+                hint="Two-way sync between Orcanos items and Azure DevOps work items. Off by default. Each account connects its OWN Azure DevOps — its organization and sign-in are entered by the account's Orcanos administrator on its Integrations screen, stored encrypted for this account only. Nothing Azure DevOps-related is set here."
+                checked={allowAzureDevops}
+                onChange={setAllowAzureDevops}
+              />
+            ) : (
+              <p className="acl-hint">
+                Integrations (Azure DevOps) needs the traceability-matrix Azure DevOps release
+                (2026-11-09) on this tenant&apos;s instance before it can be licensed.
               </p>
             )}
             {supportsBom ? (

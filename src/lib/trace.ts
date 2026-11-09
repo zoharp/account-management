@@ -83,6 +83,8 @@ export interface TraceAccountRow {
   allow_integrations?: number;
   /** GitHub connector licence, added in 4.28.0. OPT-IN like Jira (`allow_integrations`). */
   allow_github?: number;
+  /** Azure DevOps connector licence, added in traceability-matrix 2026-11-09. OPT-IN like GitHub. */
+  allow_azure_devops?: number;
   /** Software BOM licence, added in 4.30.0. OPT-IN; opens the BOM module on its own. */
   allow_sbom?: number;
   /** Ask Paul (QMS AI) licence and name override, added in 3.27.0. */
@@ -128,6 +130,8 @@ export function moduleFlag(row: TraceAccountRow | undefined, key: ModuleKey): bo
   if (key === 'integrations') return Boolean(row.allow_integrations);
   // And the GitHub connector (4.28.0).
   if (key === 'github') return Boolean(row.allow_github);
+  // And the Azure DevOps connector (traceability-matrix, 2026-11-09).
+  if (key === 'ado') return Boolean(row.allow_azure_devops);
   // And the Software BOM (4.30.0).
   if (key === 'sbom') return Boolean(row.allow_sbom);
   const value =
@@ -176,6 +180,11 @@ export function supportsIntegrations(rows: TraceAccountRow[]): boolean {
 /** Does it carry `allow_github`? (4.28.0) Same silent-discard reason as `supportsBom`. */
 export function supportsGithub(rows: TraceAccountRow[]): boolean {
   return rows.some((r) => r.allow_github !== undefined);
+}
+
+/** Does it carry `allow_azure_devops`? (traceability-matrix, 2026-11-09) Same silent-discard reason as `supportsBom`. */
+export function supportsAzureDevops(rows: TraceAccountRow[]): boolean {
+  return rows.some((r) => r.allow_azure_devops !== undefined);
 }
 
 /** Does it carry `allow_sbom`? (4.30.0) Same silent-discard reason as `supportsBom`. */
@@ -539,6 +548,7 @@ export function newTraceAccountRow(tenant: string, region: DataRegion): TraceAcc
     allow_risk: 0,
     allow_integrations: 0,
     allow_github: 0,
+    allow_azure_devops: 0,
     allow_sbom: 0,
     allow_ask_paul: 0,
   };
@@ -641,6 +651,16 @@ export async function upsertTraceModules(
       );
     }
     changes.allow_github = modules.github ? 1 : 0;
+  }
+  if (modules.ado !== undefined) {
+    if (modules.ado && !supportsAzureDevops(rows)) {
+      throw new TraceApiError(
+        'this traceability instance predates the Azure DevOps licence (needs traceability-matrix ' +
+          '2026-11-09) and would have silently discarded it',
+        409,
+      );
+    }
+    changes.allow_azure_devops = modules.ado ? 1 : 0;
   }
   if (modules.sbom !== undefined) {
     if (modules.sbom && !supportsSbom(rows)) {
