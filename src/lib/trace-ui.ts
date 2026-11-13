@@ -34,6 +34,8 @@ export interface TraceRow {
   allow_supplier_portal?: number;
   /** Multi-language licence (traceability-matrix, 2026-11-12) — OPT-IN: read with `on(v, false)`. */
   allow_multi_language?: number;
+  /** Home page licence (traceability-matrix, 2026-11-13) — OPT-IN: read with `on(v, false)`. */
+  allow_home?: number;
   /** Software BOM licence (4.30.0) — OPT-IN: read with `on(v, false)`. */
   allow_sbom?: number;
   allow_ask_paul?: number;
@@ -89,6 +91,8 @@ export interface TraceSettingsResponse {
   supports_supplier_portal?: boolean;
   /** False on an instance older than traceability-matrix 2026-11-12 — the Multi-language tick is hidden rather than silently dropped. */
   supports_multi_language?: boolean;
+  /** False on an instance older than traceability-matrix 2026-11-13 — the Home page tick is hidden rather than silently dropped. */
+  supports_home?: boolean;
   /** False on an instance older than 4.30.0 — the SBOM tick is hidden rather than silently dropped. */
   supports_sbom?: boolean;
   master_account_name: string | null;

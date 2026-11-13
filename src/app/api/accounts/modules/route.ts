@@ -11,6 +11,7 @@
  *   ado       → trace `account_access.allow_azure_devops` (Azure DevOps connector; opt-in, traceability-matrix 2026-11-09)
  *   supplier_portal → trace `account_access.allow_supplier_portal` (Supplier Portal, QMS module; opt-in, traceability-matrix 2026-11-12)
  *   multi_language  → trace `account_access.allow_multi_language` (UI language picker, off = English only; opt-in, traceability-matrix 2026-11-12)
+ *   home            → trace `account_access.allow_home` (the Home landing page; opt-in, traceability-matrix 2026-11-13)
  *   ask_paul  → BOTH master `accounts.is_active` AND trace `allow_ask_paul`
  *
  * ## Why Ask Paul writes two systems
@@ -55,6 +56,7 @@ import {
   supportsAzureDevops,
   supportsSupplierPortal,
   supportsMultiLanguage,
+  supportsHome,
   supportsSbom,
   supportsModules,
   hasReachableModule,
@@ -92,6 +94,7 @@ const MODULE_KEYS: ModuleKey[] = [
   'review',
   'supplier_portal',
   'multi_language',
+  'home',
   'risk',
   'integrations',
   'github',
@@ -106,7 +109,7 @@ const MODULE_KEYS: ModuleKey[] = [
 /** The `account_access` column each module is licensed by. */
 const MODULE_COLUMN: Record<
   Exclude<ModuleKey, RegulatoryModuleKey>,
-  'allow_ask_paul' | 'allow_trace' | 'allow_training' | 'allow_review' | 'allow_risk' | 'allow_integrations' | 'allow_github' | 'allow_azure_devops' | 'allow_supplier_portal' | 'allow_multi_language' | 'allow_bom' | 'allow_sbom'
+  'allow_ask_paul' | 'allow_trace' | 'allow_training' | 'allow_review' | 'allow_risk' | 'allow_integrations' | 'allow_github' | 'allow_azure_devops' | 'allow_supplier_portal' | 'allow_multi_language' | 'allow_home' | 'allow_bom' | 'allow_sbom'
 > = {
   ask_paul: 'allow_ask_paul',
   trace: 'allow_trace',
@@ -118,6 +121,7 @@ const MODULE_COLUMN: Record<
   ado: 'allow_azure_devops',
   supplier_portal: 'allow_supplier_portal',
   multi_language: 'allow_multi_language',
+  home: 'allow_home',
   bom: 'allow_bom',
   sbom: 'allow_sbom',
 };
@@ -405,6 +409,18 @@ export async function PUT(req: Request) {
           detail:
             'This traceability instance predates the Supplier Portal licence and would silently ' +
             'discard the change. Deploy the traceability-matrix Supplier Portal release (2026-11-12) first.',
+        },
+        { status: 409 },
+      );
+    }
+
+    // So did the Home page's (2026-11-13).
+    if (module === 'home' && !supportsHome(rows)) {
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the Home page licence and would silently ' +
+            'discard the change. Deploy the traceability-matrix Home page release (2026-11-13) first.',
         },
         { status: 409 },
       );

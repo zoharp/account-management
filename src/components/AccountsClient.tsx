@@ -440,6 +440,9 @@ function disabledReason(
   if (key === 'multi_language' && !trace.supports_multi_language && row.modules.multi_language !== true) {
     return 'This traceability instance predates the Multi-language licence — deploy the traceability-matrix Multi-language release (2026-11-12) first.';
   }
+  if (key === 'home' && !trace.supports_home && row.modules.home !== true) {
+    return 'This traceability instance predates the Home page licence — deploy the traceability-matrix Home page release (2026-11-13) first.';
+  }
   if (key === 'sbom' && !trace.supports_sbom && row.modules.sbom !== true) {
     return 'This traceability instance predates the Software BOM licence — deploy 4.30.0 first.';
   }

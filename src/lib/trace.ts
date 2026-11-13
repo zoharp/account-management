@@ -89,6 +89,8 @@ export interface TraceAccountRow {
   allow_supplier_portal?: number;
   /** Multi-language licence (UI language picker; off = English only), added in traceability-matrix 2026-11-12. OPT-IN. */
   allow_multi_language?: number;
+  /** Home page licence (the ranked to-do landing page), added in traceability-matrix 2026-11-13. OPT-IN. */
+  allow_home?: number;
   /** Software BOM licence, added in 4.30.0. OPT-IN; opens the BOM module on its own. */
   allow_sbom?: number;
   /** Ask Paul (QMS AI) licence and name override, added in 3.27.0. */
@@ -139,6 +141,8 @@ export function moduleFlag(row: TraceAccountRow | undefined, key: ModuleKey): bo
   // And the Supplier Portal + Multi-language (traceability-matrix, 2026-11-12).
   if (key === 'supplier_portal') return Boolean(row.allow_supplier_portal);
   if (key === 'multi_language') return Boolean(row.allow_multi_language);
+  // And the Home page (traceability-matrix, 2026-11-13).
+  if (key === 'home') return Boolean(row.allow_home);
   // And the Software BOM (4.30.0).
   if (key === 'sbom') return Boolean(row.allow_sbom);
   const value =
@@ -202,6 +206,11 @@ export function supportsSupplierPortal(rows: TraceAccountRow[]): boolean {
 /** Does it carry `allow_multi_language`? (traceability-matrix, 2026-11-12) Same silent-discard reason as `supportsBom`. */
 export function supportsMultiLanguage(rows: TraceAccountRow[]): boolean {
   return rows.some((r) => r.allow_multi_language !== undefined);
+}
+
+/** Does it carry `allow_home`? (traceability-matrix, 2026-11-13) Same silent-discard reason as `supportsBom`. */
+export function supportsHome(rows: TraceAccountRow[]): boolean {
+  return rows.some((r) => r.allow_home !== undefined);
 }
 
 /** Does it carry `allow_sbom`? (4.30.0) Same silent-discard reason as `supportsBom`. */
@@ -568,6 +577,7 @@ export function newTraceAccountRow(tenant: string, region: DataRegion): TraceAcc
     allow_azure_devops: 0,
     allow_supplier_portal: 0,
     allow_multi_language: 0,
+    allow_home: 0,
     allow_sbom: 0,
     allow_ask_paul: 0,
   };
@@ -700,6 +710,16 @@ export async function upsertTraceModules(
       );
     }
     changes.allow_multi_language = modules.multi_language ? 1 : 0;
+  }
+  if (modules.home !== undefined) {
+    if (modules.home && !supportsHome(rows)) {
+      throw new TraceApiError(
+        'this traceability instance predates the Home page licence (needs traceability-matrix ' +
+          '2026-11-13) and would have silently discarded it',
+        409,
+      );
+    }
+    changes.allow_home = modules.home ? 1 : 0;
   }
   if (modules.sbom !== undefined) {
     if (modules.sbom && !supportsSbom(rows)) {

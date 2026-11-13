@@ -83,6 +83,7 @@ export type ModuleKey =
   | 'review'
   | 'supplier_portal'
   | 'multi_language'
+  | 'home'
   | 'risk'
   | 'integrations'
   | 'github'
@@ -188,6 +189,8 @@ export interface TraceSourceStatus {
   supports_supplier_portal: boolean;
   /** False when the instance predates `allow_multi_language` (traceability-matrix 2026-11-12). Opt-in, so absent reads as OFF. */
   supports_multi_language: boolean;
+  /** False when the instance predates `allow_home` (traceability-matrix 2026-11-13). Opt-in, so absent reads as OFF. */
+  supports_home: boolean;
   /** False when the instance predates `allow_sbom` (< 4.30.0). Opt-in, so absent reads as OFF. */
   supports_sbom: boolean;
   /** Which instance answered — shown in the UI so local-vs-Fly is never a guess. */

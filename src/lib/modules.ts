@@ -224,6 +224,8 @@ function buildRow(args: {
   // `allow_multi_language` (instance older than traceability-matrix 2026-11-12) reads as OFF.
   const supplierPortalModule = unknown ? null : signedIn && moduleFlag(trace, 'supplier_portal');
   const multiLanguageModule = unknown ? null : signedIn && moduleFlag(trace, 'multi_language');
+  // And the Home page: an absent `allow_home` (instance older than traceability-matrix 2026-11-13) reads as OFF.
+  const homeModule = unknown ? null : signedIn && moduleFlag(trace, 'home');
   // And the Software BOM: an absent `allow_sbom` (pre-4.30.0 instance) reads as OFF.
   const sbomModule = unknown ? null : signedIn && moduleFlag(trace, 'sbom');
 
@@ -284,6 +286,7 @@ function buildRow(args: {
       ado: adoModule,
       supplier_portal: supplierPortalModule,
       multi_language: multiLanguageModule,
+      home: homeModule,
       bom: bomModule,
       sbom: sbomModule,
       // Master-owned: no master row = no answer (a dash), never "off".

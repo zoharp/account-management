@@ -57,6 +57,10 @@ export const MODULES: readonly ModuleDef[] = [
   // Not a nav module: a platform feature licence for the trace app's UI language picker
   // (off = English only). OPT-IN: absent reads as OFF.
   { key: 'multi_language', label: 'Multi-language', source: 'trace' },
+  // Home page (traceability-matrix, 2026-11-13), `account_access.allow_home`. The ranked to-do
+  // landing page; it needs setting up per account, so it is OPT-IN: absent reads as OFF, and
+  // off means "/" opens the first licensed module.
+  { key: 'home', label: 'Home page', source: 'trace' },
   { key: 'trace', label: 'Traceability', source: 'trace' },
   { key: 'training', label: 'Training', source: 'trace' },
   // Doc Review (traceability-matrix 4.8.0), `account_access.allow_review`. OPT-IN

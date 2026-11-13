@@ -38,6 +38,7 @@ import {
   supportsAzureDevops,
   supportsSupplierPortal,
   supportsMultiLanguage,
+  supportsHome,
   supportsSbom,
   supportsModules,
   hasReachableModule,
@@ -134,6 +135,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ tenant: string
       supports_azure_devops: supportsAzureDevops(rows),
       supports_supplier_portal: supportsSupplierPortal(rows),
       supports_multi_language: supportsMultiLanguage(rows),
+      supports_home: supportsHome(rows),
       supports_sbom: supportsSbom(rows),
     });
   } catch (e) {
@@ -271,6 +273,18 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       );
     }
 
+    if (!supportsHome(rows) && body.allow_home !== undefined) {
+      // And for the Home page, added in traceability-matrix 2026-11-13.
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the Home page licence and would silently ' +
+            'discard the change. Deploy the traceability-matrix Home page release (2026-11-13) first.',
+        },
+        { status: 409 },
+      );
+    }
+
     if (!supportsSbom(rows) && body.allow_sbom !== undefined) {
       // And for the Software BOM, added in 4.30.0.
       return Response.json(
@@ -310,6 +324,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       // And the Supplier Portal + Multi-language (2026-11-12).
       allow_supplier_portal: 0,
       allow_multi_language: 0,
+      // And the Home page (2026-11-13).
+      allow_home: 0,
       // And the Software BOM.
       allow_sbom: 0,
       allow_ask_paul: 1,
@@ -332,6 +348,7 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       allow_azure_devops: flag('allow_azure_devops', base.allow_azure_devops ?? 0),
       allow_supplier_portal: flag('allow_supplier_portal', base.allow_supplier_portal ?? 0),
       allow_multi_language: flag('allow_multi_language', base.allow_multi_language ?? 0),
+      allow_home: flag('allow_home', base.allow_home ?? 0),
       allow_sbom: flag('allow_sbom', base.allow_sbom ?? 0),
       allow_ask_paul: flag('allow_ask_paul', base.allow_ask_paul ?? 1),
       note: typeof body.note === 'string' ? body.note : (base.note ?? ''),
