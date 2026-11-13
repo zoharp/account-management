@@ -1278,6 +1278,23 @@ a.btn-sm {
   box-shadow: 0 0 0 3px rgba(92, 53, 168, 0.12);
 }
 
+/* ── Customer / Demo pill-select (Accounts grid, 1.11.0) ───────────────── */
+
+.acl-kind {
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+.acl-kind:focus { outline: none; border-color: var(--accent-primary); }
+.acl-kind--customer { background: var(--ok-bg); color: var(--ok-fg); border-color: var(--ok-border); }
+.acl-kind--demo { background: var(--warn-bg); color: var(--warn-fg); border-color: var(--warn-border); }
+
 /* ── Audit event-group filter ──────────────────────────────────────────── */
 
 .acl-filterbar {

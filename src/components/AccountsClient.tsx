@@ -5,7 +5,9 @@ import AccountManageModal from './AccountManageModal';
 import CreateAccountModal from './CreateAccountModal';
 import { isRegulatoryModule, MODULES } from '@/lib/module-catalog';
 import { APP_URLS, REGION_LABELS, coerceRegion } from '@/lib/regions';
-import type { MergedAccountRow, ModuleKey, TraceSourceStatus } from '@/lib/types';
+import { kindKeyOf, readKindFilter, writeKindFilter, type KindFilter } from '@/lib/account-kind-key';
+import type { AccountKind, MergedAccountRow, ModuleKey, TraceSourceStatus } from '@/lib/types';
+
 
 /**
  * The merged account list: master Supabase unioned with the traceability-matrix
@@ -42,6 +44,8 @@ export default function AccountsClient() {
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
   const [search, setSearch] = useState('');
+  const [kindFilter, setKindFilter] = useState<KindFilter>('all');
+  useEffect(() => setKindFilter(readKindFilter()), []);
   /** The one account screen. Every row opens this; the tabs inside are the old dialogs. */
   const [manage, setManage] = useState<MergedAccountRow | null>(null);
   const [createOpen, setCreateOpen] = useState(false);
@@ -130,12 +134,33 @@ export default function AccountsClient() {
     setBusy(null);
   }
 
+  /** Customer ⇄ Demo. Optimistic — it is a label, nothing else depends on it — rolled back on failure. */
+  async function setKind(row: MergedAccountRow, kind: AccountKind) {
+    const prev = row.kind;
+    setAccounts((list) => list.map((a) => (a.key === row.key ? { ...a, kind } : a)));
+    try {
+      const res = await fetch('/api/accounts/kind', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tenant: kindKeyOf(row), kind }),
+      });
+      const data = (await res.json().catch(() => ({}))) as { detail?: string };
+      if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
+      showToast(`✓ ${row.account_name} is now ${kind === 'demo' ? 'Demo' : 'Customer'}`);
+    } catch (e) {
+      setAccounts((list) => list.map((a) => (a.key === row.key ? { ...a, kind: prev } : a)));
+      showToast(`✗ ${e instanceof Error ? e.message : String(e)}`);
+    }
+  }
+
   const needle = search.trim().toLowerCase();
   const filtered = accounts.filter(
     (a) =>
-      a.account_name.toLowerCase().includes(needle) ||
-      (a.tenant ?? '').toLowerCase().includes(needle),
+      (kindFilter === 'all' || a.kind === kindFilter) &&
+      (a.account_name.toLowerCase().includes(needle) ||
+        (a.tenant ?? '').toLowerCase().includes(needle)),
   );
+  const kindCount = (k: AccountKind) => accounts.filter((a) => a.kind === k).length;
 
   return (
     <>
@@ -167,6 +192,20 @@ export default function AccountsClient() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
+          <select
+            className="acl-select"
+            value={kindFilter}
+            aria-label="Account type"
+            onChange={(e) => {
+              const v = e.target.value as KindFilter;
+              setKindFilter(v);
+              writeKindFilter(v);
+            }}
+          >
+            <option value="all">All types ({accounts.length})</option>
+            <option value="customer">Customers ({kindCount('customer')})</option>
+            <option value="demo">Demo ({kindCount('demo')})</option>
+          </select>
           <button className="acl-btn-cancel" onClick={() => void load()} disabled={loading}>
             {loading ? 'Loading…' : '↺ Refresh'}
           </button>
@@ -187,6 +226,7 @@ export default function AccountsClient() {
             <thead>
               <tr>
                 <th>Account Name</th>
+                <th>Type</th>
                 <th>Region</th>
                 <th>Modules</th>
                 <th style={{ textAlign: 'right' }}>Spend</th>
@@ -216,6 +256,19 @@ export default function AccountsClient() {
                             {row.tenant}
                           </div>
                         )}
+                    </td>
+
+                    <td>
+                      <select
+                        className={`acl-kind acl-kind--${row.kind}`}
+                        value={row.kind}
+                        aria-label={`Type of ${row.account_name}`}
+                        title="Customer or Demo — used to filter Accounts and Usage. Changes nothing else."
+                        onChange={(e) => void setKind(row, e.target.value as AccountKind)}
+                      >
+                        <option value="customer">Customer</option>
+                        <option value="demo">Demo</option>
+                      </select>
                     </td>
 
                     <td>

@@ -244,6 +244,8 @@ function buildRow(args: {
     // the name until someone creates its master row.
     account_name: master ? master.account_name : (tenant ?? ''),
     tenant,
+    // Filled in by GET /api/accounts from `lib/account-kind.ts`; Customer until then.
+    kind: 'customer',
 
     id: master?.id ?? null,
     db_type: master?.db_type ?? null,

@@ -20,6 +20,8 @@ import {
 } from '@/lib/provisioning';
 import { logSecurityEvent } from '@/lib/audit';
 import { mergeAccounts } from '@/lib/modules';
+import { kindKeyOf } from '@/lib/account-kind-key';
+import { listAccountKinds } from '@/lib/account-kind';
 import { NEW_ACCOUNT_REGULATORY } from '@/lib/module-catalog';
 import { DEFAULT_REGION, parseRegion, traceApiUrlFor } from '@/lib/regions';
 import {
@@ -181,8 +183,14 @@ export async function GET() {
     }
   }
 
+  // Never fails the list — an unreadable store reads as "everyone is a Customer".
+  const kinds = await listAccountKinds();
+
   return Response.json({
-    accounts: mergeAccounts(accounts, traceRows, { traceAvailable: trace.available }),
+    accounts: mergeAccounts(accounts, traceRows, { traceAvailable: trace.available }).map((r) => ({
+      ...r,
+      kind: kinds[kindKeyOf(r)] ?? 'customer',
+    })),
     trace,
   });
 }

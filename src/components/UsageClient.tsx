@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import { readKindFilter, writeKindFilter, type KindFilter } from '@/lib/account-kind-key';
+import type { AccountKind } from '@/lib/types';
 
 /**
  * How the traceability app is used, per account — traceability-matrix `usage_daily` via
@@ -43,6 +45,18 @@ export default function UsageClient() {
   // Storage is read after mount (not in useState) so the server render and hydration agree;
   // nothing is fetched until it has been read, or the first request would go to the default region.
   const [restored, setRestored] = useState(false);
+  /** Customer/Demo per tenant (missing = customer) — set on the Accounts screen. */
+  const [kinds, setKinds] = useState<Record<string, AccountKind>>({});
+  const [kindFilter, setKindFilter] = useState<KindFilter>('all');
+
+  useEffect(() => {
+    setKindFilter(readKindFilter());
+    fetch('/api/accounts/kind', { cache: 'no-store' })
+      .then((r) => (r.ok ? r.json() : { kinds: {} }))
+      .then((d: { kinds?: Record<string, AccountKind> }) => setKinds(d.kinds ?? {}))
+      .catch(() => { /* unreadable → everyone reads as Customer */ });
+  }, []);
+  const kindOf = (name: unknown): AccountKind => kinds[String(name).toLowerCase()] ?? 'customer';
 
   useEffect(() => {
     const v = readView();
@@ -86,15 +100,29 @@ export default function UsageClient() {
     return () => { off = true; };
   }, [restored, region, days, account]);
 
-  const accounts = summary?.accounts ?? [];
+  const allAccounts = summary?.accounts ?? [];
+  const filtering = kindFilter !== 'all';
+  const accounts = filtering ? allAccounts.filter((a) => kindOf(a.account) === kindFilter) : allAccounts;
   const sinceDay = (account ? detail?.since : summary?.since) ?? '';
-  const dayRows = fillDays((account ? detail?.by_day : summary?.totals) ?? [], sinceDay);
+  // Filtered: the per-day totals are rebuilt from the per-account days (users + hours — the two charts).
+  const dayRows = fillDays(
+    (account ? detail?.by_day : filtering ? sumByDay(summary?.account_days ?? [], (a) => kindOf(a) === kindFilter) : summary?.totals) ?? [],
+    sinceDay,
+  );
   const attention = accounts.filter((a) => a.trend === 'slipping' || a.trend === 'quiet')
     .sort((a, b) => (Number(b.prev_hours) || 0) - (Number(a.prev_hours) || 0));
   const spark: Record<string, Row[]> = {};
   for (const r of summary?.account_days ?? []) (spark[String(r.account)] ??= []).push(r);
-  const cur = summary?.current;
-  const prev = summary?.previous;
+  // Filtered: the server's period totals cover every account, so they come from the visible rows
+  // instead. Only hours and user-days exist for the period before at account level.
+  const cur: Totals | undefined = filtering
+    ? { accounts: accounts.filter((a) => Number(a.active_days) > 0).length, logins: sum(accounts, 'logins'),
+        hours: Math.round(sum(accounts, 'hours') * 10) / 10, user_days: sum(accounts, 'user_days'), actions: sum(accounts, 'actions') }
+    : summary?.current;
+  const prevRaw = summary?.previous;
+  const prev: Partial<Totals> | null | undefined = filtering
+    ? prevRaw && { hours: Math.round(sum(accounts, 'prev_hours') * 10) / 10, user_days: sum(accounts, 'prev_user_days') }
+    : prevRaw;
 
   return (
     <>
@@ -118,6 +146,14 @@ export default function UsageClient() {
         <select className="acl-select" value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Period">
           {RANGES.map((d) => <option key={d} value={d}>{d === 800 ? 'All time' : `Last ${d} days`}</option>)}
         </select>
+        {!account && (
+          <select className="acl-select" value={kindFilter} aria-label="Account type"
+            onChange={(e) => { const v = e.target.value as KindFilter; setKindFilter(v); writeKindFilter(v); }}>
+            <option value="all">All types</option>
+            <option value="customer">Customers</option>
+            <option value="demo">Demo</option>
+          </select>
+        )}
         {sinceDay && <span className="acl-muted" style={{ fontSize: 12 }}>from {sinceDay} (UTC)</span>}
       </div>
 
@@ -143,7 +179,7 @@ export default function UsageClient() {
           </div>
 
           <div style={GRID2}>
-            <ModuleBars modules={summary.modules ?? []} />
+            <ModuleBars modules={summary.modules ?? []} note={filtering ? 'all types — not split by account' : ''} />
             <div className="app-card" style={{ padding: 16, marginBottom: 16 }}>
               <h2 className="acl-section-title">Needs attention</h2>
               {attention.length === 0 ? (
@@ -168,17 +204,18 @@ export default function UsageClient() {
 
           <div className="app-card" style={{ overflowX: 'auto' }}>
             {accounts.length === 0 ? (
-              <p className="acl-empty">No usage in this period yet.</p>
+              <p className="acl-empty">{filtering && allAccounts.length ? `No ${kindFilter === 'demo' ? 'demo' : 'customer'} account was used in this period.` : 'No usage in this period yet.'}</p>
             ) : (
               <table className="acl-table">
                 <thead><tr>
-                  <th>Account</th><th>Trend</th><th>Hours per day</th><th>Most used</th><th>Sign-ins</th>
+                  <th>Account</th><th>Type</th><th>Trend</th><th>Hours per day</th><th>Most used</th><th>Sign-ins</th>
                   <th>Peak users / day</th><th>Hours in app</th><th>Actions</th><th>Days active</th><th>Last active (UTC)</th>
                 </tr></thead>
                 <tbody>
                   {accounts.map((a) => (
                     <tr key={String(a.account)} style={{ cursor: 'pointer' }} onClick={() => setAccount(String(a.account))}>
                       <td><a href="#" onClick={(e) => { e.preventDefault(); setAccount(String(a.account)); }}>{String(a.account)}</a></td>
+                      <td><KindChip k={kindOf(a.account)} /></td>
                       <td><TrendChip t={String(a.trend)} /></td>
                       <td><Spark rows={fillDays(spark[String(a.account)] ?? [], sinceDay)} /></td>
                       <td>{a.top_module ?? '—'}</td>
@@ -389,13 +426,13 @@ function AreaChart({ title, rows, k, unit }: { title: string; rows: Row[]; k: st
 }
 
 /** Hours per module, longest first — one hue (it's a magnitude), value labelled at the bar end. */
-function ModuleBars({ modules }: { modules: Row[] }) {
+function ModuleBars({ modules, note }: { modules: Row[]; note?: string }) {
   const max = Math.max(0.1, ...modules.map((m) => Number(m.hours) || 0));
   const total = modules.reduce((s, m) => s + (Number(m.hours) || 0), 0);
   return (
     <div className="app-card" style={{ padding: 16, marginBottom: 16 }}>
       <h2 className="acl-section-title">
-        Most used modules <span className="acl-muted" style={{ fontSize: 12, fontWeight: 400 }}>· time in app</span>
+        Most used modules <span className="acl-muted" style={{ fontSize: 12, fontWeight: 400 }}>· time in app{note ? ` · ${note}` : ''}</span>
       </h2>
       {modules.length === 0 ? <p className="acl-empty">No page views in this period.</p> : (
         <div style={{ display: 'grid', gap: 6 }}>
@@ -436,6 +473,24 @@ function Spark({ rows }: { rows: Row[] }) {
       <path d={d} fill="none" stroke={INK} strokeWidth={1.5} strokeLinejoin="round" />
     </svg>
   );
+}
+
+/** Per-account days → one row per day (users, hours), keeping only the accounts `keep` accepts. */
+function sumByDay(rows: Row[], keep: (account: unknown) => boolean): Row[] {
+  const by = new Map<string, { day: string; users: number; hours: number }>();
+  for (const r of rows) {
+    if (!keep(r.account)) continue;
+    const d = String(r.day);
+    const t = by.get(d) ?? { day: d, users: 0, hours: 0 };
+    t.users += Number(r.users) || 0;
+    t.hours = Math.round((t.hours + (Number(r.hours) || 0)) * 100) / 100;
+    by.set(d, t);
+  }
+  return [...by.values()].sort((a, b) => a.day.localeCompare(b.day));
+}
+
+function KindChip({ k }: { k: AccountKind }) {
+  return <span className={`acl-kind acl-kind--${k}`} style={{ cursor: 'default' }}>{k === 'demo' ? 'Demo' : 'Customer'}</span>;
 }
 
 function niceMax(v: number): number {

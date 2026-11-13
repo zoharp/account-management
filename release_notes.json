@@ -1,5 +1,15 @@
 [
   {
+    "version": "1.11.0",
+    "date": "2026-11-13",
+    "changes": [
+      "✨ **Customer or Demo.** Every account now has a type, Customer or Demo, shown in its own column on the Accounts list. Change it right there in the row. All accounts start as Customer.",
+      "✨ **Filter by type.** A new type filter on the Accounts list and on the Usage page shows all accounts, customers only or demo only, so demo accounts don't skew the numbers. Both pages share the same choice. On Usage the tiles, charts and tables follow the filter; the *Most used modules* chart still counts every account.",
+      "✨ **New licence switches.** Accounts can now be licensed for **Azure DevOps**, **Supplier Portal**, **Multi-language** and the **Home page** from the Modules list and the Traceability tab. They are off until switched on.",
+      "💄 **Neater selects.** The region and period pickers on Usage and Presentations now match the rest of the design."
+    ]
+  },
+  {
     "version": "1.10.2",
     "date": "2026-11-09",
     "changes": [

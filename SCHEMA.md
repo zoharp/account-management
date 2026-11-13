@@ -393,3 +393,18 @@ in any of the three.
 
 Backfill: 005's `orcanos-qms` seed becomes a `source='seed'` run, and any existing resolution its
 first note. The rollback at the bottom of the file drops all three — export first.
+
+## 10. `platform_settings` (sql/008)
+
+`key text primary key, value jsonb, updated_at, updated_by`. RLS on, service role only. Keys in use:
+
+| Key | Value | Written by | Read by |
+|---|---|---|---|
+| `credits` | `{"credits_per_usd": 100, "markup": 1.0}` | `/credits` (`api/settings/credits`) | this app, Ask Paul (`credit_settings()`, 30 s cache) |
+| `account_kind:<tenant lower-cased>` (1.11.0) | `{"kind": "customer" \| "demo"}` | Accounts grid *Type* (`api/accounts/kind`) | this app only — Accounts and Usage filters |
+
+**`account_kind:*` — one row per tenant, absence = Customer.** Keyed on the tenant (`kindKeyOf`:
+tenant, else lower-cased account name), never the master uuid, because most accounts are
+traceability-only and Usage only knows the tenant. Like every `account_name`-style key here there
+is **no FK**: renaming a tenant orphans its row and the account reads as Customer again; deleting
+an account leaves the row behind (harmless). It is a label — nothing gates on it.

@@ -98,6 +98,9 @@ export type ModuleKey =
  */
 export type AccountModules = Record<ModuleKey, boolean | null>;
 
+/** Staff label for filtering — Customer unless someone set Demo. See `lib/account-kind.ts`. */
+export type AccountKind = 'customer' | 'demo';
+
 /** One row of the merged list: the master half, the traceability half, or both. */
 export interface MergedAccountRow {
   /** Stable React key. The master uuid when there is one, else `trace:<tenant>`. */
@@ -105,6 +108,8 @@ export interface MergedAccountRow {
   account_name: string;
   /** Orcanos `Virtual_dir`. The merge key — see `lib/modules.ts`. */
   tenant: string | null;
+  /** Customer or Demo — keyed on `tenant` (else the lower-cased name). Missing = customer. */
+  kind: AccountKind;
 
   // ── master `accounts` half — every field null for a traceability-only tenant
   id: string | null;
