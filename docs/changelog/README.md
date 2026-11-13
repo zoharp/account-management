@@ -9,6 +9,7 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| `1.12.0` | 2026-11-13 | **AI credit limits**: default daily/weekly/monthly limits on `/credits` (1,000 / 3,000 / 10,000), per-account own limits on the new *Credit limits* tab, override dialog on default change; enforced by Ask Paul + Traceability (combined usage). |
 | `1.11.1` | 2026-11-13 | **Accounts list totals footer** — count of listed accounts (of all, when filtered), total spend and tokens. |
 | `1.11.0` | 2026-11-13 | **Account type** (Customer / Partner / Demo / Sandbox) — *Type* column + filter on Accounts and Usage (master `platform_settings` `account_kind:<tenant>`, default Customer). Also ships the four entries below. |
 | *in 1.11.0* | 2026-11-13 | **Home page licence switch** (`allow_home`, traceability-matrix 2026-11-13): module pill *Home page* + tick on the Traceability panel (Access); opt-in, 409 on an instance without the column. |

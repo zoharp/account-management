@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+import CreditLimitsCard from './CreditLimitsCard';
 
 /**
  * The credits setting — ONE for every account. Ask Paul shows customers credits instead of
@@ -126,6 +127,9 @@ export default function CreditsClient() {
           </>
         )}
       </div>
+
+      <div style={{ height: 20 }} />
+      <CreditLimitsCard factor={valid ? per : null} />
     </>
   );
 }

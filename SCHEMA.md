@@ -401,6 +401,8 @@ first note. The rollback at the bottom of the file drops all three — export fi
 | Key | Value | Written by | Read by |
 |---|---|---|---|
 | `credits` | `{"credits_per_usd": 100, "markup": 1.0}` | `/credits` (`api/settings/credits`) | this app, Ask Paul (`credit_settings()`, 30 s cache) |
+| `credit_limits` (1.12.0) | `{"day": 1000, "week": 3000, "month": 10000}` — credits, 0 = no limit | `/credits` *Default credit limits* (`api/settings/credit-limits`) | this app, Ask Paul + traceability (`credit_limits.py`, 30 s cache; missing row = these defaults) |
+| `credit_limits:<tenant lower-cased>` (1.12.0) | same shape — one account's own limits | account window *Credit limits* (`api/accounts/credit-limits`); deleted by the default-change dialog for ticked accounts | same |
 | `account_kind:<tenant lower-cased>` (1.11.0) | `{"kind": "customer" \| "partner" \| "demo" \| "sandbox"}` | Accounts grid *Type* (`api/accounts/kind`) | this app only — Accounts and Usage filters |
 
 **`account_kind:*` — one row per tenant, absence = Customer.** Keyed on the tenant (`kindKeyOf`:
@@ -408,3 +410,8 @@ tenant, else lower-cased account name), never the master uuid, because most acco
 traceability-only and Usage only knows the tenant. Like every `account_name`-style key here there
 is **no FK**: renaming a tenant orphans its row and the account reads as Customer again; deleting
 an account leaves the row behind (harmless). It is a label — nothing gates on it.
+
+**`credit_limits:*` — one row per tenant, absence = follows `credit_limits`.** Same tenant key and the
+same no-FK caveat as `account_kind:*`, but this one **gates AI**: a renamed tenant silently falls back to
+the default limits. Ask Paul and traceability read both keys in one quoted `in.(…)` query (PostgREST
+treats `, . : ( )` in an unquoted in-list as syntax).

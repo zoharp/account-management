@@ -971,6 +971,19 @@ export async function listTraceUsage(
 }
 
 /**
+ * One tenant's AI credit usage and limits as traceability computes them (trace `credit_limits.py`,
+ * `GET /api/admin/accounts/{account}/credit-usage`). `by_app.traceability` comes from trace's own
+ * `ai_usage` ledger — exact, with no mirroring lag — which is why the staff screen takes that half
+ * from here and the Ask Paul half from the master ledger. A 404 means an older trace build.
+ */
+export async function getTraceCreditUsage(
+  account: string,
+  region: DataRegion,
+): Promise<{ by_app?: { traceability?: Record<'day' | 'week' | 'month', number> } }> {
+  return call(region, `/api/admin/accounts/${encodeURIComponent(account)}/credit-usage`);
+}
+
+/**
  * Is the traceability side configured at all? Lets the list degrade instead of
  * erroring. True when AT LEAST ONE region is reachable — the US instance alone
  * is the normal state today, and the console must keep working while the EU one

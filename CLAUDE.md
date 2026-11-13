@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `1.11.1`
+- **App:** `1.12.0`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v1.md`](docs/changelog/CHANGELOG-v1.md) (long form; v0.x in `CHANGELOG-v0.md`) and
@@ -643,6 +643,26 @@ setting for every account, read by Ask Paul (`credit_settings()` in its `backend
 customers credits instead of $/tokens. Defaults (100 / 1.0) live in three places — the route, `CREDITS`
 fallback in `usage-logs/route.ts`, and Ask Paul's `CREDIT_DEFAULTS` — change them together. A missing table
 reads as defaults and saving answers 409; the migration is applied by hand, not by this app.
+
+## AI credit limits (1.12.0)
+
+Daily / weekly / monthly AI credit limits per account, enforced by **Ask Paul and Traceability** before every
+AI call. Default for everyone on `/credits` (*Default credit limits*, below the conversion), an account's own on
+its window's **Credit limits** tab. Master `platform_settings`: `credit_limits` = the default
+(`{"day":1000,"week":3000,"month":10000}`, 0 = no limit), `credit_limits:<tenant>` = one account's own —
+**no row = follows the default**, so changing the default reaches every such account at once; only accounts
+with a row are offered in the *Apply to accounts with their own limits?* dialog (ticked = row deleted).
+Keyed on the tenant (`kindKeyOf`, like `account_kind:`); Ask Paul derives the same key from its account's
+`orcanos_api_url` segment, else `account_name` — a different derivation anywhere splits one account's limits.
+Defaults live in **three** places — `CREDIT_LIMIT_DEFAULTS` in `lib/credit-limits-key.ts`, Ask Paul's and
+traceability's `backend/credit_limits.py` — change them together. Usage is combined: Ask Paul from master
+`account_usage_logs` (minus `traceability:*` rows), Traceability from its own `ai_usage` (here via trace
+`GET /api/admin/accounts/{account}/credit-usage`; a 404 = older trace build, counted 0 with a note).
+Periods are UTC calendar periods (Monday weeks). Both apps **fail open** on any read error and cache 15–30 s,
+so a limit can be overshot by the calls in that window. ⚠️ **Traceability has no `MASTER_SUPABASE_*` Fly
+secrets (checked 2026-11-13):** until they are set it enforces the default limits on its own usage only,
+and Ask Paul does not see Traceability's usage. Audited: `platform_setting_changed` (key `credit_limits`,
+incl. which accounts were reset) and `account_credit_limits_changed`.
 
 ## Account type (1.11.0)
 

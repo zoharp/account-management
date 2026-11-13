@@ -1,5 +1,14 @@
 [
   {
+    "version": "1.12.0",
+    "date": "2026-11-13",
+    "changes": [
+      "✨ **AI credit limits.** The Credits page now sets default daily, weekly and monthly AI credit limits for every account (1,000 / 3,000 / 10,000). When an account reaches any of them, AI pauses in Ask Paul and Traceability until that period resets.",
+      "✨ **Limits per account.** A new *Credit limits* tab on each account lets you use the default or set the account's own limits, and shows what it has used today, this week and this month — split between Ask Paul and Traceability.",
+      "✨ **Choose who gets a new default.** When you change the default, you see every account with its own different limits and pick which ones switch to the new default."
+    ]
+  },
+  {
     "version": "1.11.1",
     "date": "2026-11-13",
     "changes": [

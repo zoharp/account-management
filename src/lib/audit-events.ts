@@ -40,6 +40,7 @@ export const AUDIT_EVENT_GROUPS: readonly AuditEventGroup[] = [
     types: [
       'account_module_changed',
       'account_kind_changed',
+      'account_credit_limits_changed',
       'platform_setting_changed',
       'trace_account_created',
       'trace_account_updated',

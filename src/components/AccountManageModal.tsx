@@ -6,6 +6,8 @@ import TraceabilityPanel from './TraceabilityPanel';
 import AskPaulPanel from './AskPaulPanel';
 import LlmPanel from './LlmPanel';
 import SpendPanel from './SpendPanel';
+import CreditLimitsPanel from './CreditLimitsPanel';
+import { kindKeyOf } from '@/lib/account-kind-key';
 import MoveRegionPanel from './MoveRegionPanel';
 import DeleteAccountPanel from './DeleteAccountPanel';
 import { REGION_LABELS, coerceRegion } from '@/lib/regions';
@@ -48,7 +50,7 @@ import type { AccountRow, MergedAccountRow, TraceSourceStatus } from '@/lib/type
  * read the same trace row and can each change part of it.
  */
 
-type TabKey = 'overview' | 'orcanos' | 'trace' | 'askpaul' | 'llm' | 'spend';
+type TabKey = 'overview' | 'orcanos' | 'trace' | 'askpaul' | 'llm' | 'spend' | 'credits';
 
 export default function AccountManageModal({
   row,
@@ -107,6 +109,12 @@ export default function AccountManageModal({
       label: 'Spend',
       enabled: hasMaster || hasTrace,
       why: 'Neither ledger exists for this account.',
+    },
+    {
+      key: 'credits',
+      label: 'Credit limits',
+      enabled: hasMaster || Boolean(row.tenant),
+      why: 'This account has neither a master record nor a tenant to key its limits on.',
     },
   ];
 
@@ -189,6 +197,15 @@ export default function AccountManageModal({
         )}
 
         {tab === 'spend' && <SpendPanel accountId={row.id ?? null} tenant={row.tenant ?? null} />}
+
+        {tab === 'credits' && (
+          <CreditLimitsPanel
+            tenantKey={kindKeyOf(row)}
+            accountId={row.id ?? null}
+            hasTrace={hasTrace}
+            region={row.region ?? null}
+          />
+        )}
       </div>
     </div>
   );
