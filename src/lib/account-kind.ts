@@ -1,11 +1,11 @@
 /**
- * Customer vs Demo — a staff label on every account, used to filter the Accounts and Usage
- * screens so demo/test tenants don't distort the numbers. Nothing else reads it: it gates no
+ * Account type (Customer / Demo / Partner / Sandbox) — a staff label on every account, used to
+ * filter the Accounts and Usage screens so non-customer tenants don't distort the numbers. Nothing else reads it: it gates no
  * licence, no sign-in and no billing.
  *
  * Stored in master `platform_settings` (sql/008, already applied) as ONE ROW PER TENANT:
  *   key   = `account_kind:<tenant lower-cased>`
- *   value = {"kind": "demo" | "customer"}
+ *   value = {"kind": "customer" | "demo" | "partner" | "sandbox"}
  * One row per tenant (not one JSON map) so two people classifying different accounts at the
  * same time cannot overwrite each other's change.
  *
@@ -18,6 +18,7 @@
 
 import { pgGet, pgUpsert } from './supabase';
 import type { AccountKind } from './types';
+import { isAccountKind } from './account-kind-key';
 
 const PREFIX = 'account_kind:';
 
@@ -26,7 +27,7 @@ export function normaliseKindKey(tenant: string): string {
 }
 
 export function parseKind(v: unknown): AccountKind | null {
-  return v === 'demo' || v === 'customer' ? v : null;
+  return isAccountKind(v) ? v : null;
 }
 
 /** Every stored classification, by lower-cased tenant. A read failure yields an empty map (= all Customer). */

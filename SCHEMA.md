@@ -401,7 +401,7 @@ first note. The rollback at the bottom of the file drops all three — export fi
 | Key | Value | Written by | Read by |
 |---|---|---|---|
 | `credits` | `{"credits_per_usd": 100, "markup": 1.0}` | `/credits` (`api/settings/credits`) | this app, Ask Paul (`credit_settings()`, 30 s cache) |
-| `account_kind:<tenant lower-cased>` (1.11.0) | `{"kind": "customer" \| "demo"}` | Accounts grid *Type* (`api/accounts/kind`) | this app only — Accounts and Usage filters |
+| `account_kind:<tenant lower-cased>` (1.11.0) | `{"kind": "customer" \| "partner" \| "demo" \| "sandbox"}` | Accounts grid *Type* (`api/accounts/kind`) | this app only — Accounts and Usage filters |
 
 **`account_kind:*` — one row per tenant, absence = Customer.** Keyed on the tenant (`kindKeyOf`:
 tenant, else lower-cased account name), never the master uuid, because most accounts are

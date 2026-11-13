@@ -5,7 +5,7 @@ import AccountManageModal from './AccountManageModal';
 import CreateAccountModal from './CreateAccountModal';
 import { isRegulatoryModule, MODULES } from '@/lib/module-catalog';
 import { APP_URLS, REGION_LABELS, coerceRegion } from '@/lib/regions';
-import { kindKeyOf, readKindFilter, writeKindFilter, type KindFilter } from '@/lib/account-kind-key';
+import { ACCOUNT_KINDS, kindKeyOf, kindLabel, readKindFilter, writeKindFilter, type KindFilter } from '@/lib/account-kind-key';
 import type { AccountKind, MergedAccountRow, ModuleKey, TraceSourceStatus } from '@/lib/types';
 
 
@@ -134,7 +134,7 @@ export default function AccountsClient() {
     setBusy(null);
   }
 
-  /** Customer ⇄ Demo. Optimistic — it is a label, nothing else depends on it — rolled back on failure. */
+  /** Change the account type. Optimistic — it is a label, nothing else depends on it — rolled back on failure. */
   async function setKind(row: MergedAccountRow, kind: AccountKind) {
     const prev = row.kind;
     setAccounts((list) => list.map((a) => (a.key === row.key ? { ...a, kind } : a)));
@@ -146,7 +146,7 @@ export default function AccountsClient() {
       });
       const data = (await res.json().catch(() => ({}))) as { detail?: string };
       if (!res.ok) throw new Error(data.detail || `HTTP ${res.status}`);
-      showToast(`✓ ${row.account_name} is now ${kind === 'demo' ? 'Demo' : 'Customer'}`);
+      showToast(`✓ ${row.account_name} is now ${kindLabel(kind)}`);
     } catch (e) {
       setAccounts((list) => list.map((a) => (a.key === row.key ? { ...a, kind: prev } : a)));
       showToast(`✗ ${e instanceof Error ? e.message : String(e)}`);
@@ -203,8 +203,9 @@ export default function AccountsClient() {
             }}
           >
             <option value="all">All types ({accounts.length})</option>
-            <option value="customer">Customers ({kindCount('customer')})</option>
-            <option value="demo">Demo ({kindCount('demo')})</option>
+            {ACCOUNT_KINDS.map((k) => (
+              <option key={k.key} value={k.key}>{k.plural} ({kindCount(k.key)})</option>
+            ))}
           </select>
           <button className="acl-btn-cancel" onClick={() => void load()} disabled={loading}>
             {loading ? 'Loading…' : '↺ Refresh'}
@@ -263,11 +264,12 @@ export default function AccountsClient() {
                         className={`acl-kind acl-kind--${row.kind}`}
                         value={row.kind}
                         aria-label={`Type of ${row.account_name}`}
-                        title="Customer or Demo — used to filter Accounts and Usage. Changes nothing else."
+                        title="Customer, Partner, Demo or Sandbox — used to filter Accounts and Usage. Changes nothing else."
                         onChange={(e) => void setKind(row, e.target.value as AccountKind)}
                       >
-                        <option value="customer">Customer</option>
-                        <option value="demo">Demo</option>
+                        {ACCOUNT_KINDS.map((k) => (
+                          <option key={k.key} value={k.key}>{k.label}</option>
+                        ))}
                       </select>
                     </td>
 
@@ -350,6 +352,29 @@ export default function AccountsClient() {
                 );
               })}
             </tbody>
+            <tfoot>
+              <tr className="acl-total-row">
+                <td colSpan={4}>
+                  Total: {filtered.length.toLocaleString()}{' '}
+                  {filtered.length === 1 ? 'account' : 'accounts'}
+                  {filtered.length !== accounts.length && (
+                    <span className="acl-muted"> of {accounts.length.toLocaleString()}</span>
+                  )}
+                </td>
+                <td className="acl-num">
+                  $
+                  {filtered
+                    .reduce((s, r) => s + r.total_cost_usd + r.trace_cost_usd, 0)
+                    .toFixed(4)}
+                </td>
+                <td className="acl-num acl-muted">
+                  {filtered
+                    .reduce((s, r) => s + r.total_tokens + r.trace_tokens, 0)
+                    .toLocaleString()}
+                </td>
+                <td />
+              </tr>
+            </tfoot>
           </table>
         )}
       </div>

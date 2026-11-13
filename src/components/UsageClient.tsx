@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { readKindFilter, writeKindFilter, type KindFilter } from '@/lib/account-kind-key';
+import { ACCOUNT_KINDS, kindLabel, readKindFilter, writeKindFilter, type KindFilter } from '@/lib/account-kind-key';
 import type { AccountKind } from '@/lib/types';
 
 /**
@@ -45,7 +45,7 @@ export default function UsageClient() {
   // Storage is read after mount (not in useState) so the server render and hydration agree;
   // nothing is fetched until it has been read, or the first request would go to the default region.
   const [restored, setRestored] = useState(false);
-  /** Customer/Demo per tenant (missing = customer) — set on the Accounts screen. */
+  /** Account type per tenant (missing = customer) — set on the Accounts screen. */
   const [kinds, setKinds] = useState<Record<string, AccountKind>>({});
   const [kindFilter, setKindFilter] = useState<KindFilter>('all');
 
@@ -150,8 +150,7 @@ export default function UsageClient() {
           <select className="acl-select" value={kindFilter} aria-label="Account type"
             onChange={(e) => { const v = e.target.value as KindFilter; setKindFilter(v); writeKindFilter(v); }}>
             <option value="all">All types</option>
-            <option value="customer">Customers</option>
-            <option value="demo">Demo</option>
+            {ACCOUNT_KINDS.map((k) => <option key={k.key} value={k.key}>{k.plural}</option>)}
           </select>
         )}
         {sinceDay && <span className="acl-muted" style={{ fontSize: 12 }}>from {sinceDay} (UTC)</span>}
@@ -204,7 +203,7 @@ export default function UsageClient() {
 
           <div className="app-card" style={{ overflowX: 'auto' }}>
             {accounts.length === 0 ? (
-              <p className="acl-empty">{filtering && allAccounts.length ? `No ${kindFilter === 'demo' ? 'demo' : 'customer'} account was used in this period.` : 'No usage in this period yet.'}</p>
+              <p className="acl-empty">{filtering && allAccounts.length ? `No ${kindLabel(kindFilter as AccountKind).toLowerCase()} account was used in this period.` : 'No usage in this period yet.'}</p>
             ) : (
               <table className="acl-table">
                 <thead><tr>
@@ -490,7 +489,7 @@ function sumByDay(rows: Row[], keep: (account: unknown) => boolean): Row[] {
 }
 
 function KindChip({ k }: { k: AccountKind }) {
-  return <span className={`acl-kind acl-kind--${k}`} style={{ cursor: 'default' }}>{k === 'demo' ? 'Demo' : 'Customer'}</span>;
+  return <span className={`acl-kind acl-kind--${k}`} style={{ cursor: 'default' }}>{kindLabel(k)}</span>;
 }
 
 function niceMax(v: number): number {

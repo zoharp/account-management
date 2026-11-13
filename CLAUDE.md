@@ -4,7 +4,7 @@ Read this before changing anything here. **This file is the source of truth** fo
 how to work in this repo; the other docs go deeper on one topic each.
 
 ### Current versions (update after every bump)
-- **App:** `1.11.0`
+- **App:** `1.11.1`
 
 Release history is **not** kept in this file — it is
 [`docs/changelog/CHANGELOG-v1.md`](docs/changelog/CHANGELOG-v1.md) (long form; v0.x in `CHANGELOG-v0.md`) and
@@ -644,9 +644,10 @@ customers credits instead of $/tokens. Defaults (100 / 1.0) live in three places
 fallback in `usage-logs/route.ts`, and Ask Paul's `CREDIT_DEFAULTS` — change them together. A missing table
 reads as defaults and saving answers 409; the migration is applied by hand, not by this app.
 
-## Customer / Demo type (1.11.0)
+## Account type (1.11.0)
 
-Every account is labelled Customer or Demo (Accounts grid *Type* column, filter on Accounts and Usage, one
+Every account is labelled Customer, Partner, Demo or Sandbox (one list: `ACCOUNT_KINDS` in
+`lib/account-kind-key.ts` — add a type there, in `AccountKind`, and as a `.acl-kind--<key>` colour) (Accounts grid *Type* column, filter on Accounts and Usage, one
 shared `localStorage` choice). Stored in master `platform_settings` as `account_kind:<tenant>` — one row per
 tenant, **no row = Customer** (nothing was seeded). Keyed on the tenant via `kindKeyOf`
 (`lib/account-kind-key.ts`), the same tenant string Usage uses — don't key it on the master uuid, most rows

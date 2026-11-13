@@ -1,5 +1,5 @@
 /**
- * GET /api/accounts/kind — every Customer/Demo classification, `{ kinds: { <tenant>: 'demo' | 'customer' } }`.
+ * GET /api/accounts/kind — every account type, `{ kinds: { <tenant>: AccountKind } }`.
  *                          A tenant not in the map is a Customer. Used by the Usage screen.
  * PUT /api/accounts/kind — `{ tenant, kind }` sets one. Audited as `account_kind_changed`.
  *
@@ -10,6 +10,7 @@
 import { requirePlatformStaff } from '@/lib/session';
 import { listAccountKinds, normaliseKindKey, parseKind, setAccountKind } from '@/lib/account-kind';
 import { logSecurityEvent } from '@/lib/audit';
+import { ACCOUNT_KINDS } from '@/lib/account-kind-key';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,7 @@ export async function PUT(req: Request) {
   if (!tenant || tenant.length > 120 || !/^[a-z0-9._ -]+$/.test(tenant)) {
     return Response.json({ detail: 'Missing or invalid: tenant' }, { status: 400 });
   }
-  if (!kind) return Response.json({ detail: "kind must be 'customer' or 'demo'" }, { status: 400 });
+  if (!kind) return Response.json({ detail: `kind must be one of: ${ACCOUNT_KINDS.map((k) => k.key).join(', ')}` }, { status: 400 });
   try {
     await setAccountKind(tenant, kind, user.email);
   } catch (e) {

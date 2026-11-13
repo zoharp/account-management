@@ -9,7 +9,8 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
-| `1.11.0` | 2026-11-13 | **Customer / Demo account type** — *Type* column + filter on Accounts and Usage (master `platform_settings` `account_kind:<tenant>`, default Customer). Also ships the four entries below. |
+| `1.11.1` | 2026-11-13 | **Accounts list totals footer** — count of listed accounts (of all, when filtered), total spend and tokens. |
+| `1.11.0` | 2026-11-13 | **Account type** (Customer / Partner / Demo / Sandbox) — *Type* column + filter on Accounts and Usage (master `platform_settings` `account_kind:<tenant>`, default Customer). Also ships the four entries below. |
 | *in 1.11.0* | 2026-11-13 | **Home page licence switch** (`allow_home`, traceability-matrix 2026-11-13): module pill *Home page* + tick on the Traceability panel (Access); opt-in, 409 on an instance without the column. |
 | *in 1.11.0* | 2026-11-12 | **Supplier Portal + Multi-language licence switches** (`allow_supplier_portal`, `allow_multi_language`, traceability-matrix 2026-11-12): module pills *Supplier Portal* + *Multi-language*, *Supplier Portal* tick (Modules) and *Multi-language* tick (Access); refuse (409) on an instance without the column, like Azure DevOps. No version bump yet. |
 | *in 1.11.0* | 2026-11-09 | **Styled toolbar selects** on Usage and Presentations (`.acl-select`, traceability SBOM look). |
