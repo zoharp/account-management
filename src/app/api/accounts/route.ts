@@ -32,6 +32,8 @@ import {
   supportsIntegrations,
   supportsGithub,
   supportsAzureDevops,
+  supportsSupplierPortal,
+  supportsMultiLanguage,
   supportsSbom,
   supportsModules,
   TraceApiError,
@@ -107,6 +109,8 @@ export async function GET() {
     supports_integrations: false,
     supports_github: false,
     supports_azure_devops: false,
+    supports_supplier_portal: false,
+    supports_multi_language: false,
     supports_sbom: false,
     url: process.env.TRACE_API_URL ?? null,
     message: '',
@@ -127,6 +131,8 @@ export async function GET() {
       trace.supports_integrations = supportsIntegrations(traceRows);
       trace.supports_github = supportsGithub(traceRows);
       trace.supports_azure_devops = supportsAzureDevops(traceRows);
+      trace.supports_supplier_portal = supportsSupplierPortal(traceRows);
+      trace.supports_multi_language = supportsMultiLanguage(traceRows);
       trace.supports_sbom = supportsSbom(traceRows);
       if (!trace.supports_modules) {
         // Production Fly is 3.21.0 and has no allow_trace / allow_training.

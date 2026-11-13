@@ -9,6 +9,8 @@ the `release-management` convention.
 
 | Version | Date | Summary |
 |---|---|---|
+| *Unreleased* | 2026-11-12 | **Supplier Portal + Multi-language licence switches** (`allow_supplier_portal`, `allow_multi_language`, traceability-matrix 2026-11-12): module pills *Supplier Portal* + *Multi-language*, *Supplier Portal* tick (Modules) and *Multi-language* tick (Access); refuse (409) on an instance without the column, like Azure DevOps. No version bump yet. |
+| *Unreleased* | 2026-11-09 | **Styled toolbar selects** on Usage and Presentations (`.acl-select`, traceability SBOM look). |
 | *Unreleased* | 2026-11-09 | **Azure DevOps licence switch** (`allow_azure_devops`, traceability-matrix 2026-11-09): module pill *Azure DevOps* + *Integrations (Azure DevOps)* tick; refuses (409) on an instance without the column, like GitHub. No version bump yet. |
 | `1.10.2` | 2026-11-09 | **Usage** page remembers region, period and open account across a refresh (was reset to US). |
 | `1.10.1` | 2026-11-08 | Ask Paul tab: **Create Ask Paul database** now also for an existing account with no database (`POST /api/accounts/:id/provision-db`, attaches to the row). |

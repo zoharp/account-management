@@ -434,6 +434,12 @@ function disabledReason(
   if (key === 'ado' && !trace.supports_azure_devops && row.modules.ado !== true) {
     return 'This traceability instance predates the Azure DevOps licence — deploy the traceability-matrix Azure DevOps release (2026-11-09) first.';
   }
+  if (key === 'supplier_portal' && !trace.supports_supplier_portal && row.modules.supplier_portal !== true) {
+    return 'This traceability instance predates the Supplier Portal licence — deploy the traceability-matrix Supplier Portal release (2026-11-12) first.';
+  }
+  if (key === 'multi_language' && !trace.supports_multi_language && row.modules.multi_language !== true) {
+    return 'This traceability instance predates the Multi-language licence — deploy the traceability-matrix Multi-language release (2026-11-12) first.';
+  }
   if (key === 'sbom' && !trace.supports_sbom && row.modules.sbom !== true) {
     return 'This traceability instance predates the Software BOM licence — deploy 4.30.0 first.';
   }

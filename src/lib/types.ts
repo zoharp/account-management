@@ -81,6 +81,8 @@ export type ModuleKey =
   | 'trace'
   | 'training'
   | 'review'
+  | 'supplier_portal'
+  | 'multi_language'
   | 'risk'
   | 'integrations'
   | 'github'
@@ -182,6 +184,10 @@ export interface TraceSourceStatus {
   supports_github: boolean;
   /** False when the instance predates `allow_azure_devops` (traceability-matrix 2026-11-09). Opt-in, so absent reads as OFF. */
   supports_azure_devops: boolean;
+  /** False when the instance predates `allow_supplier_portal` (traceability-matrix 2026-11-12). Opt-in, so absent reads as OFF. */
+  supports_supplier_portal: boolean;
+  /** False when the instance predates `allow_multi_language` (traceability-matrix 2026-11-12). Opt-in, so absent reads as OFF. */
+  supports_multi_language: boolean;
   /** False when the instance predates `allow_sbom` (< 4.30.0). Opt-in, so absent reads as OFF. */
   supports_sbom: boolean;
   /** Which instance answered — shown in the UI so local-vs-Fly is never a guess. */

@@ -85,6 +85,10 @@ export interface TraceAccountRow {
   allow_github?: number;
   /** Azure DevOps connector licence, added in traceability-matrix 2026-11-09. OPT-IN like GitHub. */
   allow_azure_devops?: number;
+  /** Supplier Portal licence (QMS module), added in traceability-matrix 2026-11-12. OPT-IN. */
+  allow_supplier_portal?: number;
+  /** Multi-language licence (UI language picker; off = English only), added in traceability-matrix 2026-11-12. OPT-IN. */
+  allow_multi_language?: number;
   /** Software BOM licence, added in 4.30.0. OPT-IN; opens the BOM module on its own. */
   allow_sbom?: number;
   /** Ask Paul (QMS AI) licence and name override, added in 3.27.0. */
@@ -132,6 +136,9 @@ export function moduleFlag(row: TraceAccountRow | undefined, key: ModuleKey): bo
   if (key === 'github') return Boolean(row.allow_github);
   // And the Azure DevOps connector (traceability-matrix, 2026-11-09).
   if (key === 'ado') return Boolean(row.allow_azure_devops);
+  // And the Supplier Portal + Multi-language (traceability-matrix, 2026-11-12).
+  if (key === 'supplier_portal') return Boolean(row.allow_supplier_portal);
+  if (key === 'multi_language') return Boolean(row.allow_multi_language);
   // And the Software BOM (4.30.0).
   if (key === 'sbom') return Boolean(row.allow_sbom);
   const value =
@@ -185,6 +192,16 @@ export function supportsGithub(rows: TraceAccountRow[]): boolean {
 /** Does it carry `allow_azure_devops`? (traceability-matrix, 2026-11-09) Same silent-discard reason as `supportsBom`. */
 export function supportsAzureDevops(rows: TraceAccountRow[]): boolean {
   return rows.some((r) => r.allow_azure_devops !== undefined);
+}
+
+/** Does it carry `allow_supplier_portal`? (traceability-matrix, 2026-11-12) Same silent-discard reason as `supportsBom`. */
+export function supportsSupplierPortal(rows: TraceAccountRow[]): boolean {
+  return rows.some((r) => r.allow_supplier_portal !== undefined);
+}
+
+/** Does it carry `allow_multi_language`? (traceability-matrix, 2026-11-12) Same silent-discard reason as `supportsBom`. */
+export function supportsMultiLanguage(rows: TraceAccountRow[]): boolean {
+  return rows.some((r) => r.allow_multi_language !== undefined);
 }
 
 /** Does it carry `allow_sbom`? (4.30.0) Same silent-discard reason as `supportsBom`. */
@@ -549,6 +566,8 @@ export function newTraceAccountRow(tenant: string, region: DataRegion): TraceAcc
     allow_integrations: 0,
     allow_github: 0,
     allow_azure_devops: 0,
+    allow_supplier_portal: 0,
+    allow_multi_language: 0,
     allow_sbom: 0,
     allow_ask_paul: 0,
   };
@@ -661,6 +680,26 @@ export async function upsertTraceModules(
       );
     }
     changes.allow_azure_devops = modules.ado ? 1 : 0;
+  }
+  if (modules.supplier_portal !== undefined) {
+    if (modules.supplier_portal && !supportsSupplierPortal(rows)) {
+      throw new TraceApiError(
+        'this traceability instance predates the Supplier Portal licence (needs traceability-matrix ' +
+          '2026-11-12) and would have silently discarded it',
+        409,
+      );
+    }
+    changes.allow_supplier_portal = modules.supplier_portal ? 1 : 0;
+  }
+  if (modules.multi_language !== undefined) {
+    if (modules.multi_language && !supportsMultiLanguage(rows)) {
+      throw new TraceApiError(
+        'this traceability instance predates the Multi-language licence (needs traceability-matrix ' +
+          '2026-11-12) and would have silently discarded it',
+        409,
+      );
+    }
+    changes.allow_multi_language = modules.multi_language ? 1 : 0;
   }
   if (modules.sbom !== undefined) {
     if (modules.sbom && !supportsSbom(rows)) {

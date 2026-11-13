@@ -36,6 +36,8 @@ import {
   supportsIntegrations,
   supportsGithub,
   supportsAzureDevops,
+  supportsSupplierPortal,
+  supportsMultiLanguage,
   supportsSbom,
   supportsModules,
   hasReachableModule,
@@ -130,6 +132,8 @@ export async function GET(_req: Request, ctx: { params: Promise<{ tenant: string
       supports_integrations: supportsIntegrations(rows),
       supports_github: supportsGithub(rows),
       supports_azure_devops: supportsAzureDevops(rows),
+      supports_supplier_portal: supportsSupplierPortal(rows),
+      supports_multi_language: supportsMultiLanguage(rows),
       supports_sbom: supportsSbom(rows),
     });
   } catch (e) {
@@ -243,6 +247,30 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       );
     }
 
+    if (!supportsSupplierPortal(rows) && body.allow_supplier_portal !== undefined) {
+      // And for the Supplier Portal, added in traceability-matrix 2026-11-12.
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the Supplier Portal licence and would silently ' +
+            'discard the change. Deploy the traceability-matrix Supplier Portal release (2026-11-12) first.',
+        },
+        { status: 409 },
+      );
+    }
+
+    if (!supportsMultiLanguage(rows) && body.allow_multi_language !== undefined) {
+      // And for Multi-language, added in traceability-matrix 2026-11-12.
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the Multi-language licence and would silently ' +
+            'discard the change. Deploy the traceability-matrix Multi-language release (2026-11-12) first.',
+        },
+        { status: 409 },
+      );
+    }
+
     if (!supportsSbom(rows) && body.allow_sbom !== undefined) {
       // And for the Software BOM, added in 4.30.0.
       return Response.json(
@@ -279,6 +307,9 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       allow_integrations: 0,
       allow_github: 0,
       allow_azure_devops: 0,
+      // And the Supplier Portal + Multi-language (2026-11-12).
+      allow_supplier_portal: 0,
+      allow_multi_language: 0,
       // And the Software BOM.
       allow_sbom: 0,
       allow_ask_paul: 1,
@@ -299,6 +330,8 @@ export async function PUT(req: Request, ctx: { params: Promise<{ tenant: string 
       allow_integrations: flag('allow_integrations', base.allow_integrations ?? 0),
       allow_github: flag('allow_github', base.allow_github ?? 0),
       allow_azure_devops: flag('allow_azure_devops', base.allow_azure_devops ?? 0),
+      allow_supplier_portal: flag('allow_supplier_portal', base.allow_supplier_portal ?? 0),
+      allow_multi_language: flag('allow_multi_language', base.allow_multi_language ?? 0),
       allow_sbom: flag('allow_sbom', base.allow_sbom ?? 0),
       allow_ask_paul: flag('allow_ask_paul', base.allow_ask_paul ?? 1),
       note: typeof body.note === 'string' ? body.note : (base.note ?? ''),

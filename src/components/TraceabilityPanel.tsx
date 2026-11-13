@@ -49,6 +49,8 @@ export default function TraceabilityPanel({
   const [supportsIntegrations, setSupportsIntegrations] = useState(false);
   const [supportsGithub, setSupportsGithub] = useState(false);
   const [supportsAzureDevops, setSupportsAzureDevops] = useState(false);
+  const [supportsSupplierPortal, setSupportsSupplierPortal] = useState(false);
+  const [supportsMultiLanguage, setSupportsMultiLanguage] = useState(false);
   const [supportsSbom, setSupportsSbom] = useState(false);
   const [saving, setSaving] = useState(false);
   const [status, setStatus] = useState<{ kind: 'ok' | 'bad' | ''; text: string }>({
@@ -67,6 +69,8 @@ export default function TraceabilityPanel({
   const [allowIntegrations, setAllowIntegrations] = useState(false);
   const [allowGithub, setAllowGithub] = useState(false);
   const [allowAzureDevops, setAllowAzureDevops] = useState(false);
+  const [allowSupplierPortal, setAllowSupplierPortal] = useState(false);
+  const [allowMultiLanguage, setAllowMultiLanguage] = useState(false);
   const [allowSbom, setAllowSbom] = useState(false);
   const [note, setNote] = useState('');
 
@@ -88,6 +92,8 @@ export default function TraceabilityPanel({
       setSupportsIntegrations(Boolean(data.supports_integrations));
       setSupportsGithub(Boolean(data.supports_github));
       setSupportsAzureDevops(Boolean(data.supports_azure_devops));
+      setSupportsSupplierPortal(Boolean(data.supports_supplier_portal));
+      setSupportsMultiLanguage(Boolean(data.supports_multi_language));
       setSupportsSbom(Boolean(data.supports_sbom));
       const r = data.row;
       setAllowAccess(r ? Boolean(r.allow_access) : true);
@@ -101,6 +107,8 @@ export default function TraceabilityPanel({
       setAllowIntegrations(on(r?.allow_integrations, false));
       setAllowGithub(on(r?.allow_github, false));
       setAllowAzureDevops(on(r?.allow_azure_devops, false));
+      setAllowSupplierPortal(on(r?.allow_supplier_portal, false));
+      setAllowMultiLanguage(on(r?.allow_multi_language, false));
       setAllowSbom(on(r?.allow_sbom, false));
       setNote(r?.note ?? '');
     } catch (e) {
@@ -144,6 +152,8 @@ export default function TraceabilityPanel({
           ...(supportsIntegrations ? { allow_integrations: allowIntegrations } : {}),
           ...(supportsGithub ? { allow_github: allowGithub } : {}),
           ...(supportsAzureDevops ? { allow_azure_devops: allowAzureDevops } : {}),
+          ...(supportsSupplierPortal ? { allow_supplier_portal: allowSupplierPortal } : {}),
+          ...(supportsMultiLanguage ? { allow_multi_language: allowMultiLanguage } : {}),
           ...(supportsSbom ? { allow_sbom: allowSbom } : {}),
           note,
         }),
@@ -197,6 +207,19 @@ export default function TraceabilityPanel({
           checked={allowAdd}
           onChange={setAllowAdd}
         />
+        {supportsMultiLanguage ? (
+          <Check
+            label="Multi-language"
+            hint="The UI language picker inside traceability. Off by default: the account sees English only."
+            checked={allowMultiLanguage}
+            onChange={setAllowMultiLanguage}
+          />
+        ) : (
+          <p className="acl-hint">
+            Multi-language needs the traceability-matrix Multi-language release (2026-11-12) on this
+            tenant&apos;s instance before it can be licensed.
+          </p>
+        )}
       </section>
 
       <section className="acl-section">
@@ -226,6 +249,19 @@ export default function TraceabilityPanel({
               <p className="acl-hint">
                 Doc Review needs traceability-matrix 4.8.0 on this tenant&apos;s instance before it
                 can be licensed.
+              </p>
+            )}
+            {supportsSupplierPortal ? (
+              <Check
+                label="Supplier Portal"
+                hint="Suppliers sign in to answer SCARs, fill the annual review and renew certificates; the quality team checks and signs each answer before it is written to Orcanos. Off by default; customers do not see it until this is ticked. It is then set up inside the module by an Orcanos administrator."
+                checked={allowSupplierPortal}
+                onChange={setAllowSupplierPortal}
+              />
+            ) : (
+              <p className="acl-hint">
+                Supplier Portal needs the traceability-matrix Supplier Portal release (2026-11-12) on
+                this tenant&apos;s instance before it can be licensed.
               </p>
             )}
             {supportsRisk ? (

@@ -220,6 +220,10 @@ function buildRow(args: {
   // And the Azure DevOps connector: an absent `allow_azure_devops` (instance older than
   // traceability-matrix 2026-11-09) reads as OFF.
   const adoModule = unknown ? null : signedIn && moduleFlag(trace, 'ado');
+  // And the Supplier Portal + Multi-language: an absent `allow_supplier_portal` /
+  // `allow_multi_language` (instance older than traceability-matrix 2026-11-12) reads as OFF.
+  const supplierPortalModule = unknown ? null : signedIn && moduleFlag(trace, 'supplier_portal');
+  const multiLanguageModule = unknown ? null : signedIn && moduleFlag(trace, 'multi_language');
   // And the Software BOM: an absent `allow_sbom` (pre-4.30.0 instance) reads as OFF.
   const sbomModule = unknown ? null : signedIn && moduleFlag(trace, 'sbom');
 
@@ -278,6 +282,8 @@ function buildRow(args: {
       integrations: integrationsModule,
       github: githubModule,
       ado: adoModule,
+      supplier_portal: supplierPortalModule,
+      multi_language: multiLanguageModule,
       bom: bomModule,
       sbom: sbomModule,
       // Master-owned: no master row = no answer (a dash), never "off".

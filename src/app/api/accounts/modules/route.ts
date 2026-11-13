@@ -9,6 +9,8 @@
  *   review    → trace `account_access.allow_review` (Doc Review; opt-in, needs 4.8.0)
  *   risk      → trace `account_access.allow_risk` (Risk Management; opt-in, needs 4.12.0)
  *   ado       → trace `account_access.allow_azure_devops` (Azure DevOps connector; opt-in, traceability-matrix 2026-11-09)
+ *   supplier_portal → trace `account_access.allow_supplier_portal` (Supplier Portal, QMS module; opt-in, traceability-matrix 2026-11-12)
+ *   multi_language  → trace `account_access.allow_multi_language` (UI language picker, off = English only; opt-in, traceability-matrix 2026-11-12)
  *   ask_paul  → BOTH master `accounts.is_active` AND trace `allow_ask_paul`
  *
  * ## Why Ask Paul writes two systems
@@ -51,6 +53,8 @@ import {
   supportsIntegrations,
   supportsGithub,
   supportsAzureDevops,
+  supportsSupplierPortal,
+  supportsMultiLanguage,
   supportsSbom,
   supportsModules,
   hasReachableModule,
@@ -86,6 +90,8 @@ const MODULE_KEYS: ModuleKey[] = [
   'trace',
   'training',
   'review',
+  'supplier_portal',
+  'multi_language',
   'risk',
   'integrations',
   'github',
@@ -100,7 +106,7 @@ const MODULE_KEYS: ModuleKey[] = [
 /** The `account_access` column each module is licensed by. */
 const MODULE_COLUMN: Record<
   Exclude<ModuleKey, RegulatoryModuleKey>,
-  'allow_ask_paul' | 'allow_trace' | 'allow_training' | 'allow_review' | 'allow_risk' | 'allow_integrations' | 'allow_github' | 'allow_azure_devops' | 'allow_bom' | 'allow_sbom'
+  'allow_ask_paul' | 'allow_trace' | 'allow_training' | 'allow_review' | 'allow_risk' | 'allow_integrations' | 'allow_github' | 'allow_azure_devops' | 'allow_supplier_portal' | 'allow_multi_language' | 'allow_bom' | 'allow_sbom'
 > = {
   ask_paul: 'allow_ask_paul',
   trace: 'allow_trace',
@@ -110,6 +116,8 @@ const MODULE_COLUMN: Record<
   integrations: 'allow_integrations',
   github: 'allow_github',
   ado: 'allow_azure_devops',
+  supplier_portal: 'allow_supplier_portal',
+  multi_language: 'allow_multi_language',
   bom: 'allow_bom',
   sbom: 'allow_sbom',
 };
@@ -385,6 +393,30 @@ export async function PUT(req: Request) {
           detail:
             'This traceability instance predates the Azure DevOps licence and would silently ' +
             'discard the change. Deploy the traceability-matrix Azure DevOps release (2026-11-09) first.',
+        },
+        { status: 409 },
+      );
+    }
+
+    // The Supplier Portal's column landed in traceability-matrix 2026-11-12 — same again.
+    if (module === 'supplier_portal' && !supportsSupplierPortal(rows)) {
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the Supplier Portal licence and would silently ' +
+            'discard the change. Deploy the traceability-matrix Supplier Portal release (2026-11-12) first.',
+        },
+        { status: 409 },
+      );
+    }
+
+    // So did Multi-language's — same again.
+    if (module === 'multi_language' && !supportsMultiLanguage(rows)) {
+      return Response.json(
+        {
+          detail:
+            'This traceability instance predates the Multi-language licence and would silently ' +
+            'discard the change. Deploy the traceability-matrix Multi-language release (2026-11-12) first.',
         },
         { status: 409 },
       );

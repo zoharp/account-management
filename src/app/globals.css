@@ -1240,6 +1240,44 @@ a.btn-sm {
   color: var(--text-muted);
 }
 
+/* ── Toolbar select (same look as traceability's SBOM select) ─────────────
+ * Native <select>, restyled: purple chevron in a tinted box on the right,
+ * separated by a hairline. Three background layers: chevron, box, divider. */
+.acl-select {
+  appearance: none;
+  -webkit-appearance: none;
+  height: 34px;
+  min-width: 96px;
+  padding: 0 44px 0 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-overflow: ellipsis;
+  background-color: var(--bg-surface);
+  background-image:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%235C35A8' stroke-width='1.6' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"),
+    linear-gradient(var(--accent-primary-soft), var(--accent-primary-soft)),
+    linear-gradient(var(--border), var(--border));
+  background-repeat: no-repeat;
+  background-position: right 11px center, right 0 top 0, right 32px top 0;
+  background-size: 10px 6px, 32px 100%, 1px 100%;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.acl-select:hover {
+  border-color: var(--accent-primary);
+}
+
+.acl-select:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(92, 53, 168, 0.12);
+}
+
 /* ── Audit event-group filter ──────────────────────────────────────────── */
 
 .acl-filterbar {

@@ -53,11 +53,18 @@ export const MODULES: readonly ModuleDef[] = [
   // source and mean the same thing. Master `is_active` is the ACCOUNT gate and
   // belongs in the Status column, not here.
   { key: 'ask_paul', label: 'Ask Paul', source: 'trace' },
+  // Multi-language (traceability-matrix, 2026-11-12), `account_access.allow_multi_language`.
+  // Not a nav module: a platform feature licence for the trace app's UI language picker
+  // (off = English only). OPT-IN: absent reads as OFF.
+  { key: 'multi_language', label: 'Multi-language', source: 'trace' },
   { key: 'trace', label: 'Traceability', source: 'trace' },
   { key: 'training', label: 'Training', source: 'trace' },
   // Doc Review (traceability-matrix 4.8.0), `account_access.allow_review`. OPT-IN
   // like BOM: the column defaults to 0 and an absent value reads as OFF.
   { key: 'review', label: 'Doc Review', source: 'trace' },
+  // Supplier Portal (traceability-matrix, 2026-11-12), `account_access.allow_supplier_portal`.
+  // A QMS module like Doc Review. OPT-IN: the column defaults to 0 and an absent value reads as OFF.
+  { key: 'supplier_portal', label: 'Supplier Portal', source: 'trace' },
   // Risk Management (traceability-matrix 4.12.0), `account_access.allow_risk`. OPT-IN
   // like BOM and Doc Review.
   { key: 'risk', label: 'Risk', source: 'trace' },

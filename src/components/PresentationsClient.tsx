@@ -72,11 +72,11 @@ export default function PresentationsClient() {
       <div className="acl-toolbar" style={{ gap: 12, flexWrap: 'wrap' }}>
         {deck && <button className="acl-btn-cancel" onClick={() => setDeck('')}>← All presentations</button>}
         {regions.length > 1 && (
-          <select value={region} onChange={(e) => setRegion(e.target.value)} aria-label="Region">
+          <select className="acl-select" value={region} onChange={(e) => setRegion(e.target.value)} aria-label="Region">
             {regions.map((r) => <option key={r} value={r}>{r.toUpperCase()}</option>)}
           </select>
         )}
-        <select value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Period">
+        <select className="acl-select" value={days} onChange={(e) => setDays(Number(e.target.value))} aria-label="Period">
           {RANGES.map((d) => <option key={d} value={d}>Last {d} days</option>)}
         </select>
       </div>
